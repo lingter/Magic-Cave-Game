@@ -1,0 +1,5 @@
+{
+  "name": "MagicCave.Prototype",
+  "references": ["Unity.InputSystem"],
+  "autoReferenced": true
+}

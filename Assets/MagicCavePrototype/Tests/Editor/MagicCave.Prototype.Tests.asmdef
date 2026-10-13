@@ -1,0 +1,6 @@
+{
+  "name": "MagicCave.Prototype.Tests",
+  "references": ["MagicCave.Prototype"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

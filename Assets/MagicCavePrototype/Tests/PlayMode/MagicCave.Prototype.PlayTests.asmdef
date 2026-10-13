@@ -1,0 +1,5 @@
+{
+  "name": "MagicCave.Prototype.PlayTests",
+  "references": ["MagicCave.Prototype", "Unity.InputSystem"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
