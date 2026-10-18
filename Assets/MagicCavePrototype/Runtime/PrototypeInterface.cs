@@ -161,7 +161,7 @@ namespace MagicCave.Prototype
             Label(new Rect(586, 19, 250, 42), "等级 " + Run.level + "   经验 " + Run.experience + "/" + Rules.RequiredExperience(Run.level));
             Label(new Rect(865, 20, 180, 38), "背包 " + Inventory.UsedSlots(Run) + " / 20");
             Button(new Rect(1110, 17, 140, 41), "暂停 [Esc]", () => { Panel = GamePanel.Pause; CancelRoute(); });
-            Label(new Rect(26, 61, 1220, 23), "WASD/方向键移动  左键寻路/交互  右键破墙  E交互  B背包  Tab卡组  中键拖动旋转  Shift+R顺时针 / Shift+T逆时针", smallStyle);
+            Label(new Rect(26, 61, 1220, 23), "WASD/方向键移动  左键寻路/交互  右键破墙  E交互  B背包  Tab卡组  固定视角，镜头跟随角色", smallStyle);
             Box(new Rect(0, 657, 1280, 63));
             string hint = "探索迷雾，寻找门与物品";
             var target = hover.kind != TargetKind.None ? hover : highlighted;

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.InputSystem;
 
 namespace MagicCave.Prototype
 {
@@ -23,7 +22,6 @@ namespace MagicCave.Prototype
         Transform actor, hoverMarker;
         Vector3 cameraVelocity;
         Vector3 cameraFocus;
-        bool cameraDragging;
         readonly List<Transform> worldLabels = new List<Transform>();
         readonly List<TileVisual> tiles = new List<TileVisual>();
         readonly List<ObjectVisual> objects = new List<ObjectVisual>();
@@ -168,24 +166,7 @@ namespace MagicCave.Prototype
             foreach (var visual in objects) visual.root.SetActive(Run.Map.Known(visual.x, visual.y));
             Physics.SyncTransforms();
         }
-        Quaternion CameraRotation() { return Quaternion.Euler(50, Run.cameraYaw, 0); }
-        bool ReadCameraRotation(Keyboard keyboard, Mouse mouse)
-        {
-            bool dragging = mouse != null && mouse.middleButton.isPressed;
-            bool shortcut = keyboard != null && keyboard.shiftKey.isPressed && (keyboard.rKey.isPressed || keyboard.tKey.isPressed);
-            float change = 0;
-            if (shortcut)
-                change += ((keyboard.rKey.isPressed ? 1 : 0) - (keyboard.tKey.isPressed ? 1 : 0)) * cameraKeyboardRotationSpeed * Time.deltaTime;
-            if (dragging && cameraDragging) change += mouse.delta.ReadValue().x * cameraDragSensitivity;
-            cameraDragging = dragging;
-            if (change != 0)
-            {
-                Run.cameraYaw = Mathf.Repeat(Run.cameraYaw + change, 360);
-                gameCamera.transform.rotation = CameraRotation();
-                gameCamera.transform.position = cameraFocus - gameCamera.transform.forward * 10f;
-            }
-            return dragging || shortcut;
-        }
+        Quaternion CameraRotation() { return Quaternion.Euler(50, 0, 0); }
         Vector3 CameraPosition()
         {
             return cameraFocus - CameraRotation() * Vector3.forward * 10f;

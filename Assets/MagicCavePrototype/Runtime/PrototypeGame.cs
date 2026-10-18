@@ -23,8 +23,6 @@ namespace MagicCave.Prototype
         public GamePanel Panel { get; private set; }
         public bool customSeed;
         public string customSeedText = "12345";
-        [Min(0)] public float cameraKeyboardRotationSpeed = 90f;
-        [Min(0)] public float cameraDragSensitivity = 0.25f;
         Camera gameCamera;
         Font interfaceFont;
         string message = "", error = "";
@@ -94,21 +92,20 @@ namespace MagicCave.Prototype
                     if (enemyWait <= 0) { Combat.ResolveEnemyTurn(); ProcessBattle(); }
                 }
             }
-            if (Run == null || ScreenMode != GameScreen.Explore) { cameraDragging = false; return; }
+            if (Run == null || ScreenMode != GameScreen.Explore) return;
             if (keyboard != null && Panel == GamePanel.None)
             {
                 if (keyboard.bKey.wasPressedThisFrame) { Panel = GamePanel.Inventory; CancelRoute(); }
                 else if (keyboard.tabKey.wasPressedThisFrame) { Panel = GamePanel.Deck; CancelRoute(); }
             }
-            if (Panel != GamePanel.None) { cameraDragging = false; return; }
-            bool rotatingCamera = ReadCameraRotation(keyboard, Mouse.current);
+            if (Panel != GamePanel.None) return;
             hover = PointerTarget(); highlighted = NearbyTarget();
             if (keyboard != null && keyboard.eKey.wasPressedThisFrame && highlighted.kind != TargetKind.None)
             {
                 CancelRoute(); Interact(highlighted); return;
             }
             var mouse = Mouse.current;
-            if (mouse != null && !rotatingCamera && !PointerOverHud())
+            if (mouse != null && !PointerOverHud())
             {
                 if (mouse.leftButton.wasPressedThisFrame)
                 {
@@ -134,8 +131,7 @@ namespace MagicCave.Prototype
             }
             if (input.sqrMagnitude > 0)
             {
-                var direction = Quaternion.Euler(0, Run.cameraYaw, 0) * new Vector3(input.x, 0, input.y).normalized;
-                CancelRoute(); Move(new Vector2(direction.x, direction.z) * (3f * Mathf.Min(Time.deltaTime, 0.1f)));
+                CancelRoute(); Move(input.normalized * (3f * Mathf.Min(Time.deltaTime, 0.1f)));
             }
             else if (route.Count > 0)
             {
@@ -251,7 +247,6 @@ namespace MagicCave.Prototype
         {
             Store.DiscardCheckpoint(); Run = null; ScreenMode = GameScreen.Home;
             Run = MapGenerator.NewRun(seed); Combat = null; Panel = GamePanel.None;
-            cameraDragging = false;
             ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
         }
         void RequestNewRun()
@@ -263,7 +258,6 @@ namespace MagicCave.Prototype
         }
         public void ContinueRun()
         {
-            cameraDragging = false;
             Panel = GamePanel.None;
             if (Store.Session.pending != null) { Run = Store.Session.pending.run; ScreenMode = GameScreen.Settlement; return; }
             Run = Store.Continue(); ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);

@@ -106,7 +106,7 @@ namespace MagicCave.Prototype
         public string id;
         public int seed, mapIndex, health = 60, level = 1, experience, totalExperience;
         public int nextEntityId = 1, nextItemId = 1, nextAcquisitionOrder = 1;
-        public float x, y, cameraYaw;
+        public float x, y;
         public bool bossDefeated;
         public RandomStream mapRandom, battleRandom, cardRandom;
         public List<MapData> maps = new List<MapData>();

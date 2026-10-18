@@ -189,7 +189,6 @@ namespace MagicCave.Prototype
             bool legacyBossDoor = allowLegacyPosition && run.mapIndex == 4 && run.bossDefeated &&
                 run.CellX == 6 && run.CellY == 10 && run.Map.At(6, 10) == Tile.Return;
             if (float.IsNaN(run.x) || float.IsNaN(run.y) || float.IsInfinity(run.x) || float.IsInfinity(run.y) ||
-                float.IsNaN(run.cameraYaw) || float.IsInfinity(run.cameraYaw) ||
                 (!run.Map.Walkable(run.CellX, run.CellY) && !legacyBossDoor) ||
                 (!allowLegacyPosition && !run.Map.CanStand(run.x, run.y))) throw new InvalidDataException("玩家位置无效。");
         }

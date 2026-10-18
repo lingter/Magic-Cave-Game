@@ -160,27 +160,25 @@ public class PrototypePlayTests
         Assert.That(map.Known(door.x, door.y), Is.True);
     }
     [UnityTest]
-    public IEnumerator KeyboardCameraRotationNeedsShiftAndStopsOnReleaseOrPause()
+    public IEnumerator FormerRotationShortcutsKeepCameraAndExplorationFixed()
     {
         game.StartNewRun(12345); yield return null;
         var fog = (bool[])game.Run.Map.revealed.Clone(); var position = new Vector2(game.Run.x, game.Run.y);
-        driver.keyState = new KeyboardState(Key.R); yield return new WaitForSeconds(0.1f);
-        Assert.That(game.Run.cameraYaw, Is.Zero);
-        driver.keyState = new KeyboardState(Key.LeftShift, Key.R); yield return new WaitForSeconds(0.15f);
-        Assert.That(game.Run.cameraYaw, Is.GreaterThan(5)); float yaw = game.Run.cameraYaw;
-        driver.keyState = new KeyboardState(); yield return new WaitForSeconds(0.1f);
-        Assert.That(game.Run.cameraYaw, Is.EqualTo(yaw));
-        driver.keyState = new KeyboardState(Key.RightShift, Key.T); yield return new WaitForSeconds(0.1f);
-        Assert.That(Mathf.DeltaAngle(yaw, game.Run.cameraYaw), Is.LessThan(-3)); yaw = game.Run.cameraYaw;
-        driver.keyState = new KeyboardState(Key.LeftShift, Key.R, Key.T); yield return new WaitForSeconds(0.1f);
-        Assert.That(game.Run.cameraYaw, Is.EqualTo(yaw));
+        var rotation = Quaternion.Euler(50, 0, 0);
+        foreach (var keys in new[] { new KeyboardState(Key.R), new KeyboardState(Key.LeftShift, Key.R),
+            new KeyboardState(Key.RightShift, Key.T), new KeyboardState(Key.LeftShift, Key.R, Key.T) })
+        {
+            driver.keyState = keys; yield return new WaitForSeconds(0.1f);
+            Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
+        }
         Assert.That(game.Run.Map.revealed, Is.EqualTo(fog)); Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(position));
         driver.keyState = new KeyboardState(Key.Escape); yield return null; yield return null;
         driver.keyState = new KeyboardState(Key.LeftShift, Key.R); yield return new WaitForSeconds(0.1f);
-        Assert.That(game.Panel, Is.EqualTo(GamePanel.Pause)); Assert.That(game.Run.cameraYaw, Is.EqualTo(yaw));
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.Pause));
+        Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
     }
     [UnityTest]
-    public IEnumerator MiddleDragKeepsPitchDistanceAndScreenMovementAndRestoresSavedYaw()
+    public IEnumerator MiddleDragAndLegacySaveKeepFixedCameraAndScreenMovement()
     {
         game.StartNewRun(12345); game.Run.mapIndex = 4; game.Run.x = 6; game.Run.y = 6;
         var rebuild = typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -190,32 +188,39 @@ public class PrototypePlayTests
         yield return null; yield return null;
         driver.mouseState.delta = new Vector2(20, 800); yield return null; yield return null;
         driver.mouseState.delta = Vector2.zero; yield return null;
-        Assert.That(game.Run.cameraYaw, Is.GreaterThan(0));
-        Assert.That(Camera.main.transform.eulerAngles.x, Is.EqualTo(50).Within(0.01));
+        var rotation = Quaternion.Euler(50, 0, 0);
+        Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
         float half = (game.Run.Map.size - 1) / 2f;
         var focus = new Vector3(game.Run.x - half, 0.52f, game.Run.y - half);
         Assert.That(Vector3.Distance(Camera.main.transform.position, focus), Is.EqualTo(10).Within(0.01));
         Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(position));
         foreach (var label in game.GetComponentsInChildren<TextMesh>(true))
             Assert.That(Quaternion.Angle(label.transform.rotation, Camera.main.transform.rotation), Is.LessThan(0.01));
-        float yaw = game.Run.cameraYaw; driver.mouseState.buttons = 0; driver.mouseState.delta = new Vector2(90, 0);
-        yield return null; yield return null; Assert.That(game.Run.cameraYaw, Is.EqualTo(yaw));
+        driver.mouseState.buttons = 0; driver.mouseState.delta = new Vector2(90, 0);
+        yield return null; yield return null;
+        Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
         driver.mouseState.delta = Vector2.zero;
-        game.Run.cameraYaw = 90; rebuild.Invoke(game, new object[] { true }); yield return null;
         driver.keyState = new KeyboardState(Key.W); yield return new WaitForSeconds(0.15f);
         driver.keyState = new KeyboardState(); yield return null;
-        Assert.That(game.Run.x, Is.GreaterThan(position.x + 0.1f)); Assert.That(game.Run.y, Is.EqualTo(position.y).Within(0.01));
+        Assert.That(game.Run.y, Is.GreaterThan(position.y + 0.1f)); Assert.That(game.Run.x, Is.EqualTo(position.x).Within(0.01));
         var point = Camera.main.WorldToScreenPoint(new Vector3(6 - half, 0, 7 - half));
         float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
         yield return Click((point.x - (Screen.width - 1280 * scale) / 2) / scale, (Screen.height - point.y - (Screen.height - 720 * scale) / 2) / scale);
         yield return new WaitForSeconds(0.7f);
         Assert.That(game.Run.CellX, Is.EqualTo(6)); Assert.That(game.Run.CellY, Is.EqualTo(7));
         game.Store.SaveCheckpoint(game.Run); float savedX = game.Run.x;
+        // Older saves may contain a rotated camera; the removed field must be ignored.
+        string sessionPath = Path.Combine(folder, "session.json");
+        string legacyJson = File.ReadAllText(sessionPath).Replace("\"checkpoint\": {", "\"checkpoint\": {\"cameraYaw\": 90,");
+        Assert.That(legacyJson, Does.Contain("\"cameraYaw\": 90"));
+        File.WriteAllText(sessionPath, legacyJson);
         var persisted = new PrototypeStore(folder);
         typeof(PrototypeGame).GetProperty("Store").GetSetMethod(true).Invoke(game, new object[] { persisted });
-        game.Run.cameraYaw = 0; game.ContinueRun(); yield return null;
-        Assert.That(game.Run.cameraYaw, Is.EqualTo(90)); Assert.That(game.Run.x, Is.EqualTo(savedX));
-        game.StartNewRun(12345); yield return null; Assert.That(game.Run.cameraYaw, Is.Zero);
+        game.ContinueRun(); yield return null;
+        Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
+        Assert.That(game.Run.x, Is.EqualTo(savedX)); Assert.That(game.Run.CellY, Is.EqualTo(7));
+        game.StartNewRun(12345); yield return null;
+        Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
     }
     [UnityTest]
     public IEnumerator BossVictoryFromReturnDoorSiteAllowsMovementSaveAndWinningSettlement()
