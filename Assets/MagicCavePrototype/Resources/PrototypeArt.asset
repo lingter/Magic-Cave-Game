@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: becaa3d324b91cf4e8d03b837b698b76, type: 3}
+  m_Name: PrototypeArt
+  m_EditorClassIdentifier: MagicCave.Prototype::MagicCave.Prototype.PrototypeArtSet
+  floors:
+  - {fileID: 21300000, guid: 81d4b6ddca651be49bedde8b39831755, type: 3}
+  - {fileID: 21300000, guid: e51c1027c2120ed4abede50278c41df2, type: 3}
+  - {fileID: 21300000, guid: 15ccf7e791bfc854697f383237b76e83, type: 3}
+  walls:
+  - {fileID: 21300000, guid: 6cb9622d8bbca5648b27422e71cbd381, type: 3}
+  - {fileID: 21300000, guid: ec4d0017cd5e3eb43af8ad247210d6f2, type: 3}
+  - {fileID: 21300000, guid: 20a7a51907a50304a965c0c5fd6f1b95, type: 3}
+  - {fileID: 21300000, guid: 163f74a3d00e1204fa2c6196567a47d5, type: 3}
+  - {fileID: 21300000, guid: 8c0ed7299d242b94a8f5c48e81d7d7e2, type: 3}
+  - {fileID: 21300000, guid: 54a98e7915566c644b5921386bac2e32, type: 3}
+  - {fileID: 21300000, guid: dd5f597912a785c449322f5c18419ca5, type: 3}
+  - {fileID: 21300000, guid: a1694dc9745ec39448e7cefb9cfb993d, type: 3}
+  - {fileID: 21300000, guid: 95c3ef12009244740926c1c413931dbf, type: 3}
+  - {fileID: 21300000, guid: fd353b9731470bd45b22be46d4276b19, type: 3}
+  - {fileID: 21300000, guid: 4ee4d11e6adc66045ba7250af139fb6e, type: 3}
+  - {fileID: 21300000, guid: df3c4c786b4b07d4e8108baf3dc9f10f, type: 3}
+  - {fileID: 21300000, guid: 94947ba28fd789941ae761fdc1cbf731, type: 3}
+  - {fileID: 21300000, guid: 9d78ece8df0a17443b05fc7d2056dad8, type: 3}
+  playerDown: {fileID: 21300000, guid: 766f08180fc438f41829d2ff8ab96743, type: 3}
+  playerUp: {fileID: 21300000, guid: 62da1da8fb7200b49ba4135add10bcff, type: 3}
+  playerSide: {fileID: 21300000, guid: db5d24b283c447143aa102f3b0da9ea2, type: 3}
+  square: {fileID: 21300000, guid: 88a7f13e64745394096655fb4072acde, type: 3}
+  stairs: {fileID: 21300000, guid: 7754d25eed59dc74e9dd1962849b08b1, type: 3}
+  enemies:
+  - {fileID: 21300000, guid: 7e1054607adcb2b4981fd0c47196649f, type: 3}
+  - {fileID: 21300000, guid: 2cd45813b73d20543bc24c3794e2314d, type: 3}
+  - {fileID: 21300000, guid: be086e7712e332d4281cc9fbf1b48e61, type: 3}
+  loot:
+  - {fileID: 21300000, guid: 0466b34ef7a08c44e8f2eb0ed372128a, type: 3}
+  - {fileID: 21300000, guid: 0466b34ef7a08c44e8f2eb0ed372128a, type: 3}
+  - {fileID: 21300000, guid: d5c054e3e75dbd240a985e5696a0c3e7, type: 3}
+  - {fileID: 21300000, guid: 6f90096581920e3448e3eb7d6bcacccb, type: 3}
+  spriteMaterial: {fileID: 2100000, guid: 7915ceb4fae27264e8cf6386e89aad17, type: 2}

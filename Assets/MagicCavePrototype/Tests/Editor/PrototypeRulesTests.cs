@@ -65,6 +65,8 @@ public class PrototypeRulesTests
         for (int s = 0; s < 20; s++) for (int i = 0; i < (s == 0 ? 19 : 20); i++)
             run.inventory[s].units.Add(new ItemUnit { id = run.nextItemId++, kind = s == 0 ? ItemKind.Ore : ItemKind.Crystal, acquiredTicks = 10, acquisitionOrder = run.nextAcquisitionOrder++ });
         var loot = MapGenerator.AddLoot(run, run.Map, new Vector2Int(run.CellX, run.CellY), ItemKind.Ore, 3);
+        // This inventory fixture places a loose pile at the player's feet, rather than spawning a solid chest there.
+        loot.loose = true;
         Assert.That(Inventory.Pickup(run, loot), Is.EqualTo(1)); Assert.That(loot.units.Count, Is.EqualTo(2));
         var first = run.inventory[0].units[0]; long ticks = first.acquiredTicks; int order = first.acquisitionOrder;
         var dropped = Inventory.Drop(run, 0, 1); Assert.That(Inventory.Pickup(run, dropped), Is.EqualTo(1));

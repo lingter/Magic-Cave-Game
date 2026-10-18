@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Passed" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-18 05:42:30Z" end-time="2026-10-18 05:42:41Z" duration="10.777953">
+  <test-suite type="TestSuite" id="1021" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="13" result="Passed" start-time="2026-10-18 05:42:30Z" end-time="2026-10-18 05:42:41Z" duration="10.777953" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1006" name="MagicCave.ArtValidation.PlayTests.dll" fullname="E:/UnityProject/Magic Cave Game/Library/ScriptAssemblies/MagicCave.ArtValidation.PlayTests.dll" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-18 05:42:30Z" end-time="2026-10-18 05:42:41Z" duration="10.770396" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="36424" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestFixture" id="1001" name="ArtValidationPlayTests" fullname="ArtValidationPlayTests" classname="ArtValidationPlayTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-18 05:42:30Z" end-time="2026-10-18 05:42:41Z" duration="10.767477" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1004" name="ArrowKeysStopVisiblePlayerBeforePropsFromAllEightDirections" fullname="ArtValidationPlayTests.ArrowKeysStopVisiblePlayerBeforePropsFromAllEightDirections" methodname="ArrowKeysStopVisiblePlayerBeforePropsFromAllEightDirections" classname="ArtValidationPlayTests" runstate="Runnable" seed="58430773" result="Passed" start-time="2026-10-18 05:42:30Z" end-time="2026-10-18 05:42:34Z" duration="4.568068" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1002" name="FixedLayoutCameraAndDisplayModesShareTheSameCollision" fullname="ArtValidationPlayTests.FixedLayoutCameraAndDisplayModesShareTheSameCollision" methodname="FixedLayoutCameraAndDisplayModesShareTheSameCollision" classname="ArtValidationPlayTests" runstate="Runnable" seed="1990390395" result="Passed" start-time="2026-10-18 05:42:34Z" end-time="2026-10-18 05:42:35Z" duration="0.329531" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1005" name="InteractionsResetAndScreenshotsWorkInTheAuthoredScene" fullname="ArtValidationPlayTests.InteractionsResetAndScreenshotsWorkInTheAuthoredScene" methodname="InteractionsResetAndScreenshotsWorkInTheAuthoredScene" classname="ArtValidationPlayTests" runstate="Runnable" seed="468752087" result="Passed" start-time="2026-10-18 05:42:35Z" end-time="2026-10-18 05:42:36Z" duration="0.701034" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1003" name="KeyboardCollisionAndNavigationReachTheFixedExit" fullname="ArtValidationPlayTests.KeyboardCollisionAndNavigationReachTheFixedExit" methodname="KeyboardCollisionAndNavigationReachTheFixedExit" classname="ArtValidationPlayTests" runstate="Runnable" seed="1833280219" result="Passed" start-time="2026-10-18 05:42:36Z" end-time="2026-10-18 05:42:41Z" duration="5.158828" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[<b><color=#2EA3FF>MCP-FOR-UNITY</color></b>: [TestRunnerNoThrottle] Restored Interaction Mode after test run.
+Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

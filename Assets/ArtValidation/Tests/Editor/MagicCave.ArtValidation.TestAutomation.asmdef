@@ -1,0 +1,5 @@
+{
+  "name": "MagicCave.ArtValidation.TestAutomation",
+  "references": ["UnityEditor.TestRunner"],
+  "includePlatforms": ["Editor"]
+}

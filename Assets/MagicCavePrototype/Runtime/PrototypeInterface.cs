@@ -193,6 +193,13 @@ namespace MagicCave.Prototype
             Label(new Rect(rectangle.xMax - 35, rectangle.y + 10, 26, 30), Rules.Costs[(int)card].ToString(), buttonStyle, Cyan);
             Label(new Rect(rectangle.x + 10, rectangle.y + 63, rectangle.width - 20, rectangle.height - 72), Rules.Effects[(int)card], smallStyle);
         }
+        void DrawArt(Rect rectangle, Sprite sprite)
+        {
+            if (sprite == null) return;
+            var rect = sprite.rect;
+            GUI.DrawTextureWithTexCoords(rectangle, sprite.texture,
+                new Rect(rect.x / sprite.texture.width, rect.y / sprite.texture.height, rect.width / sprite.texture.width, rect.height / sprite.texture.height));
+        }
         void DrawBattle()
         {
             if (Combat == null) return;
@@ -200,9 +207,11 @@ namespace MagicCave.Prototype
             Button(new Rect(1110, 23, 130, 38), "暂停 [Esc]", () => Panel = GamePanel.Pause);
             Box(new Rect(105, 120, 415, 218)); Box(new Rect(755, 120, 415, 218));
             Label(new Rect(130, 143, 360, 42), "探索者", headingStyle, Cyan);
+            DrawArt(new Rect(420, 143, 64, 64), artSet != null ? artSet.playerDown : null);
             Bar(new Rect(130, 206, 362, 30), Run.health / 60f, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / 60");
             Label(new Rect(130, 261, 360, 35), "格挡 " + Combat.playerBlock + "     战意 +" + Combat.spirit);
             Label(new Rect(781, 143, 360, 42), Rules.EnemyNames[(int)Combat.enemy.kind], headingStyle, new Color(1f, 0.53f, 0.46f));
+            DrawArt(new Rect(1080, 143, 64, 64), artSet != null ? artSet.enemies[(int)Combat.enemy.kind] : null);
             Bar(new Rect(782, 206, 362, 30), Combat.enemyHealth / (float)Rules.EnemyHealth[(int)Combat.enemy.kind], new Color(0.68f, 0.25f, 0.30f), "生命 " + Combat.enemyHealth + " / " + Rules.EnemyHealth[(int)Combat.enemy.kind]);
             Label(new Rect(782, 261, 360, 35), "格挡 " + Combat.enemyBlock + "     意图：" + Combat.Intent, textStyle, Gold);
             Label(new Rect(538, 165, 205, 92), "能量\n" + Combat.energy + " / 3", buttonStyle, Cyan);

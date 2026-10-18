@@ -1,0 +1,1 @@
+PASS: fixed 10x10 layout; 100 floors; enclosed border; connected walkable cells; all props on floor; one-unit point-filtered sprites; orthographic fixed camera; art and whitebox share collision data.

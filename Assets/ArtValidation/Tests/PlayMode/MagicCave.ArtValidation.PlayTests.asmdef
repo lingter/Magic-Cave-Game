@@ -1,0 +1,5 @@
+{
+  "name": "MagicCave.ArtValidation.PlayTests",
+  "references": ["MagicCave.ArtValidation", "Unity.InputSystem"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

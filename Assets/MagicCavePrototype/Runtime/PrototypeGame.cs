@@ -12,9 +12,6 @@ namespace MagicCave.Prototype
 
     public sealed partial class PrototypeGame : MonoBehaviour
     {
-        public Material surfaceTemplate;
-        public Material unlitTemplate;
-        public Material transparentTemplate;
         public string storageOverride;
         public RunData Run { get; private set; }
         public Battle Combat { get; private set; }
@@ -47,6 +44,7 @@ namespace MagicCave.Prototype
         {
             Application.targetFrameRate = 60;
             gameCamera = Camera.main;
+            if (artSet == null) artSet = Resources.Load<PrototypeArtSet>("PrototypeArt");
             interfaceFont = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Arial" }, 18);
             try
             {
@@ -148,6 +146,7 @@ namespace MagicCave.Prototype
         }
         void Move(Vector2 delta)
         {
+            var before = new Vector2(Run.x, Run.y);
             int oldX = Run.CellX, oldY = Run.CellY;
             int steps = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.08f));
             delta /= steps;
@@ -157,6 +156,8 @@ namespace MagicCave.Prototype
                 if (Fits(Run.x, Run.y + delta.y)) Run.y += delta.y;
             }
             if (oldX != Run.CellX || oldY != Run.CellY) { MapGenerator.Reveal(Run); RefreshVisibility(); }
+            var moved = new Vector2(Run.x, Run.y) - before;
+            if (moved.sqrMagnitude > 0.000001f) facing = moved.normalized;
         }
         bool Fits(float x, float y)
         {
@@ -176,11 +177,16 @@ namespace MagicCave.Prototype
         Target PointerTarget()
         {
             if (gameCamera == null || Mouse.current == null || PointerOverHud()) return default;
-            Ray ray = gameCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Physics.Raycast(ray, out RaycastHit hit, 100f, ~0, QueryTriggerInteraction.Collide)) return default;
-            var target = hit.collider.GetComponent<PrototypeTarget>();
-            if (target == null || !Run.Map.Known(target.x, target.y)) return default;
-            return new Target { kind = target.kind, id = target.id, x = target.x, y = target.y };
+            var world = gameCamera.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            float half = (Run.Map.size - 1) * 0.5f;
+            int x = Mathf.FloorToInt(world.x + half + 0.5f), y = Mathf.FloorToInt(world.y + half + 0.5f);
+            if (!Run.Map.Known(x, y)) return default;
+            foreach (var enemy in Run.Map.enemies)
+                if (!enemy.defeated && enemy.x == x && enemy.y == y) return new Target { kind = TargetKind.Enemy, x = x, y = y, id = enemy.id };
+            foreach (var loot in Run.Map.loot)
+                if (loot.units.Count > 0 && loot.x == x && loot.y == y) return new Target { kind = TargetKind.Loot, x = x, y = y, id = loot.id };
+            Tile tile = Run.Map.At(x, y);
+            return new Target { kind = tile == Tile.Wall ? TargetKind.Wall : tile == Tile.Ground ? TargetKind.Ground : TargetKind.Door, x = x, y = y };
         }
         Target NearbyTarget()
         {
@@ -247,6 +253,8 @@ namespace MagicCave.Prototype
         {
             Store.DiscardCheckpoint(); Run = null; ScreenMode = GameScreen.Home;
             Run = MapGenerator.NewRun(seed); Combat = null; Panel = GamePanel.None;
+            facing = Vector2.down;
+            message = ""; messageUntil = 0; hover = default; highlighted = default;
             ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
         }
         void RequestNewRun()

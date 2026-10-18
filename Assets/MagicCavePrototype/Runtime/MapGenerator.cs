@@ -215,13 +215,20 @@ namespace MagicCave.Prototype
         public static bool EnsureSafePlayerPosition(RunData run)
         {
             if (run.Map.CanStand(run.x, run.y)) return false;
-            var candidates = new List<Vector2Int> { new Vector2Int(run.CellX, run.CellY) };
-            foreach (var direction in Directions) candidates.Add(new Vector2Int(run.CellX, run.CellY) + direction);
-            candidates.Sort((a, b) => ((Vector2)a - new Vector2(run.x, run.y)).sqrMagnitude.CompareTo(((Vector2)b - new Vector2(run.x, run.y)).sqrMagnitude));
-            foreach (var candidate in candidates)
+            // Older saves used a smaller footprint and allowed standing on item containers.
+            // Search terrain breadth-first so a chain of newly solid containers cannot strand a save.
+            var candidates = new Queue<Vector2Int>(); var visited = new HashSet<Vector2Int>();
+            var origin = new Vector2Int(run.CellX, run.CellY); candidates.Enqueue(origin); visited.Add(origin);
+            while (candidates.Count > 0)
             {
-                if (!run.Map.CanStand(candidate.x, candidate.y)) continue;
-                run.x = candidate.x; run.y = candidate.y; Reveal(run); return true;
+                var candidate = candidates.Dequeue();
+                if (run.Map.CanStand(candidate.x, candidate.y))
+                { run.x = candidate.x; run.y = candidate.y; Reveal(run); return true; }
+                foreach (var direction in Directions)
+                {
+                    var next = candidate + direction;
+                    if (run.Map.Walkable(next.x, next.y) && visited.Add(next)) candidates.Enqueue(next);
+                }
             }
             throw new InvalidOperationException("玩家附近没有可站立的位置。");
         }

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace MagicCave.Prototype
 {
@@ -9,195 +8,193 @@ namespace MagicCave.Prototype
         sealed class TileVisual
         {
             public int x, y;
-            public Renderer floor, wall;
+            public SpriteRenderer floor, wall, fog;
             public GameObject feature;
-            public bool doorHint;
         }
-        sealed class ObjectVisual
-        {
-            public GameObject root;
-            public int x, y;
-        }
+        sealed class ObjectVisual { public GameObject root; public int x, y; }
+
+        public PrototypeArtSet artSet;
         GameObject worldRoot;
         Transform actor, hoverMarker;
-        Vector3 cameraVelocity;
-        Vector3 cameraFocus;
-        readonly List<Transform> worldLabels = new List<Transform>();
+        SpriteRenderer actorVisual;
+        Vector3 cameraVelocity, cameraFocus;
+        Vector2 facing = Vector2.down;
         readonly List<TileVisual> tiles = new List<TileVisual>();
         readonly List<ObjectVisual> objects = new List<ObjectVisual>();
-        readonly Dictionary<string, Material> materials = new Dictionary<string, Material>();
-        Material floorMaterial, fogMaterial, wallMaterial, fadedWall, hintWallMaterial, fadedHintWall;
+        PixelWallTiles wallTiles;
+        Texture2D markerTexture;
+        Sprite markerSprite;
+        static readonly Color FogColor = new Color(0.018f, 0.025f, 0.04f);
+        static readonly Color DoorHintColor = new Color(1, 0.77f, 0.25f);
 
-        Material Material(string key, Color color, bool unlit = false, bool faded = false)
+        public static int PixelScale => Mathf.Max(1, Mathf.FloorToInt(Screen.height / 180f));
+        public static int SpriteOrder(float y) => 10000 - Mathf.RoundToInt(y * 100);
+        public static void ConfigurePixelCamera(Camera camera)
         {
-            if (materials.TryGetValue(key, out var existing)) return existing;
-            var template = faded ? transparentTemplate : unlit ? unlitTemplate : surfaceTemplate;
-            var material = template != null ? new Material(template) : new Material(Shader.Find(unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit"));
-            material.name = "Prototype " + key;
-            material.SetColor("_BaseColor", color);
-            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.15f);
-            if (faded)
-            {
-                material.SetFloat("_Surface", 1); material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-                material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha); material.SetInt("_ZWrite", 0);
-                material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); material.renderQueue = 3000;
-            }
-            materials.Add(key, material); return material;
+            camera.orthographic = true;
+            camera.orthographicSize = Screen.height / (32f * PixelScale);
+            camera.nearClipPlane = 0.1f; camera.farClipPlane = 40;
+            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = FogColor;
+            camera.allowHDR = false; camera.allowMSAA = false;
+            camera.transform.rotation = Quaternion.identity;
         }
-        Vector3 World(float x, float y, float height = 0)
+
+        Vector3 World(float x, float y, float depth = 0)
         {
             float half = (Run.Map.size - 1) * 0.5f;
-            return new Vector3(x - half, height, y - half);
+            return new Vector3(x - half, y - half, depth);
         }
-        GameObject Piece(string name, Transform parent, PrimitiveType primitive, Vector3 position, Vector3 scale, Material material, bool collider = false)
+
+        static Vector3 PixelPosition(Vector3 position)
         {
-            var piece = GameObject.CreatePrimitive(primitive);
-            piece.name = name; piece.transform.SetParent(parent, false);
-            piece.transform.localPosition = position; piece.transform.localScale = scale;
-            piece.GetComponent<Renderer>().sharedMaterial = material;
-            if (!collider) Destroy(piece.GetComponent<Collider>());
-            return piece;
+            float pixels = 16 * PixelScale;
+            return new Vector3(Mathf.Round(position.x * pixels) / pixels, Mathf.Round(position.y * pixels) / pixels, position.z);
         }
-        void TargetTag(GameObject piece, TargetKind kind, int x, int y, int id = 0)
+
+        SpriteRenderer Pixel(string name, Transform parent, Sprite sprite, Vector3 position, int order, Color? tint = null)
+        {
+            var node = new GameObject(name); node.transform.SetParent(parent, false); node.transform.localPosition = position;
+            var renderer = node.AddComponent<SpriteRenderer>(); renderer.sprite = sprite;
+            renderer.sharedMaterial = artSet.spriteMaterial; renderer.sortingOrder = order;
+            renderer.color = tint ?? Color.white;
+            return renderer;
+        }
+
+        void TargetTag(GameObject piece, TargetKind kind, int x, int y, int id = 0, bool trigger = false)
         {
             var tag = piece.AddComponent<PrototypeTarget>(); tag.kind = kind; tag.x = x; tag.y = y; tag.id = id;
+            var collider = piece.AddComponent<BoxCollider2D>(); collider.size = Vector2.one; collider.isTrigger = trigger;
         }
+
         void WorldLabel(Transform parent, string text, float height)
         {
             var label = new GameObject("Label"); label.transform.SetParent(parent, false);
             label.transform.localPosition = new Vector3(0, height, 0);
-            label.transform.rotation = gameCamera.transform.rotation;
-            worldLabels.Add(label.transform);
+            var plate = Pixel("Label background", label.transform, artSet.square, Vector3.zero, 30000, new Color(0.035f, 0.05f, 0.08f, 0.92f));
+            plate.transform.localScale = new Vector3(Mathf.Max(0.8f, text.Length * 0.24f), 0.32f, 1);
             var mesh = label.AddComponent<TextMesh>(); mesh.font = interfaceFont;
-            mesh.fontSize = 28; mesh.characterSize = 0.042f; mesh.anchor = TextAnchor.MiddleCenter;
-            mesh.text = text; mesh.color = new Color(0.95f, 0.96f, 1f);
-            var renderer = label.GetComponent<MeshRenderer>(); renderer.sharedMaterial = interfaceFont.material;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            mesh.fontSize = 28; mesh.characterSize = 0.085f; mesh.anchor = TextAnchor.MiddleCenter;
+            mesh.text = text; mesh.color = Color.white;
+            var renderer = label.GetComponent<MeshRenderer>(); renderer.sharedMaterial = interfaceFont.material; renderer.sortingOrder = 30001;
         }
+
+        void EnsureArt()
+        {
+            if (artSet == null) artSet = Resources.Load<PrototypeArtSet>("PrototypeArt");
+            if (artSet == null) throw new System.InvalidOperationException("缺少原型素材配置，请使用 Magic Cave → Create Playable Prototype Scene。");
+            artSet.Validate();
+            if (wallTiles == null) wallTiles = new PixelWallTiles(artSet);
+            if (markerSprite == null)
+            {
+                markerTexture = new Texture2D(16, 16, TextureFormat.RGBA32, false) { name = "Selection frame", filterMode = FilterMode.Point };
+                var pixels = new Color32[256];
+                for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++)
+                    if (x == 0 || x == 15 || y == 0 || y == 15) pixels[y * 16 + x] = new Color32(255, 190, 65, 255);
+                markerTexture.SetPixels32(pixels); markerTexture.Apply(false, true);
+                markerSprite = Sprite.Create(markerTexture, new Rect(0, 0, 16, 16), Vector2.one * 0.5f, 16);
+            }
+        }
+
         partial void BuildWorld(bool snap)
         {
+            EnsureArt(); ConfigurePixelCamera(gameCamera);
             if (worldRoot != null) { worldRoot.SetActive(false); Destroy(worldRoot); }
-            worldRoot = new GameObject("Magic Cave · Runtime Map"); worldRoot.transform.SetParent(transform, false);
-            tiles.Clear(); objects.Clear(); worldLabels.Clear();
-            floorMaterial = Material("ground", new Color(0.28f, 0.33f, 0.36f));
-            fogMaterial = Material("fog", new Color(0.018f, 0.025f, 0.04f), true);
-            wallMaterial = Material("wall", new Color(0.43f, 0.47f, 0.50f));
-            fadedWall = Material("faded wall", new Color(0.43f, 0.47f, 0.50f, 0.22f), false, true);
-            hintWallMaterial = Material("door hint wall", new Color(0.98f, 0.73f, 0.22f));
-            fadedHintWall = Material("faded door hint wall", new Color(0.98f, 0.73f, 0.22f, 0.22f), false, true);
-            var advance = Material("advance", new Color(0.14f, 0.92f, 0.78f), true);
-            var returning = Material("return", new Color(1f, 0.67f, 0.23f), true);
+            worldRoot = new GameObject("Magic Cave · Pixel Runtime Map"); worldRoot.transform.SetParent(transform, false);
+            tiles.Clear(); objects.Clear();
             for (int y = 0; y < Run.Map.size; y++) for (int x = 0; x < Run.Map.size; x++)
             {
                 Tile tile = Run.Map.At(x, y);
-                var floor = Piece("Cell " + x + "," + y, worldRoot.transform, PrimitiveType.Cube, World(x, y, -0.075f), new Vector3(0.97f, 0.15f, 0.97f), floorMaterial, true);
-                TargetTag(floor, tile == Tile.Wall ? TargetKind.Wall : tile == Tile.Ground ? TargetKind.Ground : TargetKind.Door, x, y);
-                var visual = new TileVisual { x = x, y = y, floor = floor.GetComponent<Renderer>() };
+                var floor = Pixel("Cell " + x + "," + y, worldRoot.transform, artSet.floors[(x * 17 + y * 31) % 3], World(x, y), -1000);
+                if (tile == Tile.Ground) TargetTag(floor.gameObject, TargetKind.Ground, x, y, trigger: true);
+                var visual = new TileVisual { x = x, y = y, floor = floor };
                 if (tile == Tile.Wall)
                 {
-                    var wall = Piece("Wall", worldRoot.transform, PrimitiveType.Cube, World(x, y, 0.53f), new Vector3(0.98f, 1.06f, 0.98f), wallMaterial, true);
-                    TargetTag(wall, TargetKind.Wall, x, y); visual.wall = wall.GetComponent<Renderer>(); visual.feature = wall;
+                    var wall = Pixel("Wall", worldRoot.transform, wallTiles.Get(Run.Map, x, y), World(x, y), SpriteOrder(y));
+                    TargetTag(wall.gameObject, TargetKind.Wall, x, y); visual.wall = wall; visual.feature = wall.gameObject;
                 }
                 else if (tile == Tile.Advance || tile == Tile.Return)
                 {
-                    var door = new GameObject(tile == Tile.Advance ? "前进门" : "返回门"); door.transform.SetParent(worldRoot.transform, false); door.transform.localPosition = World(x, y);
-                    var tint = tile == Tile.Advance ? advance : returning;
-                    Piece("Left pillar", door.transform, PrimitiveType.Cube, new Vector3(-0.32f, 0.47f, 0), new Vector3(0.10f, 0.94f, 0.14f), tint);
-                    Piece("Right pillar", door.transform, PrimitiveType.Cube, new Vector3(0.32f, 0.47f, 0), new Vector3(0.10f, 0.94f, 0.14f), tint);
-                    Piece("Lintel", door.transform, PrimitiveType.Cube, new Vector3(0, 0.91f, 0), new Vector3(0.74f, 0.10f, 0.14f), tint);
-                    var collision = door.AddComponent<BoxCollider>(); collision.center = new Vector3(0, 0.47f, 0); collision.size = new Vector3(0.8f, 0.94f, 0.35f);
-                    TargetTag(door, TargetKind.Door, x, y); WorldLabel(door.transform, door.name, 1.15f); visual.feature = door;
+                    var door = Pixel(tile == Tile.Advance ? "前进门" : "返回门", worldRoot.transform, artSet.stairs,
+                        World(x, y), -500, tile == Tile.Return ? DoorHintColor : new Color(0.55f, 1, 0.85f));
+                    TargetTag(door.gameObject, TargetKind.Door, x, y);
+                    WorldLabel(door.transform, door.name, 0.65f); visual.feature = door.gameObject;
                 }
+                visual.fog = Pixel("Fog " + x + "," + y, worldRoot.transform, artSet.square, World(x, y), 50000, FogColor);
                 tiles.Add(visual);
             }
             foreach (var enemy in Run.Map.enemies)
             {
                 if (enemy.defeated) continue;
-                Color color = enemy.kind == EnemyKind.Bat ? new Color(0.66f, 0.40f, 0.89f) : enemy.kind == EnemyKind.Beetle ? new Color(0.86f, 0.49f, 0.20f) : new Color(0.88f, 0.20f, 0.28f);
-                var root = new GameObject(Rules.EnemyNames[(int)enemy.kind]); root.transform.SetParent(worldRoot.transform, false); root.transform.localPosition = World(enemy.x, enemy.y);
-                bool boss = enemy.kind == EnemyKind.Boss;
-                var body = Piece("Body", root.transform, boss ? PrimitiveType.Capsule : PrimitiveType.Sphere, new Vector3(0, boss ? 0.7f : 0.36f, 0), boss ? new Vector3(0.75f, 0.70f, 0.75f) : new Vector3(0.65f, 0.48f, 0.60f), Material("enemy " + enemy.kind, color), true);
-                body.GetComponent<Collider>().isTrigger = false; TargetTag(body, TargetKind.Enemy, enemy.x, enemy.y, enemy.id);
-                if (enemy.kind == EnemyKind.Bat)
-                {
-                    Piece("Wing L", root.transform, PrimitiveType.Cube, new Vector3(-0.38f, 0.36f, 0), new Vector3(0.40f, 0.08f, 0.3f), Material("bat wings", new Color(0.35f, 0.21f, 0.53f)));
-                    Piece("Wing R", root.transform, PrimitiveType.Cube, new Vector3(0.38f, 0.36f, 0), new Vector3(0.40f, 0.08f, 0.3f), Material("bat wings", new Color(0.35f, 0.21f, 0.53f)));
-                }
-                WorldLabel(root.transform, root.name, boss ? 1.65f : 0.87f);
-                objects.Add(new ObjectVisual { root = root, x = enemy.x, y = enemy.y });
+                var visual = Pixel(Rules.EnemyNames[(int)enemy.kind], worldRoot.transform, artSet.enemies[(int)enemy.kind], World(enemy.x, enemy.y), SpriteOrder(enemy.y) + 1);
+                TargetTag(visual.gameObject, TargetKind.Enemy, enemy.x, enemy.y, enemy.id);
+                WorldLabel(visual.transform, visual.name, 0.65f);
+                objects.Add(new ObjectVisual { root = visual.gameObject, x = enemy.x, y = enemy.y });
             }
             foreach (var loot in Run.Map.loot)
             {
                 if (loot.units.Count == 0) continue;
                 ItemKind kind = loot.units[0].kind;
-                Color color = kind == ItemKind.Potion ? new Color(0.31f, 0.91f, 0.54f) : kind == ItemKind.Relic ? new Color(1f, 0.75f, 0.18f) : kind == ItemKind.Crystal ? new Color(0.30f, 0.75f, 1f) : new Color(0.67f, 0.69f, 0.72f);
-                var root = Piece("Item " + loot.id, worldRoot.transform, kind == ItemKind.Potion ? PrimitiveType.Cylinder : PrimitiveType.Cube,
-                    World(loot.x, loot.y, 0.19f), kind == ItemKind.Potion ? new Vector3(0.24f, 0.19f, 0.24f) : new Vector3(0.31f, 0.31f, 0.31f), Material("item " + kind, color), true);
-                root.GetComponent<Collider>().isTrigger = true; TargetTag(root, TargetKind.Loot, loot.x, loot.y, loot.id);
-                // A separate unscaled label keeps quantity text readable above tiny item meshes.
+                var tint = kind == ItemKind.Crystal ? new Color(0.5f, 0.85f, 1) : Color.white;
+                var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.loot[(int)kind], World(loot.x, loot.y),
+                    loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
+                TargetTag(visual.gameObject, TargetKind.Loot, loot.x, loot.y, loot.id, loot.loose);
+                if (loot.loose)
+                {
+                    // Dropped stacks lie flat and do not become a solid container under the player's feet.
+                    var image = Pixel("Loose item art", visual.transform, visual.sprite, Vector3.zero, -400, tint);
+                    image.transform.localScale = Vector3.one * 0.55f; visual.enabled = false;
+                }
                 var labelRoot = new GameObject("Item label"); labelRoot.transform.SetParent(worldRoot.transform, false); labelRoot.transform.localPosition = World(loot.x, loot.y);
-                WorldLabel(labelRoot.transform, Rules.ItemNames[(int)kind] + " ×" + loot.units.Count, 0.62f);
-                objects.Add(new ObjectVisual { root = root, x = loot.x, y = loot.y });
+                WorldLabel(labelRoot.transform, Rules.ItemNames[(int)kind] + " ×" + loot.units.Count, 0.65f);
+                objects.Add(new ObjectVisual { root = visual.gameObject, x = loot.x, y = loot.y });
                 objects.Add(new ObjectVisual { root = labelRoot, x = loot.x, y = loot.y });
             }
-            var actorRoot = new GameObject("玩家"); actorRoot.transform.SetParent(worldRoot.transform, false); actor = actorRoot.transform;
-            Piece("Explorer", actor, PrimitiveType.Capsule, new Vector3(0, 0.52f, 0), new Vector3(0.38f, 0.52f, 0.38f), Material("player", new Color(0.18f, 0.73f, 0.95f)));
-            Piece("Player mark", actor, PrimitiveType.Cylinder, new Vector3(0, 0.012f, 0), new Vector3(0.50f, 0.008f, 0.50f), Material("player mark", new Color(0.10f, 0.7f, 0.90f), true));
-            hoverMarker = Piece("Target mark", worldRoot.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(0.80f, 0.012f, 0.80f), Material("target", new Color(0.98f, 0.73f, 0.18f), true)).transform;
-            actor.position = World(Run.x, Run.y);
-            RefreshVisibility(); Physics.SyncTransforms();
-            if (snap)
-            {
-                cameraVelocity = Vector3.zero; cameraFocus = World(Run.x, Run.y, 0.52f);
-                gameCamera.transform.rotation = CameraRotation(); gameCamera.transform.position = CameraPosition();
-            }
+            actorVisual = Pixel("玩家", worldRoot.transform, artSet.playerDown, World(Run.x, Run.y), SpriteOrder(Run.y) + 2);
+            actor = actorVisual.transform;
+            actor.gameObject.AddComponent<BoxCollider2D>().size = Vector2.one * MapData.PlayerCollisionSize;
+            hoverMarker = Pixel("Target mark", worldRoot.transform, markerSprite, Vector3.zero, 40000).transform;
+            RefreshVisibility();
+            if (snap) { cameraVelocity = Vector3.zero; cameraFocus = World(Run.x, Run.y); }
+            gameCamera.transform.SetPositionAndRotation(PixelPosition(cameraFocus) + Vector3.back * 10, Quaternion.identity);
         }
+
         partial void RefreshVisibility()
         {
             if (Run == null || worldRoot == null) return;
             foreach (var visual in tiles)
             {
                 bool known = Run.Map.Known(visual.x, visual.y);
-                visual.doorHint = MapGenerator.IsDoorHintWall(Run.Map, visual.x, visual.y);
-                visual.floor.sharedMaterial = known ? floorMaterial : fogMaterial;
-                if (visual.wall != null) visual.wall.sharedMaterial = visual.doorHint ? hintWallMaterial : wallMaterial;
+                visual.fog.gameObject.SetActive(!known);
+                visual.floor.enabled = known && !(Run.Map.Border(visual.x, visual.y) && Run.Map.At(visual.x, visual.y) == Tile.Wall);
+                if (visual.wall != null) visual.wall.color = MapGenerator.IsDoorHintWall(Run.Map, visual.x, visual.y) ? DoorHintColor : Color.white;
                 if (visual.feature != null) visual.feature.SetActive(known);
             }
             foreach (var visual in objects) visual.root.SetActive(Run.Map.Known(visual.x, visual.y));
-            Physics.SyncTransforms();
         }
-        Quaternion CameraRotation() { return Quaternion.Euler(50, 0, 0); }
-        Vector3 CameraPosition()
-        {
-            return cameraFocus - CameraRotation() * Vector3.forward * 10f;
-        }
+
         partial void FollowWorld()
         {
             bool exploring = Run != null && ScreenMode == GameScreen.Explore;
             if (worldRoot != null && worldRoot.activeSelf != exploring) worldRoot.SetActive(exploring);
             if (!exploring || gameCamera == null || actor == null) return;
-            actor.position = World(Run.x, Run.y);
-            cameraFocus = Vector3.SmoothDamp(cameraFocus, World(Run.x, Run.y, 0.52f), ref cameraVelocity, 0.1f);
-            gameCamera.transform.rotation = CameraRotation();
-            gameCamera.transform.position = CameraPosition();
-            foreach (var label in worldLabels) label.rotation = gameCamera.transform.rotation;
+            ConfigurePixelCamera(gameCamera);
+            actor.position = PixelPosition(World(Run.x, Run.y));
+            actorVisual.sortingOrder = SpriteOrder(Run.y) + 2;
+            bool horizontal = Mathf.Abs(facing.x) > Mathf.Abs(facing.y);
+            actorVisual.sprite = horizontal ? artSet.playerSide : facing.y > 0 ? artSet.playerUp : artSet.playerDown;
+            actorVisual.flipX = horizontal && facing.x < 0;
+            cameraFocus = Vector3.SmoothDamp(cameraFocus, World(Run.x, Run.y), ref cameraVelocity, 0.1f);
+            gameCamera.transform.SetPositionAndRotation(PixelPosition(cameraFocus) + Vector3.back * 10, Quaternion.identity);
             var mark = hover.kind != TargetKind.None ? hover : highlighted;
             hoverMarker.gameObject.SetActive(Panel == GamePanel.None && mark.kind != TargetKind.None);
-            if (mark.kind != TargetKind.None) hoverMarker.position = World(mark.x, mark.y, 0.018f);
-            foreach (var visual in tiles) if (visual.wall != null) visual.wall.sharedMaterial = visual.doorHint ? hintWallMaterial : wallMaterial;
-            Vector3 aim = actor.position + Vector3.up * 0.52f;
-            foreach (var hit in Physics.RaycastAll(gameCamera.transform.position, (aim - gameCamera.transform.position).normalized, Vector3.Distance(aim, gameCamera.transform.position), ~0, QueryTriggerInteraction.Ignore))
-            {
-                var tag = hit.collider.GetComponent<PrototypeTarget>();
-                if (tag == null || tag.kind != TargetKind.Wall || !Run.Map.Known(tag.x, tag.y)) continue;
-                var renderer = hit.collider.GetComponent<Renderer>();
-                if (renderer != null) renderer.sharedMaterial = MapGenerator.IsDoorHintWall(Run.Map, tag.x, tag.y) ? fadedHintWall : fadedWall;
-            }
+            if (mark.kind != TargetKind.None) hoverMarker.position = World(mark.x, mark.y);
         }
+
         void OnDestroy()
         {
-            ReleaseInterfaceInput();
-            foreach (var material in materials.Values) if (material != null) Destroy(material);
+            ReleaseInterfaceInput(); wallTiles?.Dispose();
+            if (markerSprite != null) Destroy(markerSprite);
+            if (markerTexture != null) Destroy(markerTexture);
             if (interfaceFont != null) Destroy(interfaceFont);
         }
     }

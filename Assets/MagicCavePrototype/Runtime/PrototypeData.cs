@@ -61,6 +61,7 @@ namespace MagicCave.Prototype
     public sealed class GroundLoot
     {
         public int id, x, y;
+        public bool loose;
         public List<ItemUnit> units = new List<ItemUnit>();
     }
     [Serializable]
@@ -73,6 +74,7 @@ namespace MagicCave.Prototype
     [Serializable]
     public sealed class MapData
     {
+        public const float PlayerCollisionSize = 0.8f;
         public int number, size, spawnX, spawnY;
         public int[] cells;
         public bool[] revealed;
@@ -88,11 +90,12 @@ namespace MagicCave.Prototype
         {
             if (!Walkable(x, y)) return false;
             foreach (var enemy in enemies) if (!enemy.defeated && enemy.x == x && enemy.y == y) return false;
+            foreach (var item in loot) if (!item.loose && item.units.Count > 0 && item.x == x && item.y == y) return false;
             return true;
         }
         public bool CanStand(float x, float y)
         {
-            const float radius = 0.19f;
+            const float radius = PlayerCollisionSize * 0.5f;
             return CanTraverse(Mathf.FloorToInt(x - radius + 0.5f), Mathf.FloorToInt(y - radius + 0.5f)) &&
                 CanTraverse(Mathf.FloorToInt(x + radius + 0.5f), Mathf.FloorToInt(y - radius + 0.5f)) &&
                 CanTraverse(Mathf.FloorToInt(x - radius + 0.5f), Mathf.FloorToInt(y + radius + 0.5f)) &&

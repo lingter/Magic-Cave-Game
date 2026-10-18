@@ -40,7 +40,7 @@ namespace MagicCave.Prototype
             var slot = run.inventory[slotIndex];
             quantity = Math.Min(quantity, slot.units.Count);
             if (quantity <= 0) return null;
-            var loot = new GroundLoot { id = run.nextEntityId++, x = run.CellX, y = run.CellY };
+            var loot = new GroundLoot { id = run.nextEntityId++, x = run.CellX, y = run.CellY, loose = true };
             loot.units.AddRange(slot.units.Take(quantity)); slot.units.RemoveRange(0, quantity);
             run.Map.loot.Add(loot); return loot;
         }

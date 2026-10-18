@@ -1,5 +1,5 @@
 {
   "name": "MagicCave.Prototype.Editor",
-  "references": ["MagicCave.Prototype"],
+  "references": ["MagicCave.Prototype", "UnityEditor.TestRunner"],
   "includePlatforms": ["Editor"]
 }

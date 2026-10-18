@@ -33,6 +33,11 @@ public class PrototypePlayTests
     [UnitySetUp]
     public IEnumerator Setup()
     {
+        // Other fixtures load their own authored scenes; isolate this fixture's cameras and input.
+        var previousScene = SceneManager.GetActiveScene();
+        var testScene = SceneManager.CreateScene("Prototype Test " + Guid.NewGuid().ToString("N"));
+        SceneManager.SetActiveScene(testScene);
+        if (previousScene.IsValid() && previousScene.isLoaded) yield return SceneManager.UnloadSceneAsync(previousScene);
         folder = Path.Combine(Application.temporaryCachePath, "MagicCavePlayTests", Guid.NewGuid().ToString("N"));
         var camera = new GameObject("Test Camera").AddComponent<Camera>(); camera.tag = "MainCamera";
         game = new GameObject("Prototype Under Test").AddComponent<PrototypeGame>(); game.storageOverride = folder;
@@ -84,7 +89,7 @@ public class PrototypePlayTests
     {
         game.StartNewRun(12345); yield return null;
         int x = game.Run.CellX, y = game.Run.CellY;
-        var direction = MapGenerator.Directions.First(d => game.Run.Map.Walkable(x + d.x, y + d.y));
+        var direction = MapGenerator.Directions.First(d => game.Run.Map.CanTraverse(x + d.x, y + d.y));
         Key key = direction.x > 0 ? Key.D : direction.x < 0 ? Key.A : direction.y > 0 ? Key.W : Key.S;
         Vector2 before = new Vector2(game.Run.x, game.Run.y);
         driver.keyState = new KeyboardState(key); yield return new WaitForSeconds(0.15f);
@@ -103,18 +108,19 @@ public class PrototypePlayTests
         Assert.That(game.Run.Map.At(wallX, wallY), Is.EqualTo(Tile.Wall));
         driver.keyState = new KeyboardState(Key.A); yield return new WaitForSeconds(0.3f);
         driver.keyState = new KeyboardState(); yield return null;
-        Assert.That(game.Run.x, Is.GreaterThanOrEqualTo(1.68f), "Wall collision must stop the capsule before crossing into the wall cell");
+        Assert.That(game.Run.x, Is.GreaterThanOrEqualTo(1.89f), "The 0.8-unit player must stop before its artwork reaches the wall");
         float half = (game.Run.Map.size - 1) / 2f;
-        var point = Camera.main.WorldToScreenPoint(new Vector3(wallX - half, 0.53f, wallY - half));
-        Assert.That(Physics.Raycast(Camera.main.ScreenPointToRay(point), out RaycastHit hit), Is.True);
-        var tag = hit.collider.GetComponent<PrototypeTarget>();
+        var point = Camera.main.WorldToScreenPoint(new Vector3(wallX - half, wallY - half, 0));
+        var hit = Physics2D.OverlapPoint(new Vector2(wallX - half, wallY - half));
+        Assert.That(hit, Is.Not.Null);
+        var tag = hit.GetComponent<PrototypeTarget>();
         Assert.That(tag, Is.Not.Null); Assert.That(tag.kind, Is.EqualTo(TargetKind.Wall));
         Assert.That(tag.x, Is.EqualTo(wallX)); Assert.That(tag.y, Is.EqualTo(wallY));
         driver.mouseState = new MouseState { position = point, buttons = 2 };
         yield return null; yield return null;
         driver.mouseState = new MouseState { position = point }; yield return null;
         Assert.That(game.Run.Map.At(wallX, wallY), Is.EqualTo(Tile.Ground));
-        point = Camera.main.WorldToScreenPoint(new Vector3(wallX - half, 0, wallY - half));
+        point = Camera.main.WorldToScreenPoint(new Vector3(wallX - half, wallY - half, 0));
         float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
         yield return Click((point.x - (Screen.width - 1280 * scale) / 2) / scale, (Screen.height - point.y - (Screen.height - 720 * scale) / 2) / scale);
         yield return new WaitForSeconds(0.5f);
@@ -139,7 +145,7 @@ public class PrototypePlayTests
         var tags = game.GetComponentsInChildren<PrototypeTarget>(true);
         var wall = tags.First(t => t.kind == TargetKind.Wall && t.x == neighbor.x && t.y == neighbor.y && t.name == "Wall");
         Assert.That(wall.gameObject.activeInHierarchy, Is.True);
-        Assert.That(wall.GetComponent<Renderer>().sharedMaterial.name, Does.Contain("door hint wall"));
+        Assert.That(wall.GetComponent<SpriteRenderer>().color, Is.EqualTo(new Color(1, 0.77f, 0.25f)));
         var hiddenDoor = tags.First(t => t.kind == TargetKind.Door && t.x == door.x && t.y == door.y && t.name == "前进门");
         Assert.That(hiddenDoor.gameObject.activeInHierarchy, Is.False);
         foreach (var direction in MapGenerator.Directions)
@@ -153,7 +159,7 @@ public class PrototypePlayTests
         var copy = Rules.Copy(game.Run); Assert.That(MapGenerator.IsDoorHintWall(copy.Map, neighbor.x, neighbor.y), Is.True);
         game.Run.x = map.spawnX; game.Run.y = map.spawnY; MapGenerator.Reveal(game.Run);
         typeof(PrototypeGame).GetMethod("RefreshVisibility", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
-        yield return null; Assert.That(wall.GetComponent<Renderer>().sharedMaterial.name, Does.Contain("door hint wall"));
+        yield return null; Assert.That(wall.GetComponent<SpriteRenderer>().color, Is.EqualTo(new Color(1, 0.77f, 0.25f)));
         map.Set(neighbor.x, neighbor.y, Tile.Ground); game.Run.x = neighbor.x; game.Run.y = neighbor.y; MapGenerator.Reveal(game.Run);
         rebuild.Invoke(game, new object[] { true }); yield return null;
         Assert.That(MapGenerator.IsDoorHintWall(map, neighbor.x, neighbor.y), Is.False);
@@ -164,7 +170,7 @@ public class PrototypePlayTests
     {
         game.StartNewRun(12345); yield return null;
         var fog = (bool[])game.Run.Map.revealed.Clone(); var position = new Vector2(game.Run.x, game.Run.y);
-        var rotation = Quaternion.Euler(50, 0, 0);
+        var rotation = Quaternion.identity;
         foreach (var keys in new[] { new KeyboardState(Key.R), new KeyboardState(Key.LeftShift, Key.R),
             new KeyboardState(Key.RightShift, Key.T), new KeyboardState(Key.LeftShift, Key.R, Key.T) })
         {
@@ -188,10 +194,10 @@ public class PrototypePlayTests
         yield return null; yield return null;
         driver.mouseState.delta = new Vector2(20, 800); yield return null; yield return null;
         driver.mouseState.delta = Vector2.zero; yield return null;
-        var rotation = Quaternion.Euler(50, 0, 0);
+        var rotation = Quaternion.identity;
         Assert.That(Quaternion.Angle(Camera.main.transform.rotation, rotation), Is.LessThan(0.01));
         float half = (game.Run.Map.size - 1) / 2f;
-        var focus = new Vector3(game.Run.x - half, 0.52f, game.Run.y - half);
+        var focus = new Vector3(game.Run.x - half, game.Run.y - half, 0);
         Assert.That(Vector3.Distance(Camera.main.transform.position, focus), Is.EqualTo(10).Within(0.01));
         Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(position));
         foreach (var label in game.GetComponentsInChildren<TextMesh>(true))
@@ -203,7 +209,7 @@ public class PrototypePlayTests
         driver.keyState = new KeyboardState(Key.W); yield return new WaitForSeconds(0.15f);
         driver.keyState = new KeyboardState(); yield return null;
         Assert.That(game.Run.y, Is.GreaterThan(position.y + 0.1f)); Assert.That(game.Run.x, Is.EqualTo(position.x).Within(0.01));
-        var point = Camera.main.WorldToScreenPoint(new Vector3(6 - half, 0, 7 - half));
+        var point = Camera.main.WorldToScreenPoint(new Vector3(6 - half, 7 - half, 0));
         float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
         yield return Click((point.x - (Screen.width - 1280 * scale) / 2) / scale, (Screen.height - point.y - (Screen.height - 720 * scale) / 2) / scale);
         yield return new WaitForSeconds(0.7f);
@@ -267,10 +273,10 @@ public class PrototypePlayTests
         typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
         yield return null;
         var body = game.GetComponentsInChildren<PrototypeTarget>().Single(t => t.kind == TargetKind.Enemy);
-        Assert.That(body.GetComponent<Collider>().isTrigger, Is.False);
+        Assert.That(body.GetComponent<BoxCollider2D>().isTrigger, Is.False);
         driver.keyState = new KeyboardState(Key.W); yield return new WaitForSeconds(0.4f);
         driver.keyState = new KeyboardState(); yield return null;
-        Assert.That(game.Run.y, Is.LessThanOrEqualTo(8.32f)); Assert.That(game.Run.CellY, Is.EqualTo(8));
+        Assert.That(game.Run.y, Is.LessThanOrEqualTo(8.11f)); Assert.That(game.Run.CellY, Is.EqualTo(8));
         Assert.That(game.Run.Map.CanStand(game.Run.x, game.Run.y), Is.True);
         var point = Camera.main.WorldToScreenPoint(body.transform.position);
         float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
@@ -292,12 +298,54 @@ public class PrototypePlayTests
         typeof(PrototypeGame).GetMethod("RefreshVisibility", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null); yield return null;
         Assert.That(MapGenerator.Visible(game.Run, loot.x, loot.y), Is.False); Assert.That(target.gameObject.activeInHierarchy, Is.True);
         float half = (map.size - 1) / 2f;
-        var label = game.GetComponentsInChildren<TextMesh>(true).Single(t => t.transform.parent.name == "Item label" && Vector3.Distance(t.transform.parent.localPosition, new Vector3(loot.x - half, 0, loot.y - half)) < 0.01f);
+        var label = game.GetComponentsInChildren<TextMesh>(true).Single(t => t.transform.parent.name == "Item label" && Vector3.Distance(t.transform.parent.localPosition, new Vector3(loot.x - half, loot.y - half, 0)) < 0.01f);
         Assert.That(label.gameObject.activeInHierarchy, Is.True);
         game.Run.x = loot.x; game.Run.y = loot.y; MapGenerator.Reveal(game.Run);
         driver.mouseState = new MouseState(); driver.keyState = new KeyboardState(Key.E); yield return null; yield return null;
         driver.keyState = new KeyboardState(); yield return null;
         Assert.That(loot.units.Count, Is.Zero); Assert.That(Inventory.Items(game.Run).Count, Is.GreaterThan(0));
         Assert.That(game.GetComponentsInChildren<PrototypeTarget>(true).Any(t => t.kind == TargetKind.Loot && t.id == loot.id && t.gameObject.activeInHierarchy), Is.False);
+    }
+
+    [UnityTest]
+    public IEnumerator PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected()
+    {
+        game.StartNewRun(12345);
+        var map = game.Run.Map;
+        for (int i = 0; i < map.revealed.Length; i++) map.revealed[i] = true;
+        var rebuild = typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic);
+        rebuild.Invoke(game, new object[] { true }); yield return null; yield return null;
+        Assert.That(Camera.main.orthographic, Is.True);
+        Assert.That(game.GetComponentsInChildren<Collider>(true), Is.Empty, "Pixel exploration must not depend on 3D primitives or raycasts.");
+        var actor = game.GetComponentsInChildren<SpriteRenderer>().Single(r => r.name == "玩家");
+        Assert.That(actor.sprite, Is.EqualTo(game.artSet.playerDown));
+        Assert.That(actor.GetComponent<BoxCollider2D>().size, Is.EqualTo(Vector2.one * 0.8f));
+        Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Count(r => r.name == "Wall"), Is.EqualTo(map.cells.Count(c => c == (int)Tile.Wall)));
+        string captures = Path.GetFullPath("Captures/MagicCavePrototype/PixelArt"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "random-map-art-check.png"));
+        yield return null; yield return null;
+        game.BeginBattle(map.enemies[0]); yield return null; yield return null;
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "pixel-battle.png"));
+        yield return null; yield return null;
+        game.StartNewRun(12345); game.Run.mapIndex = 4; game.Run.x = 5; game.Run.y = 4;
+        var loot = MapGenerator.AddLoot(game.Run, game.Run.Map, new Vector2Int(5, 5), ItemKind.Potion, 1);
+        rebuild.Invoke(game, new object[] { true }); yield return null;
+        driver.keyState = new KeyboardState(Key.UpArrow); yield return new WaitForSeconds(0.3f);
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(game.Run.y, Is.LessThanOrEqualTo(4.11f));
+        float half = (game.Run.Map.size - 1) * 0.5f;
+        var point = Camera.main.WorldToScreenPoint(new Vector3(5 - half, 5 - half, 0));
+        driver.mouseState = new MouseState { position = point, buttons = 1 }; yield return null; yield return null;
+        driver.mouseState = new MouseState { position = point }; yield return null;
+        Assert.That(loot.units, Is.Empty); Assert.That(game.Run.Map.CanTraverse(5, 5), Is.True);
+        int slot = game.Run.inventory.FindIndex(s => s.units.Count > 0);
+        var dropped = Inventory.Drop(game.Run, slot, 1); rebuild.Invoke(game, new object[] { false }); yield return null;
+        Assert.That(dropped.loose, Is.True); PrototypeStore.ValidateRun(game.Run);
+        game.Store.SaveCheckpoint(game.Run); game.ContinueRun(); yield return null;
+        Assert.That(game.Run.Map.loot.Single(l => l.id == dropped.id).loose, Is.True);
+        // Capture normal exploration with the unchanged five-cell discovery rule as well.
+        game.StartNewRun(12345); yield return null; yield return null;
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "pixel-exploration.png"));
+        yield return null; yield return null;
     }
 }
