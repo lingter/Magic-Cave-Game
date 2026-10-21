@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="39" result="Passed" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:50Z" duration="0.676321">
+  <test-suite type="TestSuite" id="1000" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="80" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:50Z" duration="0.676321" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1094" name="MagicCave.Prototype.Tests.dll" fullname="C:/Users/cube0/.codex/visualizations/2026/10/21/01a15d1d-3a28-7e03-89d4-0637e97859d0/unity-test-project/Library/ScriptAssemblies/MagicCave.Prototype.Tests.dll" runstate="Runnable" testcasecount="80" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:50Z" duration="0.671204" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="22176" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1003" name="PixelArtRulesTests" fullname="PixelArtRulesTests" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="39" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:50Z" duration="0.670254" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1004" name="AllWallNeighborhoodsProduceCompleteOneUnitSprites" fullname="PixelArtRulesTests.AllWallNeighborhoodsProduceCompleteOneUnitSprites" methodname="AllWallNeighborhoodsProduceCompleteOneUnitSprites" classname="PixelArtRulesTests" runstate="Runnable" seed="1429677046" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.033561" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1023" name="BothEndsOfEverySharedWallEdgeChooseTheSameOutlineConnection" fullname="PixelArtRulesTests.BothEndsOfEverySharedWallEdgeChooseTheSameOutlineConnection" methodname="BothEndsOfEverySharedWallEdgeChooseTheSameOutlineConnection" classname="PixelArtRulesTests" runstate="Runnable" seed="1172485106" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.009745" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1045" name="BreakingAWallUpdatesItsNeighborsWithoutChangingDistantTiles" fullname="PixelArtRulesTests.BreakingAWallUpdatesItsNeighborsWithoutChangingDistantTiles" methodname="BreakingAWallUpdatesItsNeighborsWithoutChangingDistantTiles" classname="PixelArtRulesTests" runstate="Runnable" seed="777047987" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.000326" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1017" name="CornerCompletionRequiresBothDiscoveredWallSegments" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.003783" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1013" name="CornerCompletionRequiresBothDiscoveredWallSegments(1,1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(1,1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1323751362" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.001383" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1014" name="CornerCompletionRequiresBothDiscoveredWallSegments(1,-1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(1,-1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1308861015" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.000204" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1015" name="CornerCompletionRequiresBothDiscoveredWallSegments(-1,-1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(-1,-1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1315134755" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.000173" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1016" name="CornerCompletionRequiresBothDiscoveredWallSegments(-1,1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(-1,1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1170014910" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:49Z" duration="0.000163" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-suite type="ParameterizedMethod" id="1022" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:50Z" duration="0.014372" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1018" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(0)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(0)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="2081278209" result="Passed" start-time="2026-10-21 16:22:49Z" end-time="2026-10-21 16:22:50Z" duration="0.011343" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1019" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(1)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(1)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="203624675" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000835" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1020" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(2)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(2)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="1196779511" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000801" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1021" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(3)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(3)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="610088041" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000956" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1012" name="DiscoveredFloorAloneDoesNotExposeAnyUndiscoveredWalls" fullname="PixelArtRulesTests.DiscoveredFloorAloneDoesNotExposeAnyUndiscoveredWalls" methodname="DiscoveredFloorAloneDoesNotExposeAnyUndiscoveredWalls" classname="PixelArtRulesTests" runstate="Runnable" seed="263277757" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000506" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1044" name="DoorsRemainPartOfTheSurroundingWallTopology" fullname="PixelArtRulesTests.DoorsRemainPartOfTheSurroundingWallTopology" methodname="DoorsRemainPartOfTheSurroundingWallTopology" classname="PixelArtRulesTests" runstate="Runnable" seed="1364882410" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000138" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1047" name="EnlargedFootprintFitsOneCellCorridorsAndLegacyContainerPositionsRecover" fullname="PixelArtRulesTests.EnlargedFootprintFitsOneCellCorridorsAndLegacyContainerPositionsRecover" methodname="EnlargedFootprintFitsOneCellCorridorsAndLegacyContainerPositionsRecover" classname="PixelArtRulesTests" runstate="Runnable" seed="715548174" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.001552" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1042" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.004080" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1030" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(7,3,8)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(7,3,8)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="2097682314" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000800" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1031" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(7,6,4)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(7,6,4)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="2020674685" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000249" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1032" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(11,3,8)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(11,3,8)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="456294145" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000221" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1033" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(11,9,9)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(11,9,9)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="1505206871" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000217" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1034" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(13,9,9)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(13,9,9)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="2016532478" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000219" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1035" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(13,12,5)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(13,12,5)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="1345003192" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000216" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1036" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(14,6,4)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(14,6,4)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="341508576" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000216" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1037" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(14,12,5)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(14,12,5)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="319619417" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000225" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1038" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,3,8)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,3,8)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="907484107" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000228" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1039" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,6,4)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,6,4)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="1398284796" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000221" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1040" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,9,9)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,9,9)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="1259252350" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000216" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1041" name="FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,12,5)" fullname="PixelArtRulesTests.FoggedJunctionCompletesOnlyTheDiscoveredCorner(15,12,5)" methodname="FoggedJunctionCompletesOnlyTheDiscoveredCorner" classname="PixelArtRulesTests" runstate="Runnable" seed="2053986753" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000217" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1011" name="RoomPerimeterUsesContinuousReferenceStripsBetweenTheFourCorners" fullname="PixelArtRulesTests.RoomPerimeterUsesContinuousReferenceStripsBetweenTheFourCorners" methodname="RoomPerimeterUsesContinuousReferenceStripsBetweenTheFourCorners" classname="PixelArtRulesTests" runstate="Runnable" seed="1055789234" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000448" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1029" name="ScreenshotRegressionJunctionsHaveContinuousRoofsAndExportAPixelPreview" fullname="PixelArtRulesTests.ScreenshotRegressionJunctionsHaveContinuousRoofsAndExportAPixelPreview" methodname="ScreenshotRegressionJunctionsHaveContinuousRoofsAndExportAPixelPreview" classname="PixelArtRulesTests" runstate="Runnable" seed="1591399264" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.017313" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1046" name="SolidLootBlocksMovementButDroppedStacksDoNotTrapThePlayer" fullname="PixelArtRulesTests.SolidLootBlocksMovementButDroppedStacksDoNotTrapThePlayer" methodname="SolidLootBlocksMovementButDroppedStacksDoNotTrapThePlayer" classname="PixelArtRulesTests" runstate="Runnable" seed="1306926076" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.005148" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1043" name="SupplementalJunctionsNeverConnectUndiscoveredWallArms" fullname="PixelArtRulesTests.SupplementalJunctionsNeverConnectUndiscoveredWallArms" methodname="SupplementalJunctionsNeverConnectUndiscoveredWallArms" classname="PixelArtRulesTests" runstate="Runnable" seed="937509890" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.562817" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1028" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.003824" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1024" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(23)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(23)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="170864203" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.001770" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1025" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(39)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(39)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="176843368" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000503" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1026" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(77)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(77)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="814750892" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000415" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1027" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(141)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(141)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="851447533" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000386" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-suite type="ParameterizedMethod" id="1009" name="ThickWallCornersReuseCompleteConnectionArtwork" fullname="PixelArtRulesTests.ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000946" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1005" name="ThickWallCorner_OpenNorthEast_ConnectsNorthAndEast" fullname="PixelArtRulesTests.ThickWallCorner_OpenNorthEast_ConnectsNorthAndEast" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="328474075" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000295" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1006" name="ThickWallCorner_OpenSouthEast_ConnectsSouthAndEast" fullname="PixelArtRulesTests.ThickWallCorner_OpenSouthEast_ConnectsSouthAndEast" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="1429166770" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000101" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1007" name="ThickWallCorner_OpenSouthWest_ConnectsSouthAndWest" fullname="PixelArtRulesTests.ThickWallCorner_OpenSouthWest_ConnectsSouthAndWest" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="1236476147" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000079" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1008" name="ThickWallCorner_OpenNorthWest_ConnectsNorthAndWest" fullname="PixelArtRulesTests.ThickWallCorner_OpenNorthWest_ConnectsNorthAndWest" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="1035468761" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000075" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1010" name="TwoByTwoWallBlockMatchesTheTotalReferenceCornerLayout" fullname="PixelArtRulesTests.TwoByTwoWallBlockMatchesTheTotalReferenceCornerLayout" methodname="TwoByTwoWallBlockMatchesTheTotalReferenceCornerLayout" classname="PixelArtRulesTests" runstate="Runnable" seed="804882679" result="Passed" start-time="2026-10-21 16:22:50Z" end-time="2026-10-21 16:22:50Z" duration="0.000230" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[<b><color=#2EA3FF>MCP-FOR-UNITY</color></b>: [TestRunnerNoThrottle] Restored Interaction Mode after test run.
+Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

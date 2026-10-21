@@ -7,6 +7,7 @@ namespace MagicCave.Prototype
     public enum Tile { Ground, Wall, Advance, Return }
     public enum ItemKind { Ore, Crystal, Relic, Potion }
     public enum EnemyKind { Bat, Beetle, Boss }
+    public enum EnemyRole { Roaming, ItemGuard, CorridorGuard }
     public enum CardKind { Strike, Defend, Prepare, Heavy, Double, Shield, Fortify, Quick, Spirit, Steady }
 
     [Serializable]
@@ -61,15 +62,23 @@ namespace MagicCave.Prototype
     public sealed class GroundLoot
     {
         public int id, x, y;
+        public int guardEnemyId;
         public bool loose;
+        // Retain container artwork after its last item is removed (including after loading).
+        public ItemKind appearanceKind;
         public List<ItemUnit> units = new List<ItemUnit>();
+        public bool IsContainer => !loose;
+        public bool BlocksMovement => IsContainer && units.Count > 0;
     }
     [Serializable]
     public sealed class EnemyData
     {
         public int id, x, y;
         public EnemyKind kind;
+        public EnemyRole role;
+        public int level = 1;
         public bool defeated;
+        public int Level => Math.Max(1, level);
     }
     [Serializable]
     public sealed class MapData
@@ -80,6 +89,11 @@ namespace MagicCave.Prototype
         public bool[] revealed;
         public List<EnemyData> enemies = new List<EnemyData>();
         public List<GroundLoot> loot = new List<GroundLoot>();
+        public EnemyData LivingGuard(GroundLoot item)
+        {
+            if (item.loose || item.guardEnemyId == 0) return null;
+            return enemies.Find(e => e.id == item.guardEnemyId && !e.defeated);
+        }
         public bool Inside(int x, int y) { return x >= 0 && y >= 0 && x < size && y < size; }
         public bool Border(int x, int y) { return x == 0 || y == 0 || x == size - 1 || y == size - 1; }
         public int Index(int x, int y) { return y * size + x; }
@@ -90,7 +104,7 @@ namespace MagicCave.Prototype
         {
             if (!Walkable(x, y)) return false;
             foreach (var enemy in enemies) if (!enemy.defeated && enemy.x == x && enemy.y == y) return false;
-            foreach (var item in loot) if (!item.loose && item.units.Count > 0 && item.x == x && item.y == y) return false;
+            foreach (var item in loot) if (item.BlocksMovement && item.x == x && item.y == y) return false;
             return true;
         }
         public bool CanStand(float x, float y)
@@ -108,6 +122,8 @@ namespace MagicCave.Prototype
     {
         public string id;
         public int seed, mapIndex, health = 60, level = 1, experience, totalExperience;
+        public int maxHealth = 60, attackBonus, defenseBonus, openingEnergy, victoryHealing, openingBlock;
+        public int MaxHealth => maxHealth == 0 ? 60 : maxHealth;
         public int nextEntityId = 1, nextItemId = 1, nextAcquisitionOrder = 1;
         public float x, y;
         public bool bossDefeated;
@@ -144,9 +160,11 @@ namespace MagicCave.Prototype
     [Serializable]
     public sealed class WarehouseData
     {
-        public int version = 1;
+        public int version = 2;
         public long[] counts = new long[4];
         public List<string> committedRuns = new List<string>();
+        public long baseCapacity = 100;
+        public TownProgress town = new TownProgress();
     }
 
     public static class Rules
@@ -154,6 +172,8 @@ namespace MagicCave.Prototype
         public static readonly string[] ItemNames = { "碎矿石", "晶簇", "古代遗物", "治疗药剂" };
         public static readonly string[] EnemyNames = { "洞穴蝠", "岩甲虫", "岩洞守卫" };
         public static readonly int[] EnemyHealth = { 18, 30, 80 };
+        public static int Health(EnemyData enemy) { return EnemyHealth[(int)enemy.kind] + 4 * (enemy.Level - 1); }
+        public static string EnemyLabel(EnemyData enemy) { return EnemyNames[(int)enemy.kind] + " Lv." + enemy.Level; }
         public static readonly string[] CardNames = { "打击", "防御", "整备", "重击", "连击", "盾击", "固守", "迅击", "战意", "稳守" };
         public static readonly int[] Costs = { 1, 1, 1, 2, 1, 1, 2, 1, 1, 1 };
         public static readonly string[] Effects = { "造成6点伤害", "获得5点格挡", "抽2张牌", "造成15点伤害", "两次4点伤害", "造成当前格挡等量伤害\n不消耗格挡", "获得12点格挡", "造成5点伤害，抽1张", "本回合每段攻击+2\n可叠加", "获得4点格挡，抽1张" };

@@ -70,13 +70,14 @@ namespace MagicCave.Prototype
         void Update()
         {
             ReadInterfaceInput();
+            UpdateTown();
             if (queued != null)
             {
                 var action = queued; queued = null;
                 try { action(); error = ""; } catch (Exception exception) { ReportError(exception); }
             }
             var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && Run != null && ScreenMode != GameScreen.Result)
+            if (!townEscapeHandled && keyboard != null && keyboard.escapeKey.wasPressedThisFrame && Run != null && ScreenMode != GameScreen.Result)
             {
                 if (Panel == GamePanel.Inventory || Panel == GamePanel.Deck || Panel == GamePanel.Draw || Panel == GamePanel.Discard) Panel = GamePanel.None;
                 else if (Panel == GamePanel.Pause) Panel = GamePanel.None;
@@ -233,6 +234,8 @@ namespace MagicCave.Prototype
                 case TargetKind.Loot:
                     var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
                     if (loot == null || loot.units.Count == 0) return;
+                    var guard = Run.Map.LivingGuard(loot);
+                    if (guard != null) { Notify("需要先击败镇守怪：" + Rules.EnemyLabel(guard)); return; }
                     ItemKind kind = loot.units[0].kind; int count = Inventory.Pickup(Run, loot);
                     Notify(count > 0 ? "拾取 " + Rules.ItemNames[(int)kind] + " ×" + count : "背包已满，物品留在地面"); BuildWorld(false); break;
                 case TargetKind.Enemy:
@@ -252,7 +255,7 @@ namespace MagicCave.Prototype
         public void StartNewRun(int seed)
         {
             Store.DiscardCheckpoint(); Run = null; ScreenMode = GameScreen.Home;
-            Run = MapGenerator.NewRun(seed); Combat = null; Panel = GamePanel.None;
+            Run = MapGenerator.NewRun(seed); TownRules.Apply(Store.Warehouse.town, Run); Combat = null; Panel = GamePanel.None;
             facing = Vector2.down;
             message = ""; messageUntil = 0; hover = default; highlighted = default;
             ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
@@ -319,7 +322,7 @@ namespace MagicCave.Prototype
         {
             Run = Store.CancelSettlement(); ScreenMode = GameScreen.Explore; Panel = GamePanel.None; BuildWorld(true);
         }
-        void GoHome() { Run = null; Combat = null; ScreenMode = GameScreen.Home; Panel = GamePanel.None; CancelRoute(); }
+        void GoHome() { Run = null; Combat = null; ScreenMode = GameScreen.Home; Panel = GamePanel.None; ResetTownLocation(); CancelRoute(); }
         void Leave()
         {
             if (!leaveApplication) GoHome();

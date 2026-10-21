@@ -11,6 +11,8 @@ namespace MagicCave.Prototype
         public static int UsedSlots(RunData run) { return run.inventory.Count(slot => slot.units.Count > 0); }
         public static int Pickup(RunData run, GroundLoot loot)
         {
+            if (run.Map.LivingGuard(loot) != null) return 0;
+            if (loot.units.Count > 0) loot.appearanceKind = loot.units[0].kind;
             int taken = 0;
             while (loot.units.Count > 0)
             {
@@ -29,10 +31,10 @@ namespace MagicCave.Prototype
         }
         public static bool Heal(RunData run, int slotIndex)
         {
-            if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.health <= 0 || run.health >= 60) return false;
+            if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.health <= 0 || run.health >= run.MaxHealth) return false;
             var slot = run.inventory[slotIndex];
             if (slot.units.Count == 0 || slot.units[0].kind != ItemKind.Potion) return false;
-            slot.units.RemoveAt(0); run.health = Math.Min(60, run.health + 20); return true;
+            slot.units.RemoveAt(0); run.health = Math.Min(run.MaxHealth, run.health + 20); return true;
         }
         public static GroundLoot Drop(RunData run, int slotIndex, int quantity)
         {
@@ -69,6 +71,7 @@ namespace MagicCave.Prototype
         {
             if (enemy.defeated) return;
             enemy.defeated = true;
+            run.health = Math.Min(run.MaxHealth, run.health + run.victoryHealing);
             Award(run, enemy.kind == EnemyKind.Boss ? 30 : 10);
             if (enemy.kind == EnemyKind.Boss && !run.bossDefeated)
             {
@@ -97,9 +100,10 @@ namespace MagicCave.Prototype
         public Battle(RunData run, EnemyData enemy)
         {
             this.run = run; this.enemy = enemy;
-            enemyHealth = Rules.EnemyHealth[(int)enemy.kind];
+            enemyHealth = Rules.Health(enemy);
             draw.AddRange(run.deck); run.battleRandom.Shuffle(draw);
             StartPlayerTurn();
+            playerBlock = run.openingBlock;
         }
         public void Draw(int count)
         {
@@ -115,7 +119,7 @@ namespace MagicCave.Prototype
         }
         void StartPlayerTurn()
         {
-            playerBlock = 0; energy = 3; Draw(5); playerTurn = true;
+            playerBlock = 0; energy = 3 + (enemyTurn == 0 ? run.openingEnergy : 0); Draw(5); playerTurn = true;
         }
         public bool Play(int handIndex)
         {
@@ -126,22 +130,22 @@ namespace MagicCave.Prototype
             switch (card)
             {
                 case CardKind.Strike: Hit(6); break;
-                case CardKind.Defend: playerBlock += 5; break;
+                case CardKind.Defend: playerBlock += 5 + run.defenseBonus; break;
                 case CardKind.Prepare: Draw(2); break;
                 case CardKind.Heavy: Hit(15); break;
                 case CardKind.Double: Hit(4); if (outcome == BattleOutcome.None) Hit(4); break;
-                case CardKind.Shield: Hit(playerBlock); break;
-                case CardKind.Fortify: playerBlock += 12; break;
+                case CardKind.Shield: Hit(playerBlock, false); break;
+                case CardKind.Fortify: playerBlock += 12 + run.defenseBonus; break;
                 case CardKind.Quick: Hit(5); if (outcome == BattleOutcome.None) Draw(1); break;
                 case CardKind.Spirit: spirit += 2; break;
-                case CardKind.Steady: playerBlock += 4; Draw(1); break;
+                case CardKind.Steady: playerBlock += 4 + run.defenseBonus; Draw(1); break;
             }
             discard.Add(card);
             return true;
         }
-        void Hit(int baseDamage)
+        void Hit(int baseDamage, bool weapon = true)
         {
-            int damage = baseDamage + spirit;
+            int damage = baseDamage + spirit + (weapon ? run.attackBonus : 0);
             int blocked = Math.Min(enemyBlock, damage); enemyBlock -= blocked;
             enemyHealth = Math.Max(0, enemyHealth - (damage - blocked));
             if (enemyHealth == 0) { outcome = BattleOutcome.Victory; playerTurn = false; }
@@ -170,9 +174,10 @@ namespace MagicCave.Prototype
         {
             get
             {
-                if (enemy.kind == EnemyKind.Bat) return 5;
-                if (enemy.kind == EnemyKind.Beetle) return enemyTurn % 2 == 1 ? 8 : 0;
-                return enemyTurn % 3 == 0 ? 8 : enemyTurn % 3 == 2 ? 14 : 0;
+                int bonus = enemy.Level - 1;
+                if (enemy.kind == EnemyKind.Bat) return 5 + bonus;
+                if (enemy.kind == EnemyKind.Beetle) return enemyTurn % 2 == 1 ? 8 + bonus : 0;
+                return enemyTurn % 3 == 0 ? 8 + bonus : enemyTurn % 3 == 2 ? 14 + bonus : 0;
             }
         }
         public int IntentBlock { get { return enemy.kind == EnemyKind.Beetle ? 6 : 10; } }

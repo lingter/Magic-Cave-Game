@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-21",
+  "runner": "Unity MCP",
+  "visibilityRule": "Only complete a diagonal corner between two actually discovered wall segments beside discovered diagonal ground. Unseen straight walls and corridor extensions remain hidden.",
+  "reference": "Assets/ART Assets/Scene/Wall_All/scene_wall_All.aseprite",
+  "referencePixelMatchesTopToBottom": [
+    [10, 1, 2, 3, 6],
+    [11, 4, 5, 14, null],
+    [12, 8, 9, 13, null]
+  ],
+  "editMode": {
+    "jobId": "24925a652858473ba5d4fa60149e0f8e",
+    "passed": 59,
+    "failed": 0
+  },
+  "wallPlayMode": {
+    "jobId": "ea017f5b106b458487b5c3f01b0ec915",
+    "passed": 5,
+    "failed": 0,
+    "tests": [
+      "UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem",
+      "DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents",
+      "DoorCluesRespectFogPersistAndDisappearWhenWallBreaks",
+      "PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected",
+      "WallStopsMovementRightClickBreaksAndLeftClickWalksThrough"
+    ]
+  },
+  "previousBroaderPrototypePlayMode": {
+    "jobId": "7eb92ec455d249a2b293e0ddcf68e64b",
+    "passed": 10,
+    "failed": 1,
+    "failedTest": "SeedMenuButtonsAndCardBattleWorkWithNewInputSystem",
+    "failure": "The old seed-menu mouse coordinates no longer reach the seed toggle after concurrent town-interface changes."
+  },
+  "captures": [
+    "corridor-fog-boundary-check.png",
+    "wall-corner-fog-check.png",
+    "pixel-exploration.png",
+    "random-map-art-check.png"
+  ]
+}

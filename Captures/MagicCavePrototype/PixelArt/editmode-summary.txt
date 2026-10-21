@@ -1,2 +1,2 @@
-Passed: 33 passed, 0 failed, 0 skipped.
+Passed: 68 passed, 0 failed, 0 skipped.
 

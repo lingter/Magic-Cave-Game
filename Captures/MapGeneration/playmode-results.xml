@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-21 16:00:49Z" end-time="2026-10-21 16:00:51Z" duration="1.4726555">
+  <test-suite type="TestSuite" id="1027" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-21 16:00:49Z" end-time="2026-10-21 16:00:51Z" duration="1.472656" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1023" name="MagicCave.Prototype.PlayTests.dll" fullname="E:/UnityProject/Magic Cave Game/Temp/MapGenerationUnity/Library/ScriptAssemblies/MagicCave.Prototype.PlayTests.dll" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-10-21 16:00:49Z" end-time="2026-10-21 16:00:51Z" duration="1.466717" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="44856" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestFixture" id="1007" name="PrototypePlayTests" fullname="PrototypePlayTests" classname="PrototypePlayTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-10-21 16:00:49Z" end-time="2026-10-21 16:00:51Z" duration="1.465060" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1017" name="DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup" fullname="PrototypePlayTests.DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup" methodname="DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup" classname="PrototypePlayTests" runstate="Runnable" seed="1235344873" result="Passed" start-time="2026-10-21 16:00:49Z" end-time="2026-10-21 16:00:50Z" duration="0.389015" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1012" name="DoorCluesRespectFogPersistAndDisappearWhenWallBreaks" fullname="PrototypePlayTests.DoorCluesRespectFogPersistAndDisappearWhenWallBreaks" methodname="DoorCluesRespectFogPersistAndDisappearWhenWallBreaks" classname="PrototypePlayTests" runstate="Runnable" seed="1902417763" result="Passed" start-time="2026-10-21 16:00:50Z" end-time="2026-10-21 16:00:50Z" duration="0.229268" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1022" name="PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected" fullname="PrototypePlayTests.PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected" methodname="PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected" classname="PrototypePlayTests" runstate="Runnable" seed="1448142977" result="Passed" start-time="2026-10-21 16:00:50Z" end-time="2026-10-21 16:00:51Z" duration="0.837634" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+[MagicCave] Run Seed = 12345
+[MagicCave] Continue Run Seed = 12345
+[MagicCave] Run Seed = 12345
+Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

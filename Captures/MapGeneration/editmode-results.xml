@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="68" result="Passed" total="68" passed="68" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:15Z" duration="1.0175804">
+  <test-suite type="TestSuite" id="1000" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="68" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:15Z" duration="1.017580" total="68" passed="68" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1081" name="MagicCave.Prototype.Tests.dll" fullname="E:/UnityProject/Magic Cave Game/Temp/MapGenerationUnity/Library/ScriptAssemblies/MagicCave.Prototype.Tests.dll" runstate="Runnable" testcasecount="68" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:15Z" duration="1.012091" total="68" passed="68" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="45784" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1003" name="PixelArtRulesTests" fullname="PixelArtRulesTests" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="27" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.101533" total="27" passed="27" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1004" name="AllWallNeighborhoodsProduceCompleteOneUnitSprites" fullname="PixelArtRulesTests.AllWallNeighborhoodsProduceCompleteOneUnitSprites" methodname="AllWallNeighborhoodsProduceCompleteOneUnitSprites" classname="PixelArtRulesTests" runstate="Runnable" seed="864154248" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.032125" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1023" name="BothEndsOfEverySharedWallEdgeChooseTheSameOutlineConnection" fullname="PixelArtRulesTests.BothEndsOfEverySharedWallEdgeChooseTheSameOutlineConnection" methodname="BothEndsOfEverySharedWallEdgeChooseTheSameOutlineConnection" classname="PixelArtRulesTests" runstate="Runnable" seed="1593196417" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.010267" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1032" name="BreakingAWallUpdatesItsNeighborsWithoutChangingDistantTiles" fullname="PixelArtRulesTests.BreakingAWallUpdatesItsNeighborsWithoutChangingDistantTiles" methodname="BreakingAWallUpdatesItsNeighborsWithoutChangingDistantTiles" classname="PixelArtRulesTests" runstate="Runnable" seed="1260700340" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000438" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1017" name="CornerCompletionRequiresBothDiscoveredWallSegments" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.003564" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1013" name="CornerCompletionRequiresBothDiscoveredWallSegments(1,1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(1,1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1415593429" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001437" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1014" name="CornerCompletionRequiresBothDiscoveredWallSegments(1,-1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(1,-1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1610895035" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000208" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1015" name="CornerCompletionRequiresBothDiscoveredWallSegments(-1,-1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(-1,-1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="2122289812" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000173" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1016" name="CornerCompletionRequiresBothDiscoveredWallSegments(-1,1)" fullname="PixelArtRulesTests.CornerCompletionRequiresBothDiscoveredWallSegments(-1,1)" methodname="CornerCompletionRequiresBothDiscoveredWallSegments" classname="PixelArtRulesTests" runstate="Runnable" seed="1817852929" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000164" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-suite type="ParameterizedMethod" id="1022" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.012709" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1018" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(0)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(0)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="1256068723" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.009406" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1019" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(1)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(1)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="995713401" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000972" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1020" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(2)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(2)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="678539535" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000926" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1021" name="CorridorSideWallsStayHiddenUntilActuallyDiscovered(3)" fullname="PixelArtRulesTests.CorridorSideWallsStayHiddenUntilActuallyDiscovered(3)" methodname="CorridorSideWallsStayHiddenUntilActuallyDiscovered" classname="PixelArtRulesTests" runstate="Runnable" seed="1422205157" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000950" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1012" name="DiscoveredFloorAloneDoesNotExposeAnyUndiscoveredWalls" fullname="PixelArtRulesTests.DiscoveredFloorAloneDoesNotExposeAnyUndiscoveredWalls" methodname="DiscoveredFloorAloneDoesNotExposeAnyUndiscoveredWalls" classname="PixelArtRulesTests" runstate="Runnable" seed="1620437809" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000606" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1031" name="DoorsRemainPartOfTheSurroundingWallTopology" fullname="PixelArtRulesTests.DoorsRemainPartOfTheSurroundingWallTopology" methodname="DoorsRemainPartOfTheSurroundingWallTopology" classname="PixelArtRulesTests" runstate="Runnable" seed="859002903" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000192" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1034" name="EnlargedFootprintFitsOneCellCorridorsAndLegacyContainerPositionsRecover" fullname="PixelArtRulesTests.EnlargedFootprintFitsOneCellCorridorsAndLegacyContainerPositionsRecover" methodname="EnlargedFootprintFitsOneCellCorridorsAndLegacyContainerPositionsRecover" classname="PixelArtRulesTests" runstate="Runnable" seed="1017161880" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001702" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1011" name="RoomPerimeterUsesContinuousReferenceStripsBetweenTheFourCorners" fullname="PixelArtRulesTests.RoomPerimeterUsesContinuousReferenceStripsBetweenTheFourCorners" methodname="RoomPerimeterUsesContinuousReferenceStripsBetweenTheFourCorners" classname="PixelArtRulesTests" runstate="Runnable" seed="173312539" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000442" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1029" name="ScreenshotRegressionJunctionsHaveContinuousRoofsAndExportAPixelPreview" fullname="PixelArtRulesTests.ScreenshotRegressionJunctionsHaveContinuousRoofsAndExportAPixelPreview" methodname="ScreenshotRegressionJunctionsHaveContinuousRoofsAndExportAPixelPreview" classname="PixelArtRulesTests" runstate="Runnable" seed="973556340" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.018121" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1033" name="SolidLootBlocksMovementButDroppedStacksDoNotTrapThePlayer" fullname="PixelArtRulesTests.SolidLootBlocksMovementButDroppedStacksDoNotTrapThePlayer" methodname="SolidLootBlocksMovementButDroppedStacksDoNotTrapThePlayer" classname="PixelArtRulesTests" runstate="Runnable" seed="285679767" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.005106" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1030" name="SupplementalCornersNeverExposeUnknownTJunctionsOrCrosses" fullname="PixelArtRulesTests.SupplementalCornersNeverExposeUnknownTJunctionsOrCrosses" methodname="SupplementalCornersNeverExposeUnknownTJunctionsOrCrosses" classname="PixelArtRulesTests" runstate="Runnable" seed="99118682" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002703" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1028" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002730" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1024" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(23)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(23)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="849405211" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001039" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1025" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(39)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(39)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="1673646394" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000417" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1026" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(77)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(77)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="1997208264" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000390" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1027" name="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(141)" fullname="PixelArtRulesTests.ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow(141)" methodname="ThickThinJunctionKeepsTheFullHorizontalRoofAndFourPixelSideShadow" classname="PixelArtRulesTests" runstate="Runnable" seed="1247518764" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000393" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-suite type="ParameterizedMethod" id="1009" name="ThickWallCornersReuseCompleteConnectionArtwork" fullname="PixelArtRulesTests.ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000924" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1005" name="ThickWallCorner_OpenNorthEast_ConnectsNorthAndEast" fullname="PixelArtRulesTests.ThickWallCorner_OpenNorthEast_ConnectsNorthAndEast" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="515990179" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000297" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1006" name="ThickWallCorner_OpenSouthEast_ConnectsSouthAndEast" fullname="PixelArtRulesTests.ThickWallCorner_OpenSouthEast_ConnectsSouthAndEast" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="713635057" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000103" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1007" name="ThickWallCorner_OpenSouthWest_ConnectsSouthAndWest" fullname="PixelArtRulesTests.ThickWallCorner_OpenSouthWest_ConnectsSouthAndWest" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="1193285128" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000086" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1008" name="ThickWallCorner_OpenNorthWest_ConnectsNorthAndWest" fullname="PixelArtRulesTests.ThickWallCorner_OpenNorthWest_ConnectsNorthAndWest" methodname="ThickWallCornersReuseCompleteConnectionArtwork" classname="PixelArtRulesTests" runstate="Runnable" seed="556787795" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000082" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1010" name="TwoByTwoWallBlockMatchesTheTotalReferenceCornerLayout" fullname="PixelArtRulesTests.TwoByTwoWallBlockMatchesTheTotalReferenceCornerLayout" methodname="TwoByTwoWallBlockMatchesTheTotalReferenceCornerLayout" classname="PixelArtRulesTests" runstate="Runnable" seed="2033446689" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000230" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="1035" name="PrototypeRulesTests" fullname="PrototypeRulesTests" classname="PrototypeRulesTests" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.678796" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1056" name="ActiveSettlementRestoresSelectionAndCancelReturnsLiveState" fullname="PrototypeRulesTests.ActiveSettlementRestoresSelectionAndCancelReturnsLiveState" methodname="ActiveSettlementRestoresSelectionAndCancelReturnsLiveState" classname="PrototypeRulesTests" runstate="Runnable" seed="851811038" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.072696" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1045" name="BattleAndChoicesDoNotPerturbMapRandomness" fullname="PrototypeRulesTests.BattleAndChoicesDoNotPerturbMapRandomness" methodname="BattleAndChoicesDoNotPerturbMapRandomness" classname="PrototypeRulesTests" runstate="Runnable" seed="1696306044" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.003002" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1065" name="BossReturnDoorNeverTrapsOrOverlapsPlayer" fullname="PrototypeRulesTests.BossReturnDoorNeverTrapsOrOverlapsPlayer" classname="PrototypeRulesTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.123262" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1062" name="BossReturnDoorNeverTrapsOrOverlapsPlayer(6.0f,10.0f)" fullname="PrototypeRulesTests.BossReturnDoorNeverTrapsOrOverlapsPlayer(6.0f,10.0f)" methodname="BossReturnDoorNeverTrapsOrOverlapsPlayer" classname="PrototypeRulesTests" runstate="Runnable" seed="715123384" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.037645" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1063" name="BossReturnDoorNeverTrapsOrOverlapsPlayer(6.55f,10.0f)" fullname="PrototypeRulesTests.BossReturnDoorNeverTrapsOrOverlapsPlayer(6.55f,10.0f)" methodname="BossReturnDoorNeverTrapsOrOverlapsPlayer" classname="PrototypeRulesTests" runstate="Runnable" seed="1148327073" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.039211" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1064" name="BossReturnDoorNeverTrapsOrOverlapsPlayer(6.0f,9.45f)" fullname="PrototypeRulesTests.BossReturnDoorNeverTrapsOrOverlapsPlayer(6.0f,9.45f)" methodname="BossReturnDoorNeverTrapsOrOverlapsPlayer" classname="PrototypeRulesTests" runstate="Runnable" seed="740811587" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.045834" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1059" name="BossVictoryCreatesReturnAndRewardExactlyOnce" fullname="PrototypeRulesTests.BossVictoryCreatesReturnAndRewardExactlyOnce" methodname="BossVictoryCreatesReturnAndRewardExactlyOnce" classname="PrototypeRulesTests" runstate="Runnable" seed="103531226" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001311" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1048" name="DrawCardCannotRedrawItselfWhileResolving" fullname="PrototypeRulesTests.DrawCardCannotRedrawItselfWhileResolving" methodname="DrawCardCannotRedrawItselfWhileResolving" classname="PrototypeRulesTests" runstate="Runnable" seed="20566420" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001482" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1051" name="EnemyBlockPersistsForPlayerTurnAndClearsOnEnemyTurn" fullname="PrototypeRulesTests.EnemyBlockPersistsForPlayerTurnAndClearsOnEnemyTurn" methodname="EnemyBlockPersistsForPlayerTurnAndClearsOnEnemyTurn" classname="PrototypeRulesTests" runstate="Runnable" seed="1752627434" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001064" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1057" name="FailureSelectionUsesRarityThenFirstTimeThenOrderAndInvalidatesCheckpoint" fullname="PrototypeRulesTests.FailureSelectionUsesRarityThenFirstTimeThenOrderAndInvalidatesCheckpoint" methodname="FailureSelectionUsesRarityThenFirstTimeThenOrderAndInvalidatesCheckpoint" classname="PrototypeRulesTests" runstate="Runnable" seed="2076706391" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.026115" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1061" name="FiveMapRunCanWinWithNormalDeckRewardsPotionsAndCheckpoint" fullname="PrototypeRulesTests.FiveMapRunCanWinWithNormalDeckRewardsPotionsAndCheckpoint" methodname="FiveMapRunCanWinWithNormalDeckRewardsPotionsAndCheckpoint" classname="PrototypeRulesTests" runstate="Runnable" seed="896515351" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.070739" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Continue Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1042" name="FourHundredMapsMeetTerrainDoorAndObjectRules" fullname="PrototypeRulesTests.FourHundredMapsMeetTerrainDoorAndObjectRules" methodname="FourHundredMapsMeetTerrainDoorAndObjectRules" classname="PrototypeRulesTests" runstate="Runnable" seed="202584274" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.226585" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1044" name="GuardLevelsChangeCombatAndLegacyEnemiesKeepBaseStats" fullname="PrototypeRulesTests.GuardLevelsChangeCombatAndLegacyEnemiesKeepBaseStats" methodname="GuardLevelsChangeCombatAndLegacyEnemiesKeepBaseStats" classname="PrototypeRulesTests" runstate="Runnable" seed="1435283029" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001038" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1043" name="GuardMustBeDefeatedEvenAfterWallsAreBrokenAndSurvivesCheckpoint" fullname="PrototypeRulesTests.GuardMustBeDefeatedEvenAfterWallsAreBrokenAndSurvivesCheckpoint" methodname="GuardMustBeDefeatedEvenAfterWallsAreBrokenAndSurvivesCheckpoint" classname="PrototypeRulesTests" runstate="Runnable" seed="1859850355" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.017757" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Continue Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1052" name="InsufficientEnergyDoesNotChangeHandOrHealth" fullname="PrototypeRulesTests.InsufficientEnergyDoesNotChangeHandOrHealth" methodname="InsufficientEnergyDoesNotChangeHandOrHealth" classname="PrototypeRulesTests" runstate="Runnable" seed="830396487" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001034" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1058" name="InterruptedWarehouseCommitIsNotCreditedTwice" fullname="PrototypeRulesTests.InterruptedWarehouseCommitIsNotCreditedTwice" methodname="InterruptedWarehouseCommitIsNotCreditedTwice" classname="PrototypeRulesTests" runstate="Runnable" seed="582081252" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.058308" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1069" name="LegacyOverlappingCheckpointRecoversWithoutOverwritingSource" fullname="PrototypeRulesTests.LegacyOverlappingCheckpointRecoversWithoutOverwritingSource" classname="PrototypeRulesTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.027361" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1067" name="LegacyOverlappingCheckpointRecoversWithoutOverwritingSource(True)" fullname="PrototypeRulesTests.LegacyOverlappingCheckpointRecoversWithoutOverwritingSource(True)" methodname="LegacyOverlappingCheckpointRecoversWithoutOverwritingSource" classname="PrototypeRulesTests" runstate="Runnable" seed="554568018" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.013023" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+            <output><![CDATA[[MagicCave] Continue Run Seed = 12345
+]]></output>
+          </test-case>
+          <test-case id="1068" name="LegacyOverlappingCheckpointRecoversWithoutOverwritingSource(False)" fullname="PrototypeRulesTests.LegacyOverlappingCheckpointRecoversWithoutOverwritingSource(False)" methodname="LegacyOverlappingCheckpointRecoversWithoutOverwritingSource" classname="PrototypeRulesTests" runstate="Runnable" seed="449032723" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.013690" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+            <output><![CDATA[[MagicCave] Continue Run Seed = 12345
+]]></output>
+          </test-case>
+        </test-suite>
+        <test-case id="1053" name="LethalAttackStopsAndLethalEnemyTurnEndsRun" fullname="PrototypeRulesTests.LethalAttackStopsAndLethalEnemyTurnEndsRun" methodname="LethalAttackStopsAndLethalEnemyTurnEndsRun" classname="PrototypeRulesTests" runstate="Runnable" seed="684254970" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001709" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1054" name="MultipleUpgradesCarryExperienceAndDoNotHeal" fullname="PrototypeRulesTests.MultipleUpgradesCarryExperienceAndDoNotHeal" methodname="MultipleUpgradesCarryExperienceAndDoNotHeal" classname="PrototypeRulesTests" runstate="Runnable" seed="2055577305" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001823" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1046" name="PartialPickupDropAndRepickPreserveFirstAcquisition" fullname="PrototypeRulesTests.PartialPickupDropAndRepickPreserveFirstAcquisition" methodname="PartialPickupDropAndRepickPreserveFirstAcquisition" classname="PrototypeRulesTests" runstate="Runnable" seed="1892091623" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001260" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1060" name="PathCannotUseUnrevealedGroundAndRemainsCardinal" fullname="PrototypeRulesTests.PathCannotUseUnrevealedGroundAndRemainsCardinal" methodname="PathCannotUseUnrevealedGroundAndRemainsCardinal" classname="PrototypeRulesTests" runstate="Runnable" seed="504055610" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002126" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1066" name="PathsCannotEnterLivingEnemyCellsAndCanApproachOrPassAfterVictory" fullname="PrototypeRulesTests.PathsCannotEnterLivingEnemyCellsAndCanApproachOrPassAfterVictory" methodname="PathsCannotEnterLivingEnemyCellsAndCanApproachOrPassAfterVictory" classname="PrototypeRulesTests" runstate="Runnable" seed="62393540" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001232" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1047" name="PotionCapsHealthAndDoesNotConsumeAtFullHealth" fullname="PrototypeRulesTests.PotionCapsHealthAndDoesNotConsumeAtFullHealth" methodname="PotionCapsHealthAndDoesNotConsumeAtFullHealth" classname="PrototypeRulesTests" runstate="Runnable" seed="2123320990" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001063" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1055" name="SavedStateRestoresWallsFogItemsAndNextRandomResults" fullname="PrototypeRulesTests.SavedStateRestoresWallsFogItemsAndNextRandomResults" methodname="SavedStateRestoresWallsFogItemsAndNextRandomResults" classname="PrototypeRulesTests" runstate="Runnable" seed="1313224968" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.021496" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Continue Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1041" name="SeedReproducesMapsObjectsAndAllRandomStreams" fullname="PrototypeRulesTests.SeedReproducesMapsObjectsAndAllRandomStreams" classname="PrototypeRulesTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.011348" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1036" name="SeedReproducesMapsObjectsAndAllRandomStreams(0)" fullname="PrototypeRulesTests.SeedReproducesMapsObjectsAndAllRandomStreams(0)" methodname="SeedReproducesMapsObjectsAndAllRandomStreams" classname="PrototypeRulesTests" runstate="Runnable" seed="214752625" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002239" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1037" name="SeedReproducesMapsObjectsAndAllRandomStreams(-1)" fullname="PrototypeRulesTests.SeedReproducesMapsObjectsAndAllRandomStreams(-1)" methodname="SeedReproducesMapsObjectsAndAllRandomStreams" classname="PrototypeRulesTests" runstate="Runnable" seed="670464332" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001869" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1038" name="SeedReproducesMapsObjectsAndAllRandomStreams(int.MinValue)" fullname="PrototypeRulesTests.SeedReproducesMapsObjectsAndAllRandomStreams(int.MinValue)" methodname="SeedReproducesMapsObjectsAndAllRandomStreams" classname="PrototypeRulesTests" runstate="Runnable" seed="1075321300" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002087" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1039" name="SeedReproducesMapsObjectsAndAllRandomStreams(int.MaxValue)" fullname="PrototypeRulesTests.SeedReproducesMapsObjectsAndAllRandomStreams(int.MaxValue)" methodname="SeedReproducesMapsObjectsAndAllRandomStreams" classname="PrototypeRulesTests" runstate="Runnable" seed="1734726860" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002267" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1040" name="SeedReproducesMapsObjectsAndAllRandomStreams(12345)" fullname="PrototypeRulesTests.SeedReproducesMapsObjectsAndAllRandomStreams(12345)" methodname="SeedReproducesMapsObjectsAndAllRandomStreams" classname="PrototypeRulesTests" runstate="Runnable" seed="667354809" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002059" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1050" name="ShieldKeepsBlockAndOwnerBlockExpiresAtNextTurn" fullname="PrototypeRulesTests.ShieldKeepsBlockAndOwnerBlockExpiresAtNextTurn" methodname="ShieldKeepsBlockAndOwnerBlockExpiresAtNextTurn" classname="PrototypeRulesTests" runstate="Runnable" seed="1178643413" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.001085" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1049" name="SpiritAppliesPerHitAndBlockAbsorbsSegments" fullname="PrototypeRulesTests.SpiritAppliesPerHitAndBlockAbsorbsSegments" methodname="SpiritAppliesPerHitAndBlockAbsorbsSegments" classname="PrototypeRulesTests" runstate="Runnable" seed="2079163433" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.000936" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="1070" name="TownProgressionTests" fullname="TownProgressionTests" classname="TownProgressionTests" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:15Z" duration="0.230734" total="10" passed="10" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1076" name="CurrencyAndItemsUseSameInterruptedSettlementLedger" fullname="TownProgressionTests.CurrencyAndItemsUseSameInterruptedSettlementLedger" methodname="CurrencyAndItemsUseSameInterruptedSettlementLedger" classname="TownProgressionTests" runstate="Runnable" seed="659332882" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.036193" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1080" name="EveryTownServiceHasAConnectedWalkableEntrance" fullname="TownProgressionTests.EveryTownServiceHasAConnectedWalkableEntrance" methodname="EveryTownServiceHasAConnectedWalkableEntrance" classname="TownProgressionTests" runstate="Runnable" seed="215235455" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.003606" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1077" name="FullWarehouseRetainsSettlementUntilSpaceIsMade" fullname="TownProgressionTests.FullWarehouseRetainsSettlementUntilSpaceIsMade" methodname="FullWarehouseRetainsSettlementUntilSpaceIsMade" classname="TownProgressionTests" runstate="Runnable" seed="340491217" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.052435" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1074" name="KnightMechanicsApplyToCombatAndVictoryOnlyOnce" fullname="TownProgressionTests.KnightMechanicsApplyToCombatAndVictoryOnlyOnce" methodname="KnightMechanicsApplyToCombatAndVictoryOnlyOnce" classname="TownProgressionTests" runstate="Runnable" seed="557708870" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.002328" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1079" name="LegacyUnlimitedWarehouseMigratesWithoutLosingStockOrLedger" fullname="TownProgressionTests.LegacyUnlimitedWarehouseMigratesWithoutLosingStockOrLedger" methodname="LegacyUnlimitedWarehouseMigratesWithoutLosingStockOrLedger" classname="TownProgressionTests" runstate="Runnable" seed="1214094049" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.020076" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1072" name="LockedTalentAndGuildUpgradeNeverSpendCurrency" fullname="TownProgressionTests.LockedTalentAndGuildUpgradeNeverSpendCurrency" methodname="LockedTalentAndGuildUpgradeNeverSpendCurrency" classname="TownProgressionTests" runstate="Runnable" seed="329834409" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.018685" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1073" name="PausedRunKeepsItsTalentSnapshotWhenTownChanges" fullname="TownProgressionTests.PausedRunKeepsItsTalentSnapshotWhenTownChanges" methodname="PausedRunKeepsItsTalentSnapshotWhenTownChanges" classname="TownProgressionTests" runstate="Runnable" seed="1517212190" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:14Z" duration="0.038254" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Continue Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1078" name="SellingDonationAndExpansionPersistAndRejectOverspending" fullname="TownProgressionTests.SellingDonationAndExpansionPersistAndRejectOverspending" methodname="SellingDonationAndExpansionPersistAndRejectOverspending" classname="TownProgressionTests" runstate="Runnable" seed="2141863554" result="Passed" start-time="2026-10-21 15:58:14Z" end-time="2026-10-21 15:58:15Z" duration="0.029383" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1075" name="ShieldDamageDoesNotReceiveWeaponTalentBonus" fullname="TownProgressionTests.ShieldDamageDoesNotReceiveWeaponTalentBonus" methodname="ShieldDamageDoesNotReceiveWeaponTalentBonus" classname="TownProgressionTests" runstate="Runnable" seed="1768582116" result="Passed" start-time="2026-10-21 15:58:15Z" end-time="2026-10-21 15:58:15Z" duration="0.001986" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1071" name="TalentPurchaseAndResetPersistExactGoldAndRanks" fullname="TownProgressionTests.TalentPurchaseAndResetPersistExactGoldAndRanks" methodname="TalentPurchaseAndResetPersistExactGoldAndRanks" classname="TownProgressionTests" runstate="Runnable" seed="187606311" result="Passed" start-time="2026-10-21 15:58:15Z" end-time="2026-10-21 15:58:15Z" duration="0.026291" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

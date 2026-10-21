@@ -47,7 +47,7 @@ namespace MagicCave.Prototype.Editor
         {
             Directory.CreateDirectory("Assets/MagicCavePrototype/Resources");
             AssetDatabase.Refresh();
-            foreach (string name in new[] { "scene_wall_2", "scene_wall_11" })
+            foreach (string name in new[] { "scene_wall_2", "scene_wall_6", "scene_wall_11" })
             {
                 var importer = (TextureImporter)AssetImporter.GetAtPath(SpritePath + name + ".png");
                 if (importer == null) throw new InvalidOperationException("请先导出项目的Aseprite素材。");

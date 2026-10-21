@@ -25,7 +25,7 @@ namespace MagicCave.Prototype
                 uiKeyboard = Keyboard.current;
                 if (uiKeyboard != null) uiKeyboard.onTextInput += SeedCharacter;
             }
-            if (!seedFocused || !customSeed || ScreenMode != GameScreen.Home || Panel != GamePanel.None || uiKeyboard == null) return;
+            if (TownPage != TownPage.Expedition || !seedFocused || !customSeed || ScreenMode != GameScreen.Home || Panel != GamePanel.None || uiKeyboard == null) return;
             if (uiKeyboard.backspaceKey.wasPressedThisFrame && customSeedText.Length > 0) customSeedText = customSeedText.Substring(0, customSeedText.Length - 1);
             if (uiKeyboard.deleteKey.wasPressedThisFrame) customSeedText = "";
             if (uiKeyboard.ctrlKey.isPressed && uiKeyboard.aKey.wasPressedThisFrame) customSeedText = "";
@@ -37,7 +37,7 @@ namespace MagicCave.Prototype
         }
         void SeedCharacter(char value)
         {
-            if (seedFocused && customSeed && ScreenMode == GameScreen.Home && Panel == GamePanel.None &&
+            if (TownPage == TownPage.Expedition && seedFocused && customSeed && ScreenMode == GameScreen.Home && Panel == GamePanel.None &&
                 customSeedText.Length < 11 && (char.IsDigit(value) || (value == '-' && customSeedText.Length == 0))) customSeedText += value;
         }
         partial void ReleaseInterfaceInput()
@@ -124,40 +124,18 @@ namespace MagicCave.Prototype
             }
             else if (!string.IsNullOrEmpty(message) && Time.unscaledTime < messageUntil)
             {
-                Box(new Rect(260, 604, 760, 42)); Label(new Rect(274, 610, 730, 32), message, buttonStyle, Gold);
+                Box(new Rect(260, 99, 760, 31)); Label(new Rect(274, 100, 730, 28), message, buttonStyle, Gold);
             }
             GUI.enabled = oldEnabled; GUI.matrix = oldMatrix;
         }
-        void DrawHome()
-        {
-            Fill(new Rect(70, 108, 5, 484), "accent", Cyan);
-            Label(new Rect(98, 114, 600, 62), "MAGIC CAVE", titleStyle, Cyan);
-            Label(new Rect(100, 182, 580, 50), "魔洞探索 · 最小可玩模型", headingStyle);
-            Label(new Rect(101, 257, 515, 165), "探索随机房间，破墙寻找隐藏门。\n通过战斗升级，选择卡牌构筑本局卡组。\n生命归零则失败；击败首领后主动离开结算。", textStyle);
-            Label(new Rect(102, 498, 480, 70), "5张地图  /  10种卡牌  /  物品带出\n存档继续保留地图与本局状态", smallStyle, new Color(0.50f, 0.63f, 0.73f));
-            Box(new Rect(710, 120, 450, 490));
-            Label(new Rect(736, 140, 400, 45), "准备探索", headingStyle, Gold);
-            bool ready = Store != null;
-            bool pending = ready && Store.Session.pending != null;
-            Button(new Rect(738, 195, 394, 55), "开始新局", RequestNewRun, ready && !pending, true);
-            Button(new Rect(738, 264, 394, 55), pending ? "继续未完成结算" : "继续存档", ContinueRun, ready && (pending || Store.Session.checkpoint != null));
-            Button(new Rect(738, 334, 187, 44), "查看仓库", () => ScreenMode = GameScreen.Warehouse, ready);
-            Button(new Rect(945, 334, 187, 44), "退出", () => { leaveApplication = true; Panel = GamePanel.Leave; });
-            Button(new Rect(738, 407, 394, 40), customSeed ? "☑ 自定义种子" : "□ 随机种子（点击切换）", () => { customSeed = !customSeed; seedFocused = customSeed; });
-            var input = new Rect(738, 463, 300, 43);
-            Fill(input, seedFocused ? "input focus" : "input", seedFocused ? new Color(0.12f, 0.29f, 0.36f) : new Color(0.08f, 0.13f, 0.21f));
-            Label(new Rect(750, 467, 275, 34), customSeed ? customSeedText + (seedFocused && Mathf.FloorToInt(Time.unscaledTime * 2) % 2 == 0 ? "|" : "") : "每局随机生成Seed", textStyle);
-            if (Click(input) && customSeed) seedFocused = true;
-            Button(new Rect(1050, 463, 82, 43), "清空", () => { customSeedText = ""; seedFocused = true; }, customSeed);
-            Label(new Rect(738, 524, 392, 68), "支持32位整数，含0和负数。\n实际Seed在每局开始时输出到控制台。", smallStyle);
-        }
+        void DrawHome() { DrawTownHome(); }
         void DrawExplore()
         {
             if (Run == null) return;
             Box(new Rect(0, 0, 1280, 89));
             Label(new Rect(25, 8, 260, 32), "地图 " + (Run.mapIndex + 1) + " / 5", headingStyle, Gold);
             Label(new Rect(26, 39, 260, 21), "Seed: " + Run.seed, smallStyle, Cyan);
-            Bar(new Rect(295, 19, 260, 32), Run.health / 60f, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / 60");
+            Bar(new Rect(295, 19, 260, 32), Run.health / (float)Run.MaxHealth, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / " + Run.MaxHealth);
             Label(new Rect(586, 19, 250, 42), "等级 " + Run.level + "   经验 " + Run.experience + "/" + Rules.RequiredExperience(Run.level));
             Label(new Rect(865, 20, 180, 38), "背包 " + Inventory.UsedSlots(Run) + " / 20");
             Button(new Rect(1110, 17, 140, 41), "暂停 [Esc]", () => { Panel = GamePanel.Pause; CancelRoute(); });
@@ -175,12 +153,14 @@ namespace MagicCave.Prototype
             if (target.kind == TargetKind.Enemy)
             {
                 var enemy = Run.Map.enemies.FirstOrDefault(e => e.id == target.id);
-                if (enemy != null) hint = Rules.EnemyNames[(int)enemy.kind] + " · 点击接近后战斗 / 范围内按E";
+                if (enemy != null) hint = Rules.EnemyLabel(enemy) + " · " +
+                    (enemy.role == EnemyRole.ItemGuard ? "物品镇守" : enemy.role == EnemyRole.CorridorGuard ? "通道镇守" : "自由怪物") + " · 点击接近后战斗 / 范围内按E";
             }
             if (target.kind == TargetKind.Loot)
             {
                 var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
-                if (loot != null && loot.units.Count > 0) hint = Rules.ItemNames[(int)loot.units[0].kind] + " ×" + loot.units.Count + " · " + Rules.RarityName(loot.units[0].kind) + " · 点击 / E拾取";
+                if (loot != null && loot.units.Count > 0) hint = Rules.ItemNames[(int)loot.units[0].kind] + " ×" + loot.units.Count + " · " + Rules.RarityName(loot.units[0].kind) +
+                    (Run.Map.LivingGuard(loot) != null ? " · 需先击败镇守怪" : " · 点击 / E拾取");
             }
             Label(new Rect(26, 671, 890, 38), hint, textStyle, Gold);
             Button(new Rect(960, 669, 135, 36), "背包 [B]", () => { Panel = GamePanel.Inventory; CancelRoute(); });
@@ -191,7 +171,7 @@ namespace MagicCave.Prototype
             Button(rectangle, "", click, enabled, true);
             Label(new Rect(rectangle.x + 10, rectangle.y + 10, rectangle.width - 45, 32), Rules.CardNames[(int)card], textStyle, Gold);
             Label(new Rect(rectangle.xMax - 35, rectangle.y + 10, 26, 30), Rules.Costs[(int)card].ToString(), buttonStyle, Cyan);
-            Label(new Rect(rectangle.x + 10, rectangle.y + 63, rectangle.width - 20, rectangle.height - 72), Rules.Effects[(int)card], smallStyle);
+            Label(new Rect(rectangle.x + 10, rectangle.y + 63, rectangle.width - 20, rectangle.height - 72), CardEffect(card), smallStyle);
         }
         void DrawArt(Rect rectangle, Sprite sprite)
         {
@@ -206,15 +186,15 @@ namespace MagicCave.Prototype
             Label(new Rect(45, 28, 480, 42), "卡牌战斗", headingStyle, Gold);
             Button(new Rect(1110, 23, 130, 38), "暂停 [Esc]", () => Panel = GamePanel.Pause);
             Box(new Rect(105, 120, 415, 218)); Box(new Rect(755, 120, 415, 218));
-            Label(new Rect(130, 143, 360, 42), "探索者", headingStyle, Cyan);
+            Label(new Rect(130, 143, 360, 42), "骑士", headingStyle, Cyan);
             DrawArt(new Rect(420, 143, 64, 64), artSet != null ? artSet.playerDown : null);
-            Bar(new Rect(130, 206, 362, 30), Run.health / 60f, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / 60");
+            Bar(new Rect(130, 206, 362, 30), Run.health / (float)Run.MaxHealth, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / " + Run.MaxHealth);
             Label(new Rect(130, 261, 360, 35), "格挡 " + Combat.playerBlock + "     战意 +" + Combat.spirit);
-            Label(new Rect(781, 143, 360, 42), Rules.EnemyNames[(int)Combat.enemy.kind], headingStyle, new Color(1f, 0.53f, 0.46f));
+            Label(new Rect(781, 143, 360, 42), Rules.EnemyLabel(Combat.enemy), headingStyle, new Color(1f, 0.53f, 0.46f));
             DrawArt(new Rect(1080, 143, 64, 64), artSet != null ? artSet.enemies[(int)Combat.enemy.kind] : null);
-            Bar(new Rect(782, 206, 362, 30), Combat.enemyHealth / (float)Rules.EnemyHealth[(int)Combat.enemy.kind], new Color(0.68f, 0.25f, 0.30f), "生命 " + Combat.enemyHealth + " / " + Rules.EnemyHealth[(int)Combat.enemy.kind]);
+            Bar(new Rect(782, 206, 362, 30), Combat.enemyHealth / (float)Rules.Health(Combat.enemy), new Color(0.68f, 0.25f, 0.30f), "生命 " + Combat.enemyHealth + " / " + Rules.Health(Combat.enemy));
             Label(new Rect(782, 261, 360, 35), "格挡 " + Combat.enemyBlock + "     意图：" + Combat.Intent, textStyle, Gold);
-            Label(new Rect(538, 165, 205, 92), "能量\n" + Combat.energy + " / 3", buttonStyle, Cyan);
+            Label(new Rect(538, 165, 205, 92), "能量\n" + Combat.energy + " / " + (3 + (Combat.enemyTurn == 0 ? Run.openingEnergy : 0)), buttonStyle, Cyan);
             Label(new Rect(380, 367, 520, 35), Combat.playerTurn ? "你的回合 · 点击卡牌使用" : "敌人行动中…", buttonStyle, Gold);
             int count = Combat.hand.Count; float width = Mathf.Min(170, 1120f / Mathf.Max(1, count) - 10);
             float start = (1280 - count * (width + 10) + 10) / 2f;
@@ -256,6 +236,8 @@ namespace MagicCave.Prototype
                 Button(new Rect(884, y + 10, 85, 39), "－", () => ChangeSelection(kind, -1), !pending.failure && !pending.confirmed && selected > 0);
                 Button(new Rect(994, y + 10, 85, 39), "＋", () => ChangeSelection(kind, 1), !pending.failure && !pending.confirmed && selected < total && pending.selectedIds.Count < 10);
             }
+            Label(new Rect(150, 178, 980, 28), "结算奖励：金币 +" + TownRules.SettlementGold(pending) + "  /  声望 +" + TownRules.SettlementReputation(pending) + "    仓库剩余 " + (TownRules.Capacity(Store.Warehouse) - TownRules.Used(Store.Warehouse)) + " 件", smallStyle, Cyan);
+            Button(new Rect(450, 586, 250, 52), "管理仓库 / 扩容", () => ScreenMode = GameScreen.Warehouse, !pending.confirmed);
             Button(new Rect(150, 586, 280, 52), "取消，继续探索", CancelSettlement, !pending.failure && !pending.confirmed);
             Button(new Rect(726, 586, 404, 52), pending.confirmed ? "重试完成入库" : "确认结算并入库", FinishSettlement, true, true);
             Label(new Rect(154, 653, 970, 35), pending.failure ? "按稀有度、首次获取时间和首次入包顺序自动选取，不能更换。" : "确认前可以取消；未带出的物品在本局结束后不保留。", smallStyle);
@@ -275,23 +257,13 @@ namespace MagicCave.Prototype
             Label(new Rect(360, 80, 650, 65), result, titleStyle, Gold);
             Box(new Rect(300, 179, 680, 380));
             Label(new Rect(330, 207, 620, 88), "到达地图 " + (lastSettlement.run.mapIndex + 1) + " / 5    最终等级 " + lastSettlement.run.level + "\n本局获得经验 " + lastSettlement.run.totalExperience + "    带出物品 " + lastCarried.Count + " 件");
+            Label(new Rect(330, 285, 620, 30), "金币 +" + TownRules.SettlementGold(lastSettlement) + "    声望 +" + TownRules.SettlementReputation(lastSettlement), smallStyle, Cyan);
             int row = 0;
             foreach (var group in lastCarried.GroupBy(i => i.kind).OrderBy(g => g.Key))
                 Label(new Rect(335, 320 + row++ * 46, 610, 34), Rules.ItemNames[(int)group.Key] + " ×" + group.Count());
-            Button(new Rect(390, 600, 500, 56), "返回局外", GoHome, true, true);
+            Button(new Rect(390, 600, 500, 56), "返回世界地图", GoHome, true, true);
         }
-        void DrawWarehouse()
-        {
-            Label(new Rect(180, 95, 900, 55), "局外仓库", titleStyle, Gold);
-            Label(new Rect(184, 160, 900, 40), "物品永久累计保存；第一版新局背包为空。", textStyle);
-            for (int i = 0; i < 4; i++)
-            {
-                float y = 247 + i * 70; Box(new Rect(180, y, 920, 55));
-                Label(new Rect(200, y + 10, 560, 37), Rules.ItemNames[i] + " · " + Rules.RarityName((ItemKind)i));
-                Label(new Rect(850, y + 10, 210, 37), "× " + Store.Warehouse.counts[i], textStyle, Cyan);
-            }
-            Button(new Rect(420, 599, 440, 50), "返回", () => ScreenMode = GameScreen.Home);
-        }
+        void DrawWarehouse() { DrawTownWarehouse(); }
         void DrawPanel()
         {
             Fill(new Rect(0, 0, 1280, 720), "shade", new Color(0, 0, 0, 0.70f));
@@ -339,7 +311,7 @@ namespace MagicCave.Prototype
                 ItemKind kind = slot.units[0].kind;
                 Label(new Rect(x + 8, y + 6, 190, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count, textStyle, Gold);
                 Label(new Rect(x + 8, y + 33, 190, 23), Rules.RarityName(kind), smallStyle);
-                Button(new Rect(x + 8, y + 60, 88, 26), "使用", () => { if (Inventory.Heal(Run, slotIndex)) Notify("恢复生命，当前 " + Run.health + "/60"); }, kind == ItemKind.Potion && Run.health < 60);
+                Button(new Rect(x + 8, y + 60, 88, 26), "使用", () => { if (Inventory.Heal(Run, slotIndex)) Notify("恢复生命，当前 " + Run.health + "/" + Run.MaxHealth); }, kind == ItemKind.Potion && Run.health < Run.MaxHealth);
                 Button(new Rect(x + 108, y + 60, 88, 26), "丢弃", () => { dropSlot = slotIndex; dropQuantity = 1; });
             }
             if (dropSlot >= 0 && Run.inventory[dropSlot].units.Count > 0)
@@ -358,6 +330,7 @@ namespace MagicCave.Prototype
             bool drawPile = Panel == GamePanel.Draw, discardPile = Panel == GamePanel.Discard;
             var cards = drawPile ? Combat.draw : discardPile ? Combat.discard : Run.deck;
             Label(new Rect(263, 124, 750, 48), (drawPile ? "抽牌堆组成（顺序隐藏）" : discardPile ? "弃牌堆" : "本局卡组") + " · " + cards.Count + "张", headingStyle, Gold);
+            Label(new Rect(330, 285, 620, 30), "金币 +" + TownRules.SettlementGold(lastSettlement) + "    声望 +" + TownRules.SettlementReputation(lastSettlement), smallStyle, Cyan);
             int row = 0;
             foreach (var group in cards.GroupBy(c => c).OrderBy(g => g.Key))
             {

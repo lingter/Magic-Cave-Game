@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-22",
+  "unity": "6000.5.4f1",
+  "runner": "Isolated Unity prototype copy",
+  "editMode": {
+    "passed": 68,
+    "failed": 0,
+    "mapCount": 400,
+    "seedCount": 100
+  },
+  "playMode": {
+    "passed": 3,
+    "failed": 0,
+    "tests": [
+      "DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup",
+      "PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected",
+      "DoorCluesRespectFogPersistAndDisappearWhenWallBreaks"
+    ]
+  },
+  "notes": [
+    "PlayMode loot tests invoke the production interaction directly to avoid Game-view focus requirements in batch mode.",
+    "Event doors and wall-breaking tool items are not implemented in the current prototype; their updated design constraints are recorded.",
+    "Windows player build was not rebuilt."
+  ]
+}

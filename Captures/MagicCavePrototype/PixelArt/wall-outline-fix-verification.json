@@ -1,0 +1,38 @@
+{
+  "validationDate": "2026-10-22",
+  "runner": "Unity 6000.5.4f1 native batch mode in an isolated project copy",
+  "runtimeSource": "Assets/MagicCavePrototype/Runtime/PixelWallTiles.cs",
+  "runtimeSha256": "9E52E2D1AAE11297F7C9486AB9E6C9005CE83447F37C99285DECF7B0B42524D1",
+  "runtimeMatchesWorkspace": true,
+  "changes": [
+    "Derive visible four-direction wall outline connections from the eight terrain neighbors; both ends of a shared edge use the same adjacent terrain.",
+    "Use full original strip/corner/junction artwork; synthesize left/right T junctions from cross 6 with a complete four-column vertical edge and shadow.",
+    "Supplement only pure two-arm L corners between discovered walls. Unknown T and cross junctions remain fogged.",
+    "After actual wall breaking, rebuild against the changed terrain so neighboring corners and straight walls change accordingly."
+  ],
+  "editMode": {
+    "result": "Passed",
+    "passed": 27,
+    "failed": 0,
+    "terrainNeighborhoods": 256,
+    "sharedEdgeNeighborhoods": 2048,
+    "screenshotRegressionMasks": [23, 39, 77, 141],
+    "results": "wall-outline-editmode-results.xml"
+  },
+  "playMode": {
+    "result": "Passed",
+    "passed": 4,
+    "failed": 0,
+    "tests": [
+      "BreakingAWallRebuildsTheActualNeighborConnections",
+      "UnknownCrossStaysFoggedEvenWhenTwoOfItsArmsAreDiscovered",
+      "UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem",
+      "DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents"
+    ],
+    "breakingInput": "Inject right-button state into the current Input System update buffer and execute PrototypeGame's normal input Update path.",
+    "breakingExpectedNeighbors": ["wall_8 -> wall_11", "wall_2 -> wall_4"],
+    "results": "wall-outline-playmode-results.xml"
+  },
+  "pixelPreview": "wall-junction-fix-check.png",
+  "pixelPreviewNote": "A deterministic layout assembled from the actual selected sprite pixels, not a live gameplay screenshot."
+}

@@ -34,21 +34,67 @@ public class PrototypeRulesTests
                 var doors = Enumerable.Range(0, map.cells.Length).Where(i => map.cells[i] >= 2).ToList();
                 Assert.That(doors.Count, Is.EqualTo(index == 2 ? 2 : 1), "Seed " + seed);
                 var terrain = Rules.Copy(map);
-                foreach (int door in doors) terrain.cells[door] = (int)Tile.Wall;
+                foreach (int door in doors) terrain.cells[door] = (int)Tile.Ground;
                 Assert.That(MapGenerator.ValidateTerrain(terrain, out int groups, out int thick), Is.True);
                 Assert.That(groups, Is.GreaterThanOrEqualTo(4)); Assert.That(thick, Is.GreaterThanOrEqualTo(2));
-                var candidates = MapGenerator.DoorCandidates(terrain);
-                foreach (int door in doors) Assert.That(candidates, Does.Contain(new Vector2Int(door % map.size, door / map.size)));
+                foreach (int door in doors) Assert.That(MapGenerator.Directions.Any(d => map.Walkable(door % map.size + d.x, door / map.size + d.y)), Is.True);
                 if (doors.Count == 2) Assert.That(Math.Abs(doors[0] % 25 - doors[1] % 25) + Math.Abs(doors[0] / 25 - doors[1] / 25), Is.GreaterThanOrEqualTo(3));
                 var occupied = new HashSet<int> { map.Index(map.spawnX, map.spawnY) };
                 foreach (var enemy in map.enemies) Assert.That(occupied.Add(map.Index(enemy.x, enemy.y)), Is.True);
                 foreach (var loot in map.loot) Assert.That(occupied.Add(map.Index(loot.x, loot.y)), Is.True);
-                Assert.That(map.enemies.Count, Is.EqualTo(2));
-                Assert.That(map.loot.Count(l => l.units[0].kind == ItemKind.Ore), Is.EqualTo(3));
-                Assert.That(map.loot.Count(l => l.units[0].kind == ItemKind.Crystal), Is.EqualTo(2));
+                Assert.That(map.enemies.Count, Is.EqualTo(10));
+                Assert.That(map.loot.Count, Is.EqualTo(10));
+                Assert.That(map.loot.Count(l => l.units[0].kind == ItemKind.Ore), Is.InRange(4, 5));
+                Assert.That(map.loot.Count(l => l.units[0].kind == ItemKind.Crystal), Is.EqualTo(3));
                 Assert.That(map.loot.Count(l => l.units[0].kind == ItemKind.Potion), Is.EqualTo(2));
+                Assert.That(map.enemies.Count(e => e.role == EnemyRole.ItemGuard), Is.EqualTo(7));
+                Assert.That(map.enemies.Count(e => e.role == EnemyRole.CorridorGuard), Is.EqualTo(1));
+                Assert.That(map.enemies.Count(e => e.role == EnemyRole.Roaming), Is.EqualTo(2));
+                Assert.That(map.loot.Count(l => l.guardEnemyId != 0), Is.EqualTo(8));
+                foreach (var loot in map.loot)
+                {
+                    var guard = map.LivingGuard(loot);
+                    Assert.That(MapGenerator.IsLootCorner(map, new Vector2Int(loot.x, loot.y)), Is.EqualTo(guard != null));
+                    if (guard == null) continue;
+                    Assert.That(MapGenerator.Manhattan(new Vector2Int(loot.x, loot.y), new Vector2Int(guard.x, guard.y)), Is.EqualTo(1));
+                    Assert.That(guard.Level, Is.GreaterThanOrEqualTo(Rules.Rarity(loot.units[0].kind) + 1));
+                }
+                foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.CorridorGuard))
+                    Assert.That(MapGenerator.IsCorridor(map, new Vector2Int(guard.x, guard.y)), Is.True);
+                foreach (var enemy in map.enemies)
+                    Assert.That(MapGenerator.Manhattan(new Vector2Int(map.spawnX, map.spawnY), new Vector2Int(enemy.x, enemy.y)), Is.GreaterThanOrEqualTo(3));
             }
         }
+    }
+    [Test]
+    public void GuardMustBeDefeatedEvenAfterWallsAreBrokenAndSurvivesCheckpoint()
+    {
+        var run = New(); var loot = run.Map.loot.First(l => l.guardEnemyId != 0);
+        var guard = run.Map.LivingGuard(loot);
+        foreach (var d in MapGenerator.Directions)
+        {
+            int x = loot.x + d.x, y = loot.y + d.y;
+            if (!run.Map.Border(x, y) && run.Map.At(x, y) == Tile.Wall) run.Map.Set(x, y, Tile.Ground);
+        }
+        Assert.That(Inventory.Pickup(run, loot), Is.Zero);
+        var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
+        run = new PrototypeStore(folder).Continue(); loot = run.Map.loot.Single(l => l.id == loot.id);
+        Assert.That(run.Map.LivingGuard(loot).id, Is.EqualTo(guard.id));
+        Assert.That(Inventory.Pickup(run, loot), Is.Zero);
+        Growth.FinishVictory(run, run.Map.LivingGuard(loot));
+        Assert.That(Inventory.Pickup(run, loot), Is.GreaterThan(0));
+        PrototypeStore.ValidateRun(run);
+    }
+
+    [Test]
+    public void GuardLevelsChangeCombatAndLegacyEnemiesKeepBaseStats()
+    {
+        var run = New();
+        var legacy = new EnemyData { kind = EnemyKind.Bat, level = 0 };
+        var stronger = new EnemyData { kind = EnemyKind.Bat, level = 3 };
+        var basic = new Battle(run, legacy); var high = new Battle(run, stronger);
+        Assert.That(basic.enemyHealth, Is.EqualTo(18)); Assert.That(basic.IntentAttack, Is.EqualTo(5));
+        Assert.That(high.enemyHealth, Is.EqualTo(26)); Assert.That(high.IntentAttack, Is.EqualTo(7));
     }
     [Test]
     public void BattleAndChoicesDoNotPerturbMapRandomness()
@@ -147,7 +193,7 @@ public class PrototypeRulesTests
     {
         var run = New(); int wall = Enumerable.Range(0, 625).First(i => !run.Map.Border(i % 25, i / 25) && run.Map.cells[i] == (int)Tile.Wall);
         run.Map.cells[wall] = (int)Tile.Ground; run.Map.revealed[wall] = true; run.health = 37;
-        Inventory.Pickup(run, run.Map.loot[0]); new Battle(run, run.Map.enemies[0]);
+        Inventory.Pickup(run, run.Map.loot.First(l => l.guardEnemyId == 0)); new Battle(run, run.Map.enemies[0]);
         var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
         var loaded = new PrototypeStore(folder).Continue();
         Assert.That(JsonUtility.ToJson(loaded), Is.EqualTo(JsonUtility.ToJson(run)));
@@ -157,7 +203,7 @@ public class PrototypeRulesTests
     public void ActiveSettlementRestoresSelectionAndCancelReturnsLiveState()
     {
         var run = New(); var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
-        Inventory.Pickup(run, run.Map.loot[0]); run.health = 31; store.BeginSettlement(run, false);
+        Inventory.Pickup(run, run.Map.loot.First(l => l.guardEnemyId == 0)); run.health = 31; store.BeginSettlement(run, false);
         int id = Inventory.Items(run)[0].id; store.SaveSelection(new[] { id });
         store = new PrototypeStore(folder); Assert.That(store.Session.pending.selectedIds, Does.Contain(id));
         var restored = store.CancelSettlement(); Assert.That(restored.health, Is.EqualTo(31));
@@ -178,7 +224,7 @@ public class PrototypeRulesTests
     [Test]
     public void InterruptedWarehouseCommitIsNotCreditedTwice()
     {
-        var run = New(); Inventory.Pickup(run, run.Map.loot[0]); var store = new PrototypeStore(folder);
+        var run = New(); Inventory.Pickup(run, run.Map.loot.First(l => l.guardEnemyId == 0)); var store = new PrototypeStore(folder);
         store.BeginSettlement(run, false); store.SaveSelection(Inventory.Items(run).Select(i => i.id).Take(2).ToList());
         var interrupted = Rules.Copy(store.Session); interrupted.pending.confirmed = true; interrupted.checkpoint = null;
         store.CommitSettlement(); long total = store.Warehouse.counts.Sum(); Assert.That(total, Is.EqualTo(2));
@@ -214,7 +260,8 @@ public class PrototypeRulesTests
         {
             run.mapIndex = mapIndex; run.x = run.Map.spawnX; run.y = run.Map.spawnY;
             foreach (var loot in run.Map.loot.ToArray()) Inventory.Pickup(run, loot);
-            foreach (var enemy in run.Map.enemies)
+            // Ordinary fights are optional; take two low-level encounters per floor.
+            foreach (var enemy in run.Map.enemies.OrderBy(e => e.Level).ThenBy(e => e.kind).Take(2))
             {
                 UsePotions(run);
                 var battle = new Battle(run, enemy);
@@ -235,6 +282,7 @@ public class PrototypeRulesTests
                 }
                 Assert.That(battle.outcome, Is.EqualTo(BattleOutcome.Victory), "Map " + (mapIndex + 1) + ", enemy " + enemy.kind + ", HP " + run.health);
                 Growth.FinishVictory(run, enemy);
+                foreach (var loot in run.Map.loot.ToArray()) Inventory.Pickup(run, loot);
                 List<CardKind> choices;
                 while ((choices = Growth.NextUpgrade(run)) != null)
                     run.deck.Add(choices.OrderByDescending(c => c == CardKind.Quick ? 8 : c == CardKind.Heavy ? 7 : c == CardKind.Double ? 6 : c == CardKind.Fortify ? 5 : c == CardKind.Steady ? 4 : c == CardKind.Shield ? 2 : 1).First());

@@ -1,0 +1,46 @@
+{
+  "validationDate": "2026-10-22",
+  "runner": "Unity 6000.5.4f1 native batch mode in an isolated project copy",
+  "mcpStatus": "No connected Unity instances were available at verification time.",
+  "cause": "The previous pure-L-only guard hid an entire unknown T/cross, including the corner needed to connect two already discovered wall segments.",
+  "fix": "Supplement only the union of corner arm pairs supported by an actually known diagonal floor and two actually known wall anchors. Render that subset of the physical junction and reselect it whenever visibility refreshes.",
+  "runtimeSources": [
+    {
+      "path": "Assets/MagicCavePrototype/Runtime/PixelWallTiles.cs",
+      "sha256": "68A7DCE297E8F6C5AA9286E287F36A3F65C76E00F5EB8B120210BA593492C5D2"
+    },
+    {
+      "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+      "sha256": "232D825647A083A773F2465B19FD7CA2D9FDC5A8A8FCDAB0521767676C7C2AA3"
+    }
+  ],
+  "editMode": {
+    "passed": 39,
+    "failed": 0,
+    "terrainAndDiscoveryCombinations": 65536,
+    "sharedEdgeNeighborhoods": 2048,
+    "partialJunctionCases": 12,
+    "results": "wall-partial-editmode-results.xml"
+  },
+  "playMode": {
+    "passed": 5,
+    "failed": 0,
+    "results": "wall-partial-playmode-results.xml",
+    "actualBreakingTest": "ActualWallBreakingCompletesFoggedJunctionCornersInAllFourDirections",
+    "breakingInput": "Inject actual right mouse-button state into the current Input System buffer; validate PointerTarget coordinates; execute the production PrototypeGame.Update path.",
+    "rotations": 4,
+    "assertions": [
+      "Before breaking, the supplemental corner is hidden because its supporting floor does not exist.",
+      "Right-click breaking turns the intended known wall into ground.",
+      "After breaking, the neighboring unknown T immediately renders the proper L corner, not its hidden arm.",
+      "Unknown branches and unknown ground remain fogged.",
+      "The supplemental wall remains unknown and non-interactive, and exploration records are unchanged.",
+      "An unknown partial cross becomes the full cross when actually discovered without a terrain rebuild."
+    ]
+  },
+  "captures": {
+    "before": "wall-break-corner-before-0.png through wall-break-corner-before-3.png",
+    "after": "wall-break-corner-after-0.png through wall-break-corner-after-3.png",
+    "description": "Actual Unity runtime camera renders before and after real wall-breaking input. The camera is temporarily reframed to the test area; these are not assembled sprite previews and do not include the OnGUI HUD. All eight captures were visually checked."
+  }
+}

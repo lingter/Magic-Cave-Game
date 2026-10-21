@@ -9,6 +9,7 @@ namespace MagicCave.Prototype
         {
             public int x, y;
             public SpriteRenderer floor, wall, fog;
+            public BoxCollider2D wallCollider;
             public GameObject feature;
         }
         sealed class ObjectVisual { public GameObject root; public int x, y; }
@@ -111,6 +112,7 @@ namespace MagicCave.Prototype
                 {
                     var wall = Pixel("Wall", worldRoot.transform, wallTiles.Get(Run.Map, x, y), World(x, y), SpriteOrder(y));
                     TargetTag(wall.gameObject, TargetKind.Wall, x, y); visual.wall = wall; visual.feature = wall.gameObject;
+                    visual.wallCollider = wall.GetComponent<BoxCollider2D>();
                 }
                 else if (tile == Tile.Advance || tile == Tile.Return)
                 {
@@ -125,18 +127,26 @@ namespace MagicCave.Prototype
             foreach (var enemy in Run.Map.enemies)
             {
                 if (enemy.defeated) continue;
-                var visual = Pixel(Rules.EnemyNames[(int)enemy.kind], worldRoot.transform, artSet.enemies[(int)enemy.kind], World(enemy.x, enemy.y), SpriteOrder(enemy.y) + 1);
+                var visual = Pixel(Rules.EnemyLabel(enemy), worldRoot.transform, artSet.enemies[(int)enemy.kind], World(enemy.x, enemy.y), SpriteOrder(enemy.y) + 1);
                 TargetTag(visual.gameObject, TargetKind.Enemy, enemy.x, enemy.y, enemy.id);
                 WorldLabel(visual.transform, visual.name, 0.65f);
                 objects.Add(new ObjectVisual { root = visual.gameObject, x = enemy.x, y = enemy.y });
             }
             foreach (var loot in Run.Map.loot)
             {
-                if (loot.units.Count == 0) continue;
-                ItemKind kind = loot.units[0].kind;
+                bool empty = loot.units.Count == 0;
+                if (empty && !loot.IsContainer) continue;
+                ItemKind kind = empty ? loot.appearanceKind : loot.units[0].kind;
                 var tint = kind == ItemKind.Crystal ? new Color(0.5f, 0.85f, 1) : Color.white;
+                if (empty) tint.a = 0.25f;
                 var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.loot[(int)kind], World(loot.x, loot.y),
-                    loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
+                    empty || loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
+                if (empty)
+                {
+                    // An opened container is scenery: no interaction target, collider or item label.
+                    objects.Add(new ObjectVisual { root = visual.gameObject, x = loot.x, y = loot.y });
+                    continue;
+                }
                 TargetTag(visual.gameObject, TargetKind.Loot, loot.x, loot.y, loot.id, loot.loose);
                 if (loot.loose)
                 {
@@ -164,10 +174,18 @@ namespace MagicCave.Prototype
             foreach (var visual in tiles)
             {
                 bool known = Run.Map.Known(visual.x, visual.y);
-                visual.fog.gameObject.SetActive(!known);
+                bool showWall = visual.wall != null && PixelWallTiles.IsOutlineVisible(Run.Map, visual.x, visual.y);
+                visual.fog.gameObject.SetActive(!(known || showWall));
                 visual.floor.enabled = known && !(Run.Map.Border(visual.x, visual.y) && Run.Map.At(visual.x, visual.y) == Tile.Wall);
-                if (visual.wall != null) visual.wall.color = MapGenerator.IsDoorHintWall(Run.Map, visual.x, visual.y) ? DoorHintColor : Color.white;
-                if (visual.feature != null) visual.feature.SetActive(known);
+                if (visual.wall != null)
+                {
+                    // Exploration can change a decorative corner into a fuller
+                    // junction without rebuilding the terrain or discovering it.
+                    if (showWall) visual.wall.sprite = wallTiles.Get(Run.Map, visual.x, visual.y);
+                    visual.wall.color = MapGenerator.IsDoorHintWall(Run.Map, visual.x, visual.y) ? DoorHintColor : Color.white;
+                }
+                if (visual.wallCollider != null) visual.wallCollider.enabled = known;
+                if (visual.feature != null) visual.feature.SetActive(known || showWall);
             }
             foreach (var visual in objects) visual.root.SetActive(Run.Map.Known(visual.x, visual.y));
         }

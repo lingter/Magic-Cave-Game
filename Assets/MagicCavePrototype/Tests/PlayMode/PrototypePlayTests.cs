@@ -37,6 +37,12 @@ public class PrototypePlayTests
         var previousScene = SceneManager.GetActiveScene();
         var testScene = SceneManager.CreateScene("Prototype Test " + Guid.NewGuid().ToString("N"));
         SceneManager.SetActiveScene(testScene);
+        // Unity 6 keeps the coroutine runner in its initial scene. Preserve it before
+        // unloading that scene, otherwise the fixture stops during this setup yield.
+        if (previousScene.IsValid() && previousScene.isLoaded)
+            foreach (var root in previousScene.GetRootGameObjects())
+                if (root.GetComponentsInChildren<MonoBehaviour>(true).Any(component => component != null && component.GetType().Name == "PlaymodeTestsController"))
+                    SceneManager.MoveGameObjectToScene(root, testScene);
         if (previousScene.IsValid() && previousScene.isLoaded) yield return SceneManager.UnloadSceneAsync(previousScene);
         folder = Path.Combine(Application.temporaryCachePath, "MagicCavePlayTests", Guid.NewGuid().ToString("N"));
         var camera = new GameObject("Test Camera").AddComponent<Camera>(); camera.tag = "MainCamera";
@@ -63,15 +69,80 @@ public class PrototypePlayTests
         driver.mouseState = new MouseState { position = position };
         yield return null; yield return null; yield return null;
     }
+    void InteractWithLoot(GroundLoot loot)
+    {
+        // Use the production interaction without requiring a focused Game view in batch mode.
+        var type = typeof(PrototypeGame).GetNestedType("Target", BindingFlags.NonPublic);
+        var target = Activator.CreateInstance(type);
+        type.GetField("kind").SetValue(target, TargetKind.Loot);
+        type.GetField("id").SetValue(target, loot.id);
+        type.GetField("x").SetValue(target, loot.x);
+        type.GetField("y").SetValue(target, loot.y);
+        typeof(PrototypeGame).GetMethod("Interact", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new[] { target });
+    }
+
+    [UnityTest]
+    public IEnumerator TownWalkingTalentPurchaseWarehouseAndDepartureWork()
+    {
+        string captures = Path.GetFullPath("Captures/WorldMap"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "world-map.png")); yield return null; yield return null;
+        // Enter the tent before the mentor, chairman and warehouse become visible.
+        yield return Click(184, 233);
+        float deadline = Time.time + 8;
+        while (game.TownWalking && Time.time < deadline) yield return null;
+        Assert.That(game.InGuild, Is.True);
+        Assert.That(game.TownPage, Is.EqualTo(TownPage.None));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "guild-interior.png")); yield return null; yield return null;
+        yield return Click(584, 281);
+        deadline = Time.time + 8;
+        while (game.TownWalking && Time.time < deadline) yield return null;
+        Assert.That(game.TownPage, Is.EqualTo(TownPage.Mentor));
+        Assert.That(Vector2.Distance(game.TownPosition, new Vector2(17, 5)), Is.LessThan(.02f));
+        yield return Click(1060, 478);
+        Assert.That(game.Store.Warehouse.town.talents[1], Is.EqualTo(1));
+        Assert.That(game.Store.Warehouse.town.gold, Is.EqualTo(90));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "knight-talents.png")); yield return null; yield return null;
+        driver.keyState = new KeyboardState(Key.Escape); yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(game.TownPage, Is.EqualTo(TownPage.None));
+        // WASD cancels a previous click route.
+        game.VisitTown(2); driver.keyState = new KeyboardState(Key.A); yield return null; yield return null;
+        Assert.That(game.TownWalking, Is.False); driver.keyState = new KeyboardState(); yield return null;
+        game.VisitTown(3); deadline = Time.time + 8;
+        while (game.TownWalking && Time.time < deadline) yield return null;
+        Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Warehouse));
+        yield return Click(350, 574);
+        Assert.That(TownRules.Capacity(game.Store.Warehouse), Is.EqualTo(150));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "warehouse.png")); yield return null; yield return null;
+        yield return Click(950, 575); Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Home));
+        game.VisitTown(2); deadline = Time.time + 8;
+        while (game.TownWalking && Time.time < deadline) yield return null;
+        Assert.That(game.TownPage, Is.EqualTo(TownPage.Chairman));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "guild-upgrade.png")); yield return null; yield return null;
+        game.CloseTownPage(); game.StartNewRun(12345); yield return null;
+        Assert.That(game.Run.attackBonus, Is.EqualTo(1));
+        Assert.That(game.Run.MaxHealth, Is.EqualTo(60));
+        typeof(PrototypeGame).GetMethod("BeginSettlement", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { false });
+        yield return Click(560, 610); Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Warehouse));
+        driver.keyState = new KeyboardState(Key.Escape); yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Settlement));
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.None), "Esc from settlement warehouse must not also open pause.");
+    }
+
     [UnityTest]
     public IEnumerator SeedMenuButtonsAndCardBattleWorkWithNewInputSystem()
     {
         Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Home));
-        yield return Click(910, 424); Assert.That(game.customSeed, Is.True, "Seed toggle must respond to Input System mouse release");
-        yield return Click(1090, 482); Assert.That(game.customSeedText, Is.Empty);
+        game.VisitTown(4);
+        float deadline = Time.time + 8;
+        while (game.TownWalking && Time.time < deadline) yield return null;
+        Assert.That(game.TownPage, Is.EqualTo(TownPage.Expedition));
+        yield return Click(1040, 420); Assert.That(game.customSeed, Is.True, "Seed toggle must respond to Input System mouse release");
+        yield return Click(1190, 470); Assert.That(game.customSeedText, Is.Empty);
         var character = typeof(PrototypeGame).GetMethod("SeedCharacter", BindingFlags.Instance | BindingFlags.NonPublic);
         foreach (char value in "-2026") character.Invoke(game, new object[] { value });
-        yield return Click(920, 222); Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Explore)); Assert.That(game.Run.seed, Is.EqualTo(-2026));
+        yield return Click(1050, 292); Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Explore)); Assert.That(game.Run.seed, Is.EqualTo(-2026));
         yield return Click(1010, 687); Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
         yield return Click(1080, 609); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
         game.BeginBattle(game.Run.Map.enemies[0]); yield return null;
@@ -132,7 +203,10 @@ public class PrototypePlayTests
         game.StartNewRun(12345); yield return null;
         var map = game.Run.Map;
         int doorIndex = Array.FindIndex(map.cells, tile => tile == (int)Tile.Advance);
-        var door = new Vector2Int(doorIndex % map.size, doorIndex / map.size);
+        // Cover legacy saves whose ordinary doors were buried in walls.
+        map.cells[doorIndex] = (int)Tile.Ground;
+        var door = MapGenerator.DoorCandidates(map)[0];
+        map.Set(door.x, door.y, Tile.Advance);
         var neighbor = door + MapGenerator.Directions.First(d => MapGenerator.Directions.Any(step => map.Walkable(door.x + d.x + step.x, door.y + d.y + step.y)));
         var approach = neighbor + MapGenerator.Directions.First(d => map.Walkable(neighbor.x + d.x, neighbor.y + d.y));
         Array.Clear(map.revealed, 0, map.revealed.Length);
@@ -154,7 +228,9 @@ public class PrototypePlayTests
             if (point == neighbor) continue;
             Assert.That(MapGenerator.IsDoorHintWall(map, point.x, point.y), Is.EqualTo(map.Known(point.x, point.y)));
             var hiddenWall = tags.First(t => t.kind == TargetKind.Wall && t.x == point.x && t.y == point.y && t.name == "Wall");
-            Assert.That(hiddenWall.gameObject.activeInHierarchy, Is.EqualTo(map.Known(point.x, point.y)));
+            Assert.That(hiddenWall.gameObject.activeInHierarchy, Is.EqualTo(PixelWallTiles.IsOutlineVisible(map, point.x, point.y)));
+            Assert.That(hiddenWall.GetComponent<SpriteRenderer>().color,
+                Is.EqualTo(map.Known(point.x, point.y) ? new Color(1, 0.77f, 0.25f) : Color.white));
         }
         var copy = Rules.Copy(game.Run); Assert.That(MapGenerator.IsDoorHintWall(copy.Map, neighbor.x, neighbor.y), Is.True);
         game.Run.x = map.spawnX; game.Run.y = map.spawnY; MapGenerator.Reveal(game.Run);
@@ -287,6 +363,8 @@ public class PrototypePlayTests
     public IEnumerator DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup()
     {
         game.StartNewRun(12345); var map = game.Run.Map; var loot = map.loot[0];
+        var guard = map.LivingGuard(loot);
+        if (guard != null) Growth.FinishVictory(game.Run, guard);
         Array.Clear(map.revealed, 0, map.revealed.Length);
         game.Run.x = loot.x; game.Run.y = loot.y; MapGenerator.Reveal(game.Run);
         typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true }); yield return null;
@@ -301,10 +379,252 @@ public class PrototypePlayTests
         var label = game.GetComponentsInChildren<TextMesh>(true).Single(t => t.transform.parent.name == "Item label" && Vector3.Distance(t.transform.parent.localPosition, new Vector3(loot.x - half, loot.y - half, 0)) < 0.01f);
         Assert.That(label.gameObject.activeInHierarchy, Is.True);
         game.Run.x = loot.x; game.Run.y = loot.y; MapGenerator.Reveal(game.Run);
-        driver.mouseState = new MouseState(); driver.keyState = new KeyboardState(Key.E); yield return null; yield return null;
-        driver.keyState = new KeyboardState(); yield return null;
+        InteractWithLoot(loot); yield return null;
         Assert.That(loot.units.Count, Is.Zero); Assert.That(Inventory.Items(game.Run).Count, Is.GreaterThan(0));
         Assert.That(game.GetComponentsInChildren<PrototypeTarget>(true).Any(t => t.kind == TargetKind.Loot && t.id == loot.id && t.gameObject.activeInHierarchy), Is.False);
+        var remnant = game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == "Item " + loot.id && r.gameObject.activeInHierarchy);
+        Assert.That(remnant.color.a, Is.EqualTo(0.25f));
+        Assert.That(remnant.GetComponent<Collider2D>(), Is.Null);
+        Assert.That(remnant.sprite, Is.EqualTo(game.artSet.loot[(int)loot.appearanceKind]));
+        Assert.That(map.CanTraverse(loot.x, loot.y), Is.True);
+    }
+
+    [UnityTest]
+    public IEnumerator DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents()
+    {
+        game.StartNewRun(12345);
+        var map = new MapData { number = 1, size = 11, cells = Enumerable.Repeat((int)Tile.Wall, 121).ToArray(), revealed = new bool[121] };
+        for (int y = 3; y <= 7; y++) for (int x = 3; x <= 7; x++)
+        { map.Set(x, y, Tile.Ground); map.revealed[map.Index(x, y)] = true; }
+        map.Set(9, 5, Tile.Advance);
+        map.Set(9, 6, Tile.Ground);
+        MapGenerator.AddLoot(game.Run, map, new Vector2Int(9, 6), ItemKind.Potion, 1);
+        map.enemies.Add(new EnemyData { id = game.Run.nextEntityId++, x = 9, y = 6, kind = EnemyKind.Bat });
+        game.Run.maps[0] = map; game.Run.x = 5; game.Run.y = 5;
+        // Walking along the room edges discovers the straight walls, but not the
+        // diagonal corner cells. Only those four missing connectors may be added.
+        for (int y = 3; y <= 7; y++) for (int x = 3; x <= 7; x++)
+        { game.Run.x = x; game.Run.y = y; MapGenerator.Reveal(game.Run); }
+        game.Run.x = 5; game.Run.y = 5;
+        var discovery = (bool[])map.revealed.Clone();
+        typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+        yield return null; yield return null;
+        var tags = game.GetComponentsInChildren<PrototypeTarget>(true);
+        var corners = new[] { new Vector2Int(2, 8), new Vector2Int(8, 8), new Vector2Int(2, 2), new Vector2Int(8, 2) };
+        var cornerArt = new[] { 4, 5, 8, 9 };
+        for (int i = 0; i < corners.Length; i++)
+        {
+            var point = corners[i];
+            var wall = tags.Single(t => t.kind == TargetKind.Wall && t.x == point.x && t.y == point.y);
+            Assert.That(wall.gameObject.activeInHierarchy, Is.True, "Missing room corner " + point);
+            Assert.That(wall.GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[cornerArt[i] - 1]));
+            Assert.That(wall.GetComponent<BoxCollider2D>().enabled, Is.False, "Decorative outlines are not discovered interaction targets.");
+            Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == $"Fog {point.x},{point.y}").gameObject.activeSelf, Is.False);
+            Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == $"Cell {point.x},{point.y}").enabled, Is.False,
+                "Transparent corner pixels must not expose an undiscovered floor underneath.");
+        }
+        Assert.That(tags.Single(t => t.kind == TargetKind.Wall && t.x == 1 && t.y == 1).gameObject.activeInHierarchy, Is.False,
+            "Completing the outline must not propagate through walls.");
+        Assert.That(tags.Single(t => t.kind == TargetKind.Wall && t.x == 8 && t.y == 5).GetComponent<SpriteRenderer>().color,
+            Is.EqualTo(new Color(1, 0.77f, 0.25f)), "Actually discovered walls retain their existing door clues.");
+        foreach (var hidden in tags.Where(t => t.kind == TargetKind.Door || t.kind == TargetKind.Enemy || t.kind == TargetKind.Loot))
+            Assert.That(hidden.gameObject.activeInHierarchy, Is.False, "Hidden content was exposed by the outline: " + hidden.kind);
+        Assert.That(map.revealed, Is.EqualTo(discovery));
+        string captures = Path.GetFullPath("Captures/MagicCavePrototype/PixelArt"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "wall-corner-fog-check.png"));
+        yield return null; yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem()
+    {
+        game.StartNewRun(12345);
+        var map = new MapData { number = 1, size = 9, cells = Enumerable.Repeat((int)Tile.Wall, 81).ToArray(), revealed = new bool[81] };
+        for (int y = 4; y <= 6; y++) for (int x = 3; x <= 5; x++) map.Set(x, y, Tile.Ground);
+        for (int y = 1; y <= 3; y++) map.Set(4, y, Tile.Ground);
+        game.Run.maps[0] = map;
+        foreach (var position in new[] { new Vector2Int(3, 4), new Vector2Int(5, 4), new Vector2Int(4, 4) })
+        { game.Run.x = position.x; game.Run.y = position.y; MapGenerator.Reveal(game.Run); }
+        var discovery = (bool[])map.revealed.Clone();
+        typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+        yield return null; yield return null;
+        var tags = game.GetComponentsInChildren<PrototypeTarget>(true);
+        foreach (int x in new[] { 3, 5 })
+        {
+            var wall = tags.Single(t => t.kind == TargetKind.Wall && t.x == x && t.y == 2);
+            Assert.That(wall.gameObject.activeInHierarchy, Is.False, "The corridor side below the discovered area must remain hidden.");
+            Assert.That(wall.GetComponent<BoxCollider2D>().enabled, Is.False);
+            Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == $"Fog {x},2").gameObject.activeSelf, Is.True);
+        }
+        foreach (int x in new[] { 2, 6 })
+            Assert.That(tags.Single(t => t.kind == TargetKind.Wall && t.x == x && t.y == 3).gameObject.activeInHierarchy, Is.True,
+                "The corner between two discovered wall segments should still be complete.");
+        Assert.That(map.revealed, Is.EqualTo(discovery));
+        string captures = Path.GetFullPath("Captures/MagicCavePrototype/PixelArt"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "corridor-fog-boundary-check.png"));
+        yield return null; yield return null;
+        game.Run.x = 4; game.Run.y = 3; MapGenerator.Reveal(game.Run);
+        var refresh = typeof(PrototypeGame).GetMethod("RefreshVisibility", BindingFlags.Instance | BindingFlags.NonPublic);
+        refresh.Invoke(game, null); yield return null;
+        foreach (int x in new[] { 3, 5 })
+            Assert.That(tags.Single(t => t.kind == TargetKind.Wall && t.x == x && t.y == 2).gameObject.activeInHierarchy, Is.False,
+                "Moving closer must not reveal walls beyond the current discovery cross.");
+        game.Run.y = 2; MapGenerator.Reveal(game.Run); refresh.Invoke(game, null); yield return null;
+        foreach (int x in new[] { 3, 5 })
+        {
+            var wall = tags.Single(t => t.kind == TargetKind.Wall && t.x == x && t.y == 2);
+            Assert.That(wall.gameObject.activeInHierarchy, Is.True);
+            Assert.That(wall.GetComponent<BoxCollider2D>().enabled, Is.True);
+            Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == $"Fog {x},2").gameObject.activeSelf, Is.False);
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator BreakingAWallRebuildsTheActualNeighborConnections()
+    {
+        game.StartNewRun(12345);
+        var map = new MapData { number = 1, size = 9, cells = Enumerable.Repeat((int)Tile.Wall, 81).ToArray(), revealed = new bool[81] };
+        for (int y = 3; y <= 5; y++) for (int x = 3; x <= 5; x++) map.Set(x, y, Tile.Ground);
+        game.Run.maps[0] = map; game.Run.x = 3; game.Run.y = 3; MapGenerator.Reveal(game.Run);
+        // The west corner is already discovered from the earlier room approach.
+        map.revealed[map.Index(2, 2)] = true;
+        typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+        yield return null; yield return null;
+        var before = game.GetComponentsInChildren<PrototypeTarget>(true);
+        Assert.That(before.Single(t => t.kind == TargetKind.Wall && t.x == 2 && t.y == 2).GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[7]));
+        Assert.That(before.Single(t => t.kind == TargetKind.Wall && t.x == 4 && t.y == 2).GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[1]));
+        float half = (map.size - 1) * 0.5f;
+        var point = Camera.main.WorldToScreenPoint(new Vector3(3 - half, 2 - half, 0));
+        driver.mouseState = new MouseState { position = point }; yield return null; yield return null;
+        // Batch-mode test coroutines can run against the Editor input buffer rather
+        // than Dynamic. Inject into the buffer that the actual input reader uses.
+        driver.mouse.MakeCurrent(); InputState.Change(driver.mouse, driver.mouseState, InputState.currentUpdateType);
+        var pointer = typeof(PrototypeGame).GetMethod("PointerTarget", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
+        var inputCamera = (Camera)typeof(PrototypeGame).GetField("gameCamera", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(game);
+        var mousePosition = Mouse.current == null ? Vector2.zero : Mouse.current.position.ReadValue();
+        var inputWorld = inputCamera.ScreenToWorldPoint(mousePosition);
+        bool overHud = (bool)typeof(PrototypeGame).GetMethod("PointerOverHud", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
+        Assert.That(pointer.GetType().GetField("kind").GetValue(pointer), Is.EqualTo(TargetKind.Wall),
+            $"Break target {point}, actual mouse {mousePosition}, world {inputWorld}, cameras {Camera.main == inputCamera}, HUD {overHud}, known {map.Known(3, 2)}, size {game.Run.Map.size}, screen {Screen.width}x{Screen.height}.");
+        Assert.That(pointer.GetType().GetField("x").GetValue(pointer), Is.EqualTo(3));
+        Assert.That(pointer.GetType().GetField("y").GetValue(pointer), Is.EqualTo(2));
+        driver.mouseState = new MouseState { position = point, buttons = 2 };
+        InputState.Change(driver.mouse, driver.mouseState, InputState.currentUpdateType);
+        typeof(PrototypeGame).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
+        yield return null; yield return null;
+        driver.mouseState = new MouseState { position = point }; yield return null;
+        Assert.That(map.At(3, 2), Is.EqualTo(Tile.Ground), "Use the actual wall-breaking input, not only a manual map mutation.");
+        var after = game.GetComponentsInChildren<PrototypeTarget>(true);
+        Assert.That(after.Single(t => t.kind == TargetKind.Wall && t.x == 2 && t.y == 2).GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[10]),
+            "The old bottom-left corner must become a straight vertical wall.");
+        Assert.That(after.Single(t => t.kind == TargetKind.Wall && t.x == 4 && t.y == 2).GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[3]),
+            "The former horizontal wall must turn into the new corner around the broken cell.");
+        Assert.That(after.Any(t => t.kind == TargetKind.Wall && t.x == 3 && t.y == 2), Is.False);
+    }
+
+    [UnityTest]
+    public IEnumerator UnknownCrossShowsOnlyTheKnownCornerAndRefreshesWhenDiscovered()
+    {
+        game.StartNewRun(12345);
+        var map = new MapData { number = 1, size = 7, cells = Enumerable.Repeat((int)Tile.Wall, 49).ToArray(), revealed = new bool[49] };
+        foreach (var point in new[] { new Vector2Int(2, 2), new Vector2Int(2, 4), new Vector2Int(4, 2), new Vector2Int(4, 4) })
+            map.Set(point.x, point.y, Tile.Ground);
+        map.revealed[map.Index(4, 4)] = true; map.revealed[map.Index(4, 3)] = true; map.revealed[map.Index(3, 4)] = true;
+        game.Run.maps[0] = map; game.Run.x = 4; game.Run.y = 4;
+        typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+        yield return null; yield return null;
+        var cross = game.GetComponentsInChildren<PrototypeTarget>(true).Single(t => t.kind == TargetKind.Wall && t.x == 3 && t.y == 3);
+        var fog = game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == "Fog 3,3");
+        Assert.That(PixelWallTiles.OutlineMask(PixelWallTiles.Mask(map, 3, 3)), Is.EqualTo(15));
+        Assert.That(cross.gameObject.activeInHierarchy, Is.True); Assert.That(fog.gameObject.activeSelf, Is.False);
+        Assert.That(cross.GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[7]), "Only the known north/east corner is visible, not the hidden south/west branches.");
+        Assert.That(cross.GetComponent<BoxCollider2D>().enabled, Is.False);
+        Assert.That(map.Known(3, 3), Is.False);
+        map.revealed[map.Index(3, 3)] = true;
+        typeof(PrototypeGame).GetMethod("RefreshVisibility", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null); yield return null;
+        Assert.That(cross.gameObject.activeInHierarchy, Is.True); Assert.That(fog.gameObject.activeSelf, Is.False);
+        Assert.That(cross.GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[5]), "Refresh must replace the decorative corner with the discovered cross.");
+        Assert.That(cross.GetComponent<BoxCollider2D>().enabled, Is.True);
+    }
+
+    [UnityTest]
+    public IEnumerator ActualWallBreakingCompletesFoggedJunctionCornersInAllFourDirections()
+    {
+        for (int turns = 0; turns < 4; turns++)
+        {
+            Vector2Int Rotate(int x, int y)
+            {
+                var p = new Vector2Int(x - 4, y - 4);
+                for (int turn = 0; turn < turns; turn++) p = new Vector2Int(-p.y, p.x);
+                return p + new Vector2Int(4, 4);
+            }
+            game.StartNewRun(12345);
+            var map = new MapData { number = 1, size = 9, cells = Enumerable.Repeat((int)Tile.Wall, 81).ToArray(), revealed = new bool[81] };
+            var center = Rotate(3, 3); var broken = Rotate(4, 2); var player = Rotate(5, 2);
+            var hiddenFloor = Rotate(4, 4);
+            map.Set(hiddenFloor.x, hiddenFloor.y, Tile.Ground); map.Set(player.x, player.y, Tile.Ground);
+            foreach (var anchor in new[] { Rotate(4, 3), Rotate(3, 2) }) map.revealed[map.Index(anchor.x, anchor.y)] = true;
+            game.Run.maps[0] = map; game.Run.x = player.x; game.Run.y = player.y; MapGenerator.Reveal(game.Run);
+            typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+            yield return null; yield return null;
+            var before = game.GetComponentsInChildren<PrototypeTarget>(true).Single(t => t.kind == TargetKind.Wall && t.x == center.x && t.y == center.y);
+            Assert.That(before.gameObject.activeInHierarchy, Is.False, "Before breaking, the diagonal floor needed for this connector does not exist.");
+            CaptureWallCamera($"wall-break-corner-before-{turns}.png", center, map.size);
+            var discovery = (bool[])map.revealed.Clone();
+            float half = (map.size - 1) * 0.5f;
+            var camera = (Camera)typeof(PrototypeGame).GetField("gameCamera", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(game);
+            var point = camera.WorldToScreenPoint(new Vector3(broken.x - half, broken.y - half, 0));
+            driver.mouse.MakeCurrent(); driver.mouseState = new MouseState { position = point };
+            InputState.Change(driver.mouse, driver.mouseState, InputState.currentUpdateType);
+            var target = typeof(PrototypeGame).GetMethod("PointerTarget", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
+            Assert.That(target.GetType().GetField("kind").GetValue(target), Is.EqualTo(TargetKind.Wall), "Actual right-click must hit the intended wall.");
+            Assert.That(target.GetType().GetField("x").GetValue(target), Is.EqualTo(broken.x));
+            Assert.That(target.GetType().GetField("y").GetValue(target), Is.EqualTo(broken.y));
+            driver.mouseState = new MouseState { position = point, buttons = 2 };
+            InputState.Change(driver.mouse, driver.mouseState, InputState.currentUpdateType);
+            typeof(PrototypeGame).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
+            driver.mouseState = new MouseState { position = point };
+            InputState.Change(driver.mouse, driver.mouseState, InputState.currentUpdateType);
+            yield return null; yield return null;
+            Assert.That(map.At(broken.x, broken.y), Is.EqualTo(Tile.Ground), "The production wall-breaking input must change terrain.");
+            var after = game.GetComponentsInChildren<PrototypeTarget>(true).Single(t => t.kind == TargetKind.Wall && t.x == center.x && t.y == center.y);
+            Assert.That(after.gameObject.activeInHierarchy, Is.True, "The newly opened floor must complete the known wall corner immediately.");
+            int[] cornerArt = { 4, 8, 9, 5 };
+            Assert.That(after.GetComponent<SpriteRenderer>().sprite, Is.SameAs(game.artSet.walls[cornerArt[turns] - 1]), "An unknown T must draw only its proven corner, not its extra arm.");
+            Assert.That(after.GetComponent<BoxCollider2D>().enabled, Is.False);
+            Assert.That(map.Known(center.x, center.y), Is.False);
+            Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == $"Fog {center.x},{center.y}").gameObject.activeSelf, Is.False);
+            foreach (var hidden in new[] { Rotate(3, 4), Rotate(2, 3), hiddenFloor })
+                Assert.That(game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == $"Fog {hidden.x},{hidden.y}").gameObject.activeSelf, Is.True,
+                    "Completing the corner must not expose the unknown branch or floor.");
+            Assert.That(map.revealed, Is.EqualTo(discovery), "Visual completion must not expand exploration.");
+            CaptureWallCamera($"wall-break-corner-after-{turns}.png", center, map.size);
+        }
+    }
+
+    void CaptureWallCamera(string filename, Vector2Int center, int mapSize)
+    {
+        var camera = (Camera)typeof(PrototypeGame).GetField("gameCamera", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(game);
+        var oldTarget = camera.targetTexture; var oldActive = RenderTexture.active;
+        var oldPosition = camera.transform.position; float oldSize = camera.orthographicSize; float oldAspect = camera.aspect;
+        var target = RenderTexture.GetTemporary(448, 448, 24, RenderTextureFormat.ARGB32);
+        var image = new Texture2D(448, 448, TextureFormat.RGBA32, false);
+        try
+        {
+            float half = (mapSize - 1) * 0.5f;
+            camera.transform.position = new Vector3(center.x - half, center.y - half, -10);
+            camera.orthographicSize = 3.5f; camera.aspect = 1; camera.targetTexture = target;
+            camera.Render(); RenderTexture.active = target;
+            image.ReadPixels(new Rect(0, 0, 448, 448), 0, 0); image.Apply();
+            string captures = Path.GetFullPath("Captures/MagicCavePrototype/PixelArt"); Directory.CreateDirectory(captures);
+            File.WriteAllBytes(Path.Combine(captures, filename), image.EncodeToPNG());
+        }
+        finally
+        {
+            camera.targetTexture = oldTarget; camera.transform.position = oldPosition;
+            camera.orthographicSize = oldSize; camera.aspect = oldAspect; RenderTexture.active = oldActive;
+            RenderTexture.ReleaseTemporary(target); UnityEngine.Object.Destroy(image);
+        }
     }
 
     [UnityTest]
@@ -333,10 +653,7 @@ public class PrototypePlayTests
         driver.keyState = new KeyboardState(Key.UpArrow); yield return new WaitForSeconds(0.3f);
         driver.keyState = new KeyboardState(); yield return null;
         Assert.That(game.Run.y, Is.LessThanOrEqualTo(4.11f));
-        float half = (game.Run.Map.size - 1) * 0.5f;
-        var point = Camera.main.WorldToScreenPoint(new Vector3(5 - half, 5 - half, 0));
-        driver.mouseState = new MouseState { position = point, buttons = 1 }; yield return null; yield return null;
-        driver.mouseState = new MouseState { position = point }; yield return null;
+        InteractWithLoot(loot); yield return null;
         Assert.That(loot.units, Is.Empty); Assert.That(game.Run.Map.CanTraverse(5, 5), Is.True);
         int slot = game.Run.inventory.FindIndex(s => s.units.Count > 0);
         var dropped = Inventory.Drop(game.Run, slot, 1); rebuild.Invoke(game, new object[] { false }); yield return null;

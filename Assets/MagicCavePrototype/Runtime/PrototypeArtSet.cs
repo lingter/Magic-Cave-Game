@@ -22,7 +22,7 @@ namespace MagicCave.Prototype
             foreach (var group in new[] { floors, walls, enemies, loot })
                 foreach (var sprite in group)
                     if (sprite == null || sprite.pixelsPerUnit != 16) throw new InvalidOperationException("原型素材必须使用16 PPU。");
-            if (!walls[1].texture.isReadable || !walls[10].texture.isReadable)
+            if (!walls[1].texture.isReadable || !walls[5].texture.isReadable || !walls[10].texture.isReadable)
                 throw new InvalidOperationException("墙体贴图需要启用Read/Write，以组合厚墙连接。");
         }
     }

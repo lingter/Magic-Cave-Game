@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Passed" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-21 16:06:10Z" end-time="2026-10-21 16:06:11Z" duration="1.0303118">
+  <test-suite type="TestSuite" id="1027" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-21 16:06:10Z" end-time="2026-10-21 16:06:11Z" duration="1.030312" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1023" name="MagicCave.Prototype.PlayTests.dll" fullname="C:/Users/cube0/.codex/visualizations/2026/10/21/01a15d1d-3a28-7e03-89d4-0637e97859d0/unity-test-project/Library/ScriptAssemblies/MagicCave.Prototype.PlayTests.dll" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-10-21 16:06:10Z" end-time="2026-10-21 16:06:11Z" duration="1.023215" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="1428" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestFixture" id="1007" name="PrototypePlayTests" fullname="PrototypePlayTests" classname="PrototypePlayTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-10-21 16:06:10Z" end-time="2026-10-21 16:06:11Z" duration="1.022049" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1020" name="BreakingAWallRebuildsTheActualNeighborConnections" fullname="PrototypePlayTests.BreakingAWallRebuildsTheActualNeighborConnections" methodname="BreakingAWallRebuildsTheActualNeighborConnections" classname="PrototypePlayTests" runstate="Runnable" seed="402841268" result="Passed" start-time="2026-10-21 16:06:10Z" end-time="2026-10-21 16:06:11Z" duration="0.417892" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1018" name="DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents" fullname="PrototypePlayTests.DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents" methodname="DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents" classname="PrototypePlayTests" runstate="Runnable" seed="1512715681" result="Passed" start-time="2026-10-21 16:06:11Z" end-time="2026-10-21 16:06:11Z" duration="0.189883" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1021" name="UnknownCrossStaysFoggedEvenWhenTwoOfItsArmsAreDiscovered" fullname="PrototypePlayTests.UnknownCrossStaysFoggedEvenWhenTwoOfItsArmsAreDiscovered" methodname="UnknownCrossStaysFoggedEvenWhenTwoOfItsArmsAreDiscovered" classname="PrototypePlayTests" runstate="Runnable" seed="1643681790" result="Passed" start-time="2026-10-21 16:06:11Z" end-time="2026-10-21 16:06:11Z" duration="0.175859" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1019" name="UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem" fullname="PrototypePlayTests.UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem" methodname="UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem" classname="PrototypePlayTests" runstate="Runnable" seed="2060180817" result="Passed" start-time="2026-10-21 16:06:11Z" end-time="2026-10-21 16:06:11Z" duration="0.227287" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Run Seed = 12345
+<b><color=#2EA3FF>MCP-FOR-UNITY</color></b>: [TestRunnerNoThrottle] Restored Interaction Mode after test run.
+Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

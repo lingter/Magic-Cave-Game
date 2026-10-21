@@ -63,7 +63,7 @@ namespace MagicCave.Prototype
                     if (row < 2) Corridor(map, start, centers[(row + 1) * 3 + col], random.Range(0, 2) == 0);
                 }
                 if (!ValidateTerrain(map, out _, out _)) continue;
-                var candidates = DoorCandidates(map);
+                var candidates = OpenDoorCandidates(map);
                 random.Shuffle(candidates);
                 if (candidates.Count == 0) continue;
                 var advance = candidates[0];
@@ -71,7 +71,13 @@ namespace MagicCave.Prototype
                 if (number == 3 && candidates.Count == 0) continue;
                 map.Set(advance.x, advance.y, Tile.Advance);
                 if (number == 3) map.Set(candidates[0].x, candidates[0].y, Tile.Return);
-                PlaceObjects(run, map);
+                if (!ValidateTerrain(map, out _, out _)) continue;
+                int entityId = run.nextEntityId, itemId = run.nextItemId;
+                if (!PlaceObjects(run, map))
+                {
+                    run.nextEntityId = entityId; run.nextItemId = itemId;
+                    continue;
+                }
                 return map;
             }
             throw new InvalidOperationException("地图" + number + "在100次尝试后仍未通过验收。Seed=" + run.seed);
@@ -173,27 +179,145 @@ namespace MagicCave.Prototype
             return candidates;
         }
 
-        static void PlaceObjects(RunData run, MapData map)
+        static List<Vector2Int> OpenDoorCandidates(MapData map)
         {
-            var free = new List<Vector2Int>();
+            var result = new List<Vector2Int>();
             for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
-                if (map.Walkable(x, y)) free.Add(new Vector2Int(x, y));
-            run.mapRandom.Shuffle(free);
-            int index = 0;
-            var spawn = free[index++]; map.spawnX = spawn.x; map.spawnY = spawn.y;
-            for (int i = 0; i < 2; i++)
             {
-                var p = free[index++];
-                map.enemies.Add(new EnemyData { id = run.nextEntityId++, x = p.x, y = p.y, kind = (EnemyKind)run.mapRandom.Range(0, 2) });
+                if (!map.Walkable(x, y)) continue;
+                int neighbors = 0;
+                foreach (var d in Directions) if (map.Walkable(x + d.x, y + d.y)) neighbors++;
+                if (neighbors >= 3) result.Add(new Vector2Int(x, y));
             }
-            for (int i = 0; i < 3; i++) AddLoot(run, map, free[index++], ItemKind.Ore, run.mapRandom.Range(2, 5));
-            for (int i = 0; i < 2; i++) AddLoot(run, map, free[index++], ItemKind.Crystal, run.mapRandom.Range(1, 3));
-            for (int i = 0; i < 2; i++) AddLoot(run, map, free[index++], ItemKind.Potion, 1);
-            if (run.mapRandom.Range(0, 4) == 0) AddLoot(run, map, free[index], ItemKind.Relic, 1);
+            return result;
+        }
+
+        // A room corner has two perpendicular solid walls, rather than just a corridor bend.
+        public static bool IsLootCorner(MapData map, Vector2Int p)
+        {
+            if (!map.Walkable(p.x, p.y)) return false;
+            for (int i = 0; i < Directions.Length; i++)
+            {
+                var a = p + Directions[i]; var b = p + Directions[(i + 1) % 4];
+                var openA = p - Directions[i]; var openB = p - Directions[(i + 1) % 4];
+                if (map.At(a.x, a.y) == Tile.Wall && map.At(b.x, b.y) == Tile.Wall &&
+                    map.Walkable(openA.x, openA.y) && map.Walkable(openB.x, openB.y) &&
+                    map.Walkable(openA.x + openB.x - p.x, openA.y + openB.y - p.y)) return true;
+            }
+            return false;
+        }
+
+        public static bool IsCorridor(MapData map, Vector2Int p)
+        {
+            if (!map.Walkable(p.x, p.y)) return false;
+            return map.Walkable(p.x - 1, p.y) && map.Walkable(p.x + 1, p.y) &&
+                map.At(p.x, p.y - 1) == Tile.Wall && map.At(p.x, p.y + 1) == Tile.Wall ||
+                map.Walkable(p.x, p.y - 1) && map.Walkable(p.x, p.y + 1) &&
+                map.At(p.x - 1, p.y) == Tile.Wall && map.At(p.x + 1, p.y) == Tile.Wall;
+        }
+
+        static EnemyData AddEnemy(RunData run, MapData map, Vector2Int p, EnemyRole role)
+        {
+            var enemy = new EnemyData { id = run.nextEntityId++, x = p.x, y = p.y,
+                kind = (EnemyKind)run.mapRandom.Range(0, 2), role = role };
+            map.enemies.Add(enemy); return enemy;
+        }
+
+        static bool PlaceObjects(RunData run, MapData map)
+        {
+            var free = new List<Vector2Int>(); var corners = new List<Vector2Int>();
+            for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
+            {
+                var p = new Vector2Int(x, y);
+                if (map.Walkable(x, y)) free.Add(p);
+                if (IsLootCorner(map, p)) corners.Add(p);
+            }
+            run.mapRandom.Shuffle(free); run.mapRandom.Shuffle(corners);
+            var occupied = new HashSet<Vector2Int>();
+            var guarded = new List<KeyValuePair<Vector2Int, EnemyData>>();
+            // Eight corner piles, seven guards: one guard protects two adjacent corner piles.
+            foreach (var p in free)
+            {
+                var adjacent = corners.FindAll(c => Manhattan(c, p) == 1);
+                if (adjacent.Count < 2 || IsLootCorner(map, p)) continue;
+                var guard = AddEnemy(run, map, p, EnemyRole.ItemGuard);
+                occupied.Add(p);
+                for (int i = 0; i < 2; i++)
+                {
+                    occupied.Add(adjacent[i]); guarded.Add(new KeyValuePair<Vector2Int, EnemyData>(adjacent[i], guard));
+                }
+                break;
+            }
+            if (guarded.Count != 2) return false;
+            foreach (var corner in corners)
+            {
+                if (guarded.Count == 8) break;
+                if (occupied.Contains(corner)) continue;
+                var options = new List<Vector2Int>();
+                foreach (var d in Directions)
+                {
+                    var p = corner + d;
+                    if (map.Walkable(p.x, p.y) && !occupied.Contains(p) && !IsLootCorner(map, p)) options.Add(p);
+                }
+                if (options.Count == 0) continue;
+                var position = options[run.mapRandom.Range(0, options.Count)];
+                var guard = AddEnemy(run, map, position, EnemyRole.ItemGuard);
+                occupied.Add(position); occupied.Add(corner);
+                guarded.Add(new KeyValuePair<Vector2Int, EnemyData>(corner, guard));
+            }
+            if (guarded.Count != 8) return false;
+
+            var kinds = new List<ItemKind> { ItemKind.Ore, ItemKind.Ore, ItemKind.Ore, ItemKind.Ore,
+                ItemKind.Crystal, ItemKind.Crystal, ItemKind.Crystal, ItemKind.Potion, ItemKind.Potion,
+                run.mapRandom.Range(0, 4) == 0 ? ItemKind.Relic : ItemKind.Ore };
+            run.mapRandom.Shuffle(kinds);
+            kinds.Sort((a, b) => Rules.Rarity(b).CompareTo(Rules.Rarity(a)));
+            // Assign scarce high levels to the rarest guarded loot first.
+            for (int i = 0; i < guarded.Count; i++)
+            {
+                var pair = guarded[i];
+                int level = Rules.Rarity(kinds[i]) + 1;
+                pair.Value.level = Math.Max(pair.Value.level, level);
+                AddPile(run, map, pair.Key, kinds[i]).guardEnemyId = pair.Value.id;
+            }
+            foreach (var p in free)
+            {
+                if (map.loot.Count == 10) break;
+                if (occupied.Contains(p) || IsLootCorner(map, p) || IsCorridor(map, p)) continue;
+                AddPile(run, map, p, kinds[map.loot.Count]); occupied.Add(p);
+            }
+            if (map.loot.Count != 10) return false;
+            foreach (var p in free)
+            {
+                if (occupied.Contains(p) || !IsCorridor(map, p)) continue;
+                AddEnemy(run, map, p, EnemyRole.CorridorGuard); occupied.Add(p); break;
+            }
+            if (map.enemies.Count != 8) return false;
+            foreach (var p in free)
+            {
+                if (map.enemies.Count == 10) break;
+                if (occupied.Contains(p) || IsCorridor(map, p)) continue;
+                AddEnemy(run, map, p, EnemyRole.Roaming); occupied.Add(p);
+            }
+            if (map.enemies.Count != 10) return false;
+            foreach (var p in free)
+            {
+                if (occupied.Contains(p) || IsCorridor(map, p) ||
+                    map.enemies.Exists(e => Manhattan(p, new Vector2Int(e.x, e.y)) < 3)) continue;
+                map.spawnX = p.x; map.spawnY = p.y; return true;
+            }
+            return false;
+        }
+
+        static GroundLoot AddPile(RunData run, MapData map, Vector2Int p, ItemKind kind)
+        {
+            int count = kind == ItemKind.Ore ? run.mapRandom.Range(2, 5) :
+                kind == ItemKind.Crystal ? run.mapRandom.Range(1, 3) : 1;
+            return AddLoot(run, map, p, kind, count);
         }
         public static GroundLoot AddLoot(RunData run, MapData map, Vector2Int position, ItemKind kind, int count)
         {
-            var loot = new GroundLoot { id = run.nextEntityId++, x = position.x, y = position.y };
+            var loot = new GroundLoot { id = run.nextEntityId++, x = position.x, y = position.y, appearanceKind = kind };
             for (int i = 0; i < count; i++) loot.units.Add(new ItemUnit { id = run.nextItemId++, kind = kind });
             map.loot.Add(loot);
             return loot;

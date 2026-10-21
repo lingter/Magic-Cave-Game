@@ -27,9 +27,17 @@ namespace MagicCave.Prototype
             if (Session.checkpoint != null) MapGenerator.EnsureSafePlayerPosition(Session.checkpoint);
             if (Session.pending != null) MapGenerator.EnsureSafePlayerPosition(Session.pending.run);
             ValidateSession(Session);
-            if (Warehouse.version != 1 || Warehouse.counts == null || Warehouse.counts.Length != 4 ||
+            if ((Warehouse.version != 1 && Warehouse.version != 2) || Warehouse.counts == null || Warehouse.counts.Length != 4 ||
                 Warehouse.counts.Any(c => c < 0) || Warehouse.committedRuns == null)
                 throw new InvalidDataException("仓库数据格式无效。原文件已保留。");
+            if (Warehouse.version == 1)
+            {
+                Warehouse.town = new TownProgress();
+                // Legacy warehouses were unlimited: retain every existing item when adding a capacity.
+                Warehouse.baseCapacity = Math.Max(100, TownRules.Used(Warehouse));
+                Warehouse.version = 2;
+            }
+            ValidateTown(Warehouse);
         }
         static T Read<T>(string path) where T : class
         {
@@ -102,6 +110,9 @@ namespace MagicCave.Prototype
             var pending = Session.pending;
             if (pending == null) throw new InvalidOperationException("没有待结算的本局。");
             ValidateSelection(pending);
+            if (!Warehouse.committedRuns.Contains(pending.run.id) &&
+                pending.selectedIds.Count > TownRules.Capacity(Warehouse) - TownRules.Used(Warehouse))
+                throw new InvalidOperationException("仓库空间不足，请先出售物品或扩容；本次结算已保留。");
             if (!pending.confirmed)
             {
                 var next = Rules.Copy(Session);
@@ -113,11 +124,85 @@ namespace MagicCave.Prototype
             {
                 var nextWarehouse = Rules.Copy(Warehouse);
                 foreach (var item in selected) nextWarehouse.counts[(int)item.kind] = checked(nextWarehouse.counts[(int)item.kind] + 1);
+                nextWarehouse.town.gold = checked(nextWarehouse.town.gold + TownRules.SettlementGold(pending));
+                nextWarehouse.town.reputation = checked(nextWarehouse.town.reputation + TownRules.SettlementReputation(pending));
                 nextWarehouse.committedRuns.Add(pending.run.id);
                 AtomicWrite(WarehousePath, nextWarehouse); Warehouse = nextWarehouse;
             }
             SaveSession(new SessionData());
             return selected;
+        }
+        static void ValidateTown(WarehouseData warehouse)
+        {
+            var town = warehouse.town;
+            if (town == null || town.gold < 0 || town.reputation < 0 || town.guildLevel < 1 || town.guildLevel > 3 ||
+                town.warehouseUpgrades < 0 || town.warehouseUpgrades > 10 || warehouse.baseCapacity < 100 ||
+                town.talents == null || town.talents.Length != TownRules.Talents.Length)
+                throw new InvalidDataException("城镇养成数据无效，原文件已保留。");
+            if (TownRules.Used(warehouse) > TownRules.Capacity(warehouse) || town.talents[0] != 1)
+                throw new InvalidDataException("仓库容量或职业数据无效，原文件已保留。");
+            for (int i = 0; i < town.talents.Length; i++)
+            {
+                var talent = TownRules.Talents[i];
+                if (town.talents[i] < 0 || town.talents[i] > talent.maximum ||
+                    (town.talents[i] > 0 && (town.guildLevel < talent.guildLevel ||
+                        (talent.parent >= 0 && town.talents[talent.parent] < talent.parentRank))))
+                    throw new InvalidDataException("骑士天赋数据无效，原文件已保留。");
+            }
+        }
+        void ChangeWarehouse(Action<WarehouseData> change)
+        {
+            if (Session.pending != null && Session.pending.confirmed) throw new InvalidOperationException("请先完成已确认的结算。");
+            var next = Rules.Copy(Warehouse); change(next); ValidateTown(next);
+            AtomicWrite(WarehousePath, next); Warehouse = next;
+        }
+        public void LearnTalent(int id)
+        {
+            string reason = TownRules.TalentLock(Warehouse.town, id);
+            if (reason.Length > 0) throw new InvalidOperationException(reason);
+            ChangeWarehouse(next => { next.town.gold -= TownRules.TalentGold(next.town, id); next.town.talents[id]++; });
+        }
+        public void ResetTalents()
+        {
+            ChangeWarehouse(next =>
+            {
+                for (int i = 1; i < next.town.talents.Length; i++)
+                {
+                    long rank = next.town.talents[i];
+                    next.town.gold = checked(next.town.gold + TownRules.Talents[i].gold * rank * (rank + 1) / 2);
+                    next.town.talents[i] = 0;
+                }
+            });
+        }
+        public void UpgradeGuild()
+        {
+            var town = Warehouse.town;
+            if (town.guildLevel >= 3) throw new InvalidOperationException("公会已达到初版最高等级。");
+            if (town.gold < TownRules.UpgradeGold(town) || town.reputation < TownRules.UpgradeReputation(town))
+                throw new InvalidOperationException("金币不足或声望未达要求。");
+            ChangeWarehouse(next => { next.town.gold -= TownRules.UpgradeGold(next.town); next.town.guildLevel++; });
+        }
+        public void ExpandWarehouse()
+        {
+            var town = Warehouse.town;
+            if (town.warehouseUpgrades >= 10 || town.gold < TownRules.ExpansionGold(town))
+                throw new InvalidOperationException("金币不足或仓库已扩容至上限。");
+            ChangeWarehouse(next => { next.town.gold -= TownRules.ExpansionGold(next.town); next.town.warehouseUpgrades++; });
+        }
+        public void SellWarehouse(ItemKind kind, int quantity)
+        {
+            if ((int)kind < 0 || (int)kind >= 4 || quantity <= 0 || Warehouse.counts[(int)kind] < quantity)
+                throw new InvalidOperationException("出售数量无效。");
+            ChangeWarehouse(next =>
+            {
+                next.counts[(int)kind] -= quantity;
+                next.town.gold = checked(next.town.gold + (long)quantity * TownRules.SellPrices[(int)kind]);
+            });
+        }
+        public void DonateRelic()
+        {
+            if (Warehouse.counts[(int)ItemKind.Relic] <= 0) throw new InvalidOperationException("仓库中没有古代遗物。");
+            ChangeWarehouse(next => { next.counts[(int)ItemKind.Relic]--; next.town.reputation = checked(next.town.reputation + 10); });
         }
         static void ValidateSelection(PendingSettlement pending)
         {
@@ -150,7 +235,10 @@ namespace MagicCave.Prototype
         public static void ValidateRun(RunData run, bool allowLegacyPosition = false)
         {
             if (run == null || string.IsNullOrEmpty(run.id) || run.maps == null || run.maps.Count != 5 ||
-                run.mapIndex < 0 || run.mapIndex >= 5 || run.health < 0 || run.health > 60 ||
+                run.mapIndex < 0 || run.mapIndex >= 5 || run.health < 0 || run.health > run.MaxHealth ||
+                run.MaxHealth < 60 || run.MaxHealth > 75 || run.attackBonus < 0 || run.attackBonus > 3 ||
+                run.defenseBonus < 0 || run.defenseBonus > 3 || run.openingEnergy < 0 || run.openingEnergy > 1 ||
+                run.victoryHealing < 0 || run.victoryHealing > 3 || run.openingBlock < 0 || run.openingBlock > 6 ||
                 run.level < 1 || run.level > 1000000 || run.experience < 0 || run.totalExperience < 0 ||
                 run.deck == null || run.deck.Count < 10 || run.inventory == null || run.inventory.Count != 20 ||
                 run.mapRandom == null || run.battleRandom == null || run.cardRandom == null ||
@@ -178,11 +266,16 @@ namespace MagicCave.Prototype
                     if (map.cells[map.Index(x, y)] < 0 || map.cells[map.Index(x, y)] > 3 || (map.Border(x, y) && map.At(x, y) != Tile.Wall))
                         throw new InvalidDataException("地图地块或边界无效。");
                 foreach (var enemy in map.enemies)
-                    if (enemy == null || (int)enemy.kind < 0 || (int)enemy.kind > 2 || !map.Walkable(enemy.x, enemy.y))
+                    if (enemy == null || (int)enemy.kind < 0 || (int)enemy.kind > 2 || !map.Walkable(enemy.x, enemy.y) ||
+                        enemy.level < 0 || enemy.level > 3 || (int)enemy.role < 0 || (int)enemy.role > 2)
                         throw new InvalidDataException("敌人数据无效。");
                 foreach (var loot in map.loot)
                 {
                     if (loot == null || loot.units == null || !map.Walkable(loot.x, loot.y)) throw new InvalidDataException("地面物品数据无效。");
+                    if ((int)loot.appearanceKind < 0 || (int)loot.appearanceKind >= Rules.ItemNames.Length)
+                        throw new InvalidDataException("物品容器外观无效。");
+                    if (loot.guardEnemyId != 0 && !map.enemies.Any(e => e.id == loot.guardEnemyId && e.role == EnemyRole.ItemGuard))
+                        throw new InvalidDataException("物品镇守关系无效。");
                     foreach (var item in loot.units) ValidateItem(item, ids);
                 }
             }

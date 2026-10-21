@@ -1,0 +1,6 @@
+2026-10-21 Unity 6000.5.4f1
+EditMode: 59 completed, succeeded, no failures (job c7b6ed40fb5d411cbfbcf4c5538aacce).
+PlayMode full prototype suite: 12 passed, 0 failed (job fee6b7d803cb4ec187f50af8e4f3585c).
+Final grass/UI visual verification: town walkthrough passed (job 536d39b39ee4468da74464591f6598ab).
+Final warehouse Esc regression: town walkthrough passed, 1/1 (job 2024e855534d47888d12b5ab04e132cb).
+Verified images: world-map.png, guild-interior.png, knight-talents.png, guild-upgrade.png, warehouse.png.
