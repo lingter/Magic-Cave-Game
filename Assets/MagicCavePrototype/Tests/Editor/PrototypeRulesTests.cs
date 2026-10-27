@@ -346,12 +346,12 @@ public class PrototypeRulesTests
     }
     static float CardScore(Battle battle, CardKind card)
     {
-        int damage = card == CardKind.Strike ? 6 : card == CardKind.Heavy ? 15 : card == CardKind.Double ? 8 + battle.spirit : card == CardKind.Quick ? 5 : card == CardKind.Shield ? battle.playerBlock : 0;
+        double damage = card == CardKind.Strike ? 6 : card == CardKind.Heavy ? 15 : card == CardKind.Double ? 8 + battle.spirit : card == CardKind.Quick ? 5 : card == CardKind.Shield ? battle.playerBlock : 0;
         int block = card == CardKind.Defend ? 5 : card == CardKind.Fortify ? 12 : card == CardKind.Steady ? 4 : 0;
         if (damage > 0 && damage + battle.spirit >= battle.enemyHealth + battle.enemyBlock) return 100;
-        if (block > 0 && battle.playerBlock < battle.IntentAttack) return 20 + Math.Min(block, battle.IntentAttack - battle.playerBlock);
+        if (block > 0 && battle.playerBlock < battle.IntentAttack) return (float)(20 + Math.Min(block, battle.IntentAttack - battle.playerBlock));
         if (card == CardKind.Prepare || card == CardKind.Steady) return battle.energy >= 2 ? 15 : 0;
         if (card == CardKind.Spirit) return battle.energy >= 2 ? 14 : 0;
-        return damage > 0 ? (damage + battle.spirit) / (float)Rules.Costs[(int)card] : 0;
+        return damage > 0 ? (float)((damage + battle.spirit) / Rules.Costs[(int)card]) : 0;
     }
 }

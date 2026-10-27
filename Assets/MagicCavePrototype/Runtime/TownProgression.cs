@@ -31,14 +31,14 @@ namespace MagicCave.Prototype
         public static readonly KnightTalent[] Talents =
         {
             new KnightTalent("骑士誓言", "战士公会 · 骑士职业\n解锁攻守两条成长路线", 1, -1, 0, 1, 0, 0),
-            new KnightTalent("力量训练", "小节点 · 每级攻击伤害 +1\n对每段攻击生效，不影响盾击", 3, 0, 1, 1, 30, 0),
+            new KnightTalent("力量训练", "小节点 · 每级力量 +1\n通过武器属性修正提高实际ATK", 3, 0, 1, 1, 30, 0),
             new KnightTalent("体魄训练", "小节点 · 每级最大生命 +5\n出发时以新的最大生命开始", 3, 0, 1, 1, 30, 0),
-            new KnightTalent("盾术训练", "小节点 · 每级防御牌格挡 +1\n影响防御、固守、稳守", 3, 2, 1, 1, 40, 0),
+            new KnightTalent("盾术训练", "小节点 · 每级敏捷 +1\n影响格挡、武器修正及敏捷副属性", 3, 2, 1, 1, 40, 0),
             new KnightTalent("破阵先锋", "大节点 · 每场战斗首回合\n获得 1 点额外能量", 1, 1, 2, 2, 100, 10),
             new KnightTalent("不屈意志", "大节点 · 每场胜利后\n恢复 3 点生命，不超过上限", 1, 2, 2, 2, 100, 10),
             new KnightTalent("盾壁", "大节点 · 每场战斗开始\n获得 6 点初始格挡", 1, 3, 2, 3, 150, 35)
         };
-        public static long Used(WarehouseData warehouse) => warehouse.counts.Sum();
+        public static long Used(WarehouseData warehouse) => checked(warehouse.counts.Sum() + warehouse.equipment.Count);
         public static long Capacity(WarehouseData warehouse) => checked(warehouse.baseCapacity + warehouse.town.warehouseUpgrades * 50L);
         public static int UpgradeGold(TownProgress town) => town.guildLevel == 1 ? 100 : 250;
         public static int UpgradeReputation(TownProgress town) => town.guildLevel == 1 ? 10 : 35;
@@ -60,8 +60,18 @@ namespace MagicCave.Prototype
         public static void Apply(TownProgress town, RunData run)
         {
             if (!town.knight) return;
+            if (run.UsesAttributes)
+            {
+                run.character.talentHealth = town.talents[2] * 5;
+                run.character.talentStrength = town.talents[1];
+                run.character.talentAgility = town.talents[3];
+                run.health = run.MaxHealth;
+            }
+            else
+            {
             run.maxHealth = 60 + town.talents[2] * 5; run.health = run.MaxHealth;
             run.attackBonus = town.talents[1]; run.defenseBonus = town.talents[3];
+            }
             run.openingEnergy = town.talents[4]; run.victoryHealing = town.talents[5] * 3;
             run.openingBlock = town.talents[6] * 6;
         }

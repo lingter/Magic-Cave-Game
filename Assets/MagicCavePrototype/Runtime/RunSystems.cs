@@ -7,7 +7,8 @@ namespace MagicCave.Prototype
 {
     public static class Inventory
     {
-        public static List<ItemUnit> Items(RunData run) { return run.inventory.SelectMany(slot => slot.units).ToList(); }
+        public static List<ItemUnit> Items(RunData run) { return run.inventory.SelectMany(slot => slot.units)
+            .Concat(run.UsesAttributes ? run.character.equipment : Enumerable.Empty<ItemUnit>()).ToList(); }
         public static int UsedSlots(RunData run) { return run.inventory.Count(slot => slot.units.Count > 0); }
         public static int Pickup(RunData run, GroundLoot loot)
         {
@@ -17,7 +18,7 @@ namespace MagicCave.Prototype
             while (loot.units.Count > 0)
             {
                 ItemUnit item = loot.units[0];
-                var slot = run.inventory.FirstOrDefault(s => s.units.Count > 0 && s.units[0].kind == item.kind && s.units.Count < 20)
+                var slot = run.inventory.FirstOrDefault(s => s.units.Count > 0 && s.units[0].kind == item.kind && s.units.Count < Rules.StackLimit(item.kind))
                     ?? run.inventory.FirstOrDefault(s => s.units.Count == 0);
                 if (slot == null) break;
                 if (item.acquiredTicks == 0)
@@ -34,7 +35,55 @@ namespace MagicCave.Prototype
             if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.health <= 0 || run.health >= run.MaxHealth) return false;
             var slot = run.inventory[slotIndex];
             if (slot.units.Count == 0 || slot.units[0].kind != ItemKind.Potion) return false;
-            slot.units.RemoveAt(0); run.health = Math.Min(run.MaxHealth, run.health + 20); return true;
+            slot.units.RemoveAt(0); run.health = CharacterAttributes.Quantize(Math.Min(run.MaxHealth, run.health + 20)); return true;
+        }
+        public static bool CanUse(RunData run, int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.health <= 0 || run.inventory[slotIndex].units.Count == 0) return false;
+            var kind = run.inventory[slotIndex].units[0].kind;
+            if (kind == ItemKind.Potion) return run.health < run.MaxHealth;
+            if (!run.UsesAttributes || kind < ItemKind.StrengthEssence || kind > ItemKind.AssaultPotion) return false;
+            return kind != ItemKind.AssaultPotion || !run.character.modifiers.Any(m => m.source == "assault-potion" && m.remainingBattles == 2);
+        }
+        public static bool Use(RunData run, int slotIndex)
+        {
+            if (!CanUse(run, slotIndex)) return false;
+            var slot = run.inventory[slotIndex]; var kind = slot.units[0].kind;
+            if (kind == ItemKind.Potion) return Heal(run, slotIndex);
+            if (kind == ItemKind.AssaultPotion)
+            {
+                var existing = run.character.modifiers.Find(m => m.source == "assault-potion");
+                if (existing != null && existing.remainingBattles == 2) return false;
+                if (existing != null) existing.remainingBattles = 2;
+                else run.character.modifiers.Add(new AttributeModifier { source = "assault-potion", attribute = AttributeKind.Strength, value = 2, remainingBattles = 2 });
+            }
+            else
+            {
+                var attribute = (AttributeKind)((int)kind - (int)ItemKind.StrengthEssence);
+                var existing = run.character.modifiers.Find(m => m.source == "essence-" + attribute);
+                if (existing != null) existing.value++;
+                else run.character.modifiers.Add(new AttributeModifier { source = "essence-" + attribute, attribute = attribute, value = 1 });
+            }
+            slot.units.RemoveAt(0); return true;
+        }
+        public static string Equip(RunData run, int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.inventory[slotIndex].units.Count != 1) return "请选择背包中的装备";
+            var slot = run.inventory[slotIndex]; var item = slot.units[0];
+            string reason = CharacterAttributes.EquipLock(run, item); if (reason.Length > 0) return reason;
+            var definition = run.attributeRules.Find(item.kind);
+            var previous = run.character.equipment.Find(i => run.attributeRules.Find(i.kind).slot == definition.slot);
+            slot.units.Clear();
+            if (previous != null) { run.character.equipment.Remove(previous); slot.units.Add(previous); }
+            run.character.equipment.Add(item); run.health = Math.Min(run.health, run.MaxHealth); return "";
+        }
+        public static string Unequip(RunData run, EquipmentSlot equipmentSlot)
+        {
+            if (!run.UsesAttributes) return "旧版探索没有装备槽";
+            var item = run.character.equipment.Find(i => run.attributeRules.Find(i.kind).slot == equipmentSlot);
+            if (item == null) return "槽位为空";
+            var free = run.inventory.Find(s => s.units.Count == 0); if (free == null) return "背包已满，无法卸下";
+            run.character.equipment.Remove(item); free.units.Add(item); run.health = Math.Min(run.health, run.MaxHealth); return "";
         }
         public static GroundLoot Drop(RunData run, int slotIndex, int quantity)
         {
@@ -71,7 +120,8 @@ namespace MagicCave.Prototype
         {
             if (enemy.defeated) return;
             enemy.defeated = true;
-            run.health = Math.Min(run.MaxHealth, run.health + run.victoryHealing);
+            run.health = CharacterAttributes.Quantize(Math.Min(run.MaxHealth, run.health + run.victoryHealing));
+            CharacterAttributes.FinishBattle(run);
             Award(run, enemy.kind == EnemyKind.Boss ? 30 : 10);
             if (enemy.kind == EnemyKind.Boss && !run.bossDefeated)
             {
@@ -90,7 +140,8 @@ namespace MagicCave.Prototype
     {
         public readonly RunData run;
         public readonly EnemyData enemy;
-        public int enemyHealth, enemyBlock, playerBlock, energy, spirit, enemyTurn;
+        public double enemyHealth, enemyBlock, playerBlock;
+        public int energy, spirit, enemyTurn;
         public bool playerTurn;
         public BattleOutcome outcome;
         public readonly List<CardKind> hand = new List<CardKind>();
@@ -129,27 +180,37 @@ namespace MagicCave.Prototype
             energy -= cost; hand.RemoveAt(handIndex);
             switch (card)
             {
-                case CardKind.Strike: Hit(6); break;
-                case CardKind.Defend: playerBlock += 5 + run.defenseBonus; break;
+                case CardKind.Strike: Hit(card); break;
+                case CardKind.Defend: playerBlock += CombatNumbers.Block(run, card); break;
                 case CardKind.Prepare: Draw(2); break;
-                case CardKind.Heavy: Hit(15); break;
-                case CardKind.Double: Hit(4); if (outcome == BattleOutcome.None) Hit(4); break;
-                case CardKind.Shield: Hit(playerBlock, false); break;
-                case CardKind.Fortify: playerBlock += 12 + run.defenseBonus; break;
-                case CardKind.Quick: Hit(5); if (outcome == BattleOutcome.None) Draw(1); break;
+                case CardKind.Heavy: Hit(card); break;
+                case CardKind.Double: Hit(card); if (outcome == BattleOutcome.None) Hit(card); break;
+                case CardKind.Shield: Hit(card); break;
+                case CardKind.Fortify: playerBlock += CombatNumbers.Block(run, card); break;
+                case CardKind.Quick: Hit(card); if (outcome == BattleOutcome.None) Draw(1); break;
                 case CardKind.Spirit: spirit += 2; break;
-                case CardKind.Steady: playerBlock += 4 + run.defenseBonus; Draw(1); break;
+                case CardKind.Steady: playerBlock += CombatNumbers.Block(run, card); Draw(1); break;
             }
             discard.Add(card);
             return true;
         }
-        void Hit(int baseDamage, bool weapon = true)
+        void Hit(CardKind card)
         {
-            int damage = baseDamage + spirit + (weapon ? run.attackBonus : 0);
-            int blocked = Math.Min(enemyBlock, damage); enemyBlock -= blocked;
-            enemyHealth = Math.Max(0, enemyHealth - (damage - blocked));
+            double damage = CombatNumbers.Damage(run, card, spirit, playerBlock);
+            CombatNumbers.Apply(damage, run.UsesAttributes ? enemy.physicalDefense : 0, ref enemyBlock, ref enemyHealth);
             if (enemyHealth == 0) { outcome = BattleOutcome.Victory; playerTurn = false; }
         }
+        public double Preview(CardKind card)
+        {
+            double block = enemyBlock, health = enemyHealth, total = 0;
+            if (!CombatNumbers.IsAttack(card)) return 0;
+            for (int segment = 0; segment < CombatNumbers.Segments(card) && health > 0; segment++)
+                total += CombatNumbers.Apply(CombatNumbers.Damage(run, card, spirit, playerBlock),
+                    run.UsesAttributes ? enemy.physicalDefense : 0, ref block, ref health);
+            return CharacterAttributes.Quantize(total);
+        }
+        public double ExpectedHealthLoss => Math.Max(0, IntentAttack -
+            (run.UsesAttributes ? CharacterAttributes.Calculate(run, true).defense : 0) - playerBlock);
         public void EndPlayerTurn()
         {
             if (!playerTurn || outcome != BattleOutcome.None) return;
@@ -162,8 +223,8 @@ namespace MagicCave.Prototype
             int attack = IntentAttack;
             if (attack > 0)
             {
-                int blocked = Math.Min(playerBlock, attack); playerBlock -= blocked;
-                run.health = Math.Max(0, run.health - (attack - blocked));
+                CombatNumbers.Apply(attack, run.UsesAttributes ? CharacterAttributes.Calculate(run, true).defense : 0,
+                    ref playerBlock, ref run.health);
             }
             else enemyBlock += IntentBlock;
             enemyTurn++;

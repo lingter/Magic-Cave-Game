@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 namespace MagicCave.Prototype
 {
     public enum GameScreen { Home, Explore, Battle, Rewards, Settlement, Result, Warehouse }
-    public enum GamePanel { None, Inventory, Deck, Draw, Discard, Pause, Return, NewRun, Leave }
+    public enum GamePanel { None, Inventory, Deck, Draw, Discard, Pause, Return, NewRun, Leave, Character }
 
     public sealed partial class PrototypeGame : MonoBehaviour
     {
@@ -42,6 +42,9 @@ namespace MagicCave.Prototype
 
         void Start()
         {
+            var arguments = Environment.GetCommandLineArgs();
+            int storageOption = Array.IndexOf(arguments, "-prototypeStorage");
+            if (storageOption >= 0 && storageOption + 1 < arguments.Length) storageOverride = Path.GetFullPath(arguments[storageOption + 1]);
             Application.targetFrameRate = 60;
             gameCamera = Camera.main;
             if (artSet == null) artSet = Resources.Load<PrototypeArtSet>("PrototypeArt");
@@ -50,6 +53,7 @@ namespace MagicCave.Prototype
             {
                 string folder = string.IsNullOrEmpty(storageOverride) ? Path.Combine(Application.persistentDataPath, "magic-cave-prototype") : storageOverride;
                 Store = new PrototypeStore(folder);
+                Debug.Log("[MagicCave] Character prototype ready; rules v" + PrototypeAttributeSet.LoadRules().version + ".");
                 if (Store.Session.pending != null)
                 {
                     Run = Store.Session.pending.run; ScreenMode = GameScreen.Settlement;
@@ -77,9 +81,11 @@ namespace MagicCave.Prototype
                 try { action(); error = ""; } catch (Exception exception) { ReportError(exception); }
             }
             var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && Panel == GamePanel.NewRun)
+            { Panel = GamePanel.None; departurePreview = null; return; }
             if (!townEscapeHandled && keyboard != null && keyboard.escapeKey.wasPressedThisFrame && Run != null && ScreenMode != GameScreen.Result)
             {
-                if (Panel == GamePanel.Inventory || Panel == GamePanel.Deck || Panel == GamePanel.Draw || Panel == GamePanel.Discard) Panel = GamePanel.None;
+                if (Panel == GamePanel.Inventory || Panel == GamePanel.Deck || Panel == GamePanel.Draw || Panel == GamePanel.Discard || Panel == GamePanel.Character) Panel = GamePanel.None;
                 else if (Panel == GamePanel.Pause) Panel = GamePanel.None;
                 else if (Panel == GamePanel.None) { Panel = GamePanel.Pause; CancelRoute(); }
             }
@@ -96,6 +102,7 @@ namespace MagicCave.Prototype
             {
                 if (keyboard.bKey.wasPressedThisFrame) { Panel = GamePanel.Inventory; CancelRoute(); }
                 else if (keyboard.tabKey.wasPressedThisFrame) { Panel = GamePanel.Deck; CancelRoute(); }
+                else if (keyboard.cKey.wasPressedThisFrame) { Panel = GamePanel.Character; CancelRoute(); }
             }
             if (Panel != GamePanel.None) return;
             hover = PointerTarget(); highlighted = NearbyTarget();
@@ -253,9 +260,13 @@ namespace MagicCave.Prototype
         }
 
         public void StartNewRun(int seed)
+            => StartNewRun(seed, AttributeKind.Agility);
+
+        public void StartNewRun(int seed, AttributeKind secondary)
         {
-            Store.DiscardCheckpoint(); Run = null; ScreenMode = GameScreen.Home;
-            Run = MapGenerator.NewRun(seed); TownRules.Apply(Store.Warehouse.town, Run); Combat = null; Panel = GamePanel.None;
+            var next = MapGenerator.NewRun(seed, secondary);
+            TownRules.Apply(Store.Warehouse.town, next); PrototypeStore.ValidateRun(next);
+            Store.DiscardCheckpoint(); Run = next; Combat = null; Panel = GamePanel.None;
             facing = Vector2.down;
             message = ""; messageUntil = 0; hover = default; highlighted = default;
             ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
@@ -264,8 +275,7 @@ namespace MagicCave.Prototype
         {
             if (customSeed && !int.TryParse(customSeedText, out requestedSeed)) { Notify("请输入32位整数种子，例如12345或-100"); return; }
             if (!customSeed) requestedSeed = BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 0);
-            if (Store.Session.checkpoint != null) Panel = GamePanel.NewRun;
-            else StartNewRun(requestedSeed);
+            selectedSecondary = AttributeKind.None; departurePreview = null; Panel = GamePanel.NewRun;
         }
         public void ContinueRun()
         {
@@ -281,6 +291,20 @@ namespace MagicCave.Prototype
         {
             CancelRoute(); Combat = new Battle(Run, enemy); processedBattle = false;
             ScreenMode = GameScreen.Battle; Panel = GamePanel.None;
+        }
+        public string EquipInventory(int slot)
+        {
+            if (ScreenMode != GameScreen.Explore || Run == null) return "只能在探索时更换装备";
+            return Inventory.Equip(Run, slot);
+        }
+        public string UnequipSlot(EquipmentSlot slot)
+        {
+            if (ScreenMode != GameScreen.Explore || Run == null) return "只能在探索时更换装备";
+            return Inventory.Unequip(Run, slot);
+        }
+        public bool UseInventory(int slot)
+        {
+            return ScreenMode == GameScreen.Explore && Run != null && Inventory.Use(Run, slot);
         }
         void PlayCard(int index)
         {

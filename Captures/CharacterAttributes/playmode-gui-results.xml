@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="17" result="Passed" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-25 06:59:57Z" end-time="2026-10-25 07:00:27Z" duration="30.3374495">
+  <test-suite type="TestSuite" id="1029" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-10-25 06:59:57Z" end-time="2026-10-25 07:00:27Z" duration="30.337450" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1025" name="MagicCave.Prototype.PlayTests.dll" fullname="E:/UnityProject/Magic Cave Game/Captures/CharacterAttributes/UnityVerification/Library/ScriptAssemblies/MagicCave.Prototype.PlayTests.dll" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-10-25 06:59:57Z" end-time="2026-10-25 07:00:27Z" duration="30.329106" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="54392" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestFixture" id="1007" name="PrototypePlayTests" fullname="PrototypePlayTests" classname="PrototypePlayTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-10-25 06:59:57Z" end-time="2026-10-25 07:00:27Z" duration="30.326123" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1023" name="ActualWallBreakingCompletesFoggedJunctionCornersInAllFourDirections" fullname="PrototypePlayTests.ActualWallBreakingCompletesFoggedJunctionCornersInAllFourDirections" methodname="ActualWallBreakingCompletesFoggedJunctionCornersInAllFourDirections" classname="PrototypePlayTests" runstate="Runnable" seed="582486914" result="Passed" start-time="2026-10-25 06:59:57Z" end-time="2026-10-25 06:59:58Z" duration="1.200848" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+[MagicCave] Run Seed = 12345
+[MagicCave] Run Seed = 12345
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1016" name="BossVictoryFromReturnDoorSiteAllowsMovementSaveAndWinningSettlement" fullname="PrototypePlayTests.BossVictoryFromReturnDoorSiteAllowsMovementSaveAndWinningSettlement" methodname="BossVictoryFromReturnDoorSiteAllowsMovementSaveAndWinningSettlement" classname="PrototypePlayTests" runstate="Runnable" seed="326835215" result="Passed" start-time="2026-10-25 06:59:58Z" end-time="2026-10-25 07:00:00Z" duration="1.375240" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+[MagicCave] Continue Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1021" name="BreakingAWallRebuildsTheActualNeighborConnections" fullname="PrototypePlayTests.BreakingAWallRebuildsTheActualNeighborConnections" methodname="BreakingAWallRebuildsTheActualNeighborConnections" classname="PrototypePlayTests" runstate="Runnable" seed="1705811901" result="Passed" start-time="2026-10-25 07:00:00Z" end-time="2026-10-25 07:00:00Z" duration="0.679360" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1018" name="DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup" fullname="PrototypePlayTests.DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup" methodname="DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup" classname="PrototypePlayTests" runstate="Runnable" seed="753545136" result="Passed" start-time="2026-10-25 07:00:00Z" end-time="2026-10-25 07:00:01Z" duration="0.486857" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1019" name="DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents" fullname="PrototypePlayTests.DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents" methodname="DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents" classname="PrototypePlayTests" runstate="Runnable" seed="933490474" result="Passed" start-time="2026-10-25 07:00:01Z" end-time="2026-10-25 07:00:01Z" duration="0.454434" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1013" name="DoorCluesRespectFogPersistAndDisappearWhenWallBreaks" fullname="PrototypePlayTests.DoorCluesRespectFogPersistAndDisappearWhenWallBreaks" methodname="DoorCluesRespectFogPersistAndDisappearWhenWallBreaks" classname="PrototypePlayTests" runstate="Runnable" seed="1366962904" result="Passed" start-time="2026-10-25 07:00:01Z" end-time="2026-10-25 07:00:02Z" duration="0.530040" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1014" name="FormerRotationShortcutsKeepCameraAndExplorationFixed" fullname="PrototypePlayTests.FormerRotationShortcutsKeepCameraAndExplorationFixed" methodname="FormerRotationShortcutsKeepCameraAndExplorationFixed" classname="PrototypePlayTests" runstate="Runnable" seed="1150657014" result="Passed" start-time="2026-10-25 07:00:02Z" end-time="2026-10-25 07:00:03Z" duration="0.981861" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1011" name="KeyboardMoveRespectsCollisionAndPause" fullname="PrototypePlayTests.KeyboardMoveRespectsCollisionAndPause" methodname="KeyboardMoveRespectsCollisionAndPause" classname="PrototypePlayTests" runstate="Runnable" seed="57487171" result="Passed" start-time="2026-10-25 07:00:03Z" end-time="2026-10-25 07:00:04Z" duration="0.749791" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1017" name="LivingMonsterHasSolidVolumeStopsWalkingAndBattleStartsFromAdjacentCell" fullname="PrototypePlayTests.LivingMonsterHasSolidVolumeStopsWalkingAndBattleStartsFromAdjacentCell" methodname="LivingMonsterHasSolidVolumeStopsWalkingAndBattleStartsFromAdjacentCell" classname="PrototypePlayTests" runstate="Runnable" seed="505353937" result="Passed" start-time="2026-10-25 07:00:04Z" end-time="2026-10-25 07:00:05Z" duration="1.031153" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1015" name="MiddleDragAndLegacySaveKeepFixedCameraAndScreenMovement" fullname="PrototypePlayTests.MiddleDragAndLegacySaveKeepFixedCameraAndScreenMovement" methodname="MiddleDragAndLegacySaveKeepFixedCameraAndScreenMovement" classname="PrototypePlayTests" runstate="Runnable" seed="719368115" result="Passed" start-time="2026-10-25 07:00:05Z" end-time="2026-10-25 07:00:06Z" duration="1.579200" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+[MagicCave] Continue Run Seed = 12345
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1024" name="PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected" fullname="PrototypePlayTests.PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected" methodname="PixelArtRendersRandomTerrainAndBattleAndSolidLootCanBeCollected" classname="PrototypePlayTests" runstate="Runnable" seed="1687180326" result="Passed" start-time="2026-10-25 07:00:06Z" end-time="2026-10-25 07:00:07Z" duration="1.173344" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+[MagicCave] Run Seed = 12345
+[MagicCave] Continue Run Seed = 12345
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1009" name="SeedMenuButtonsAndCardBattleWorkWithNewInputSystem" fullname="PrototypePlayTests.SeedMenuButtonsAndCardBattleWorkWithNewInputSystem" methodname="SeedMenuButtonsAndCardBattleWorkWithNewInputSystem" classname="PrototypePlayTests" runstate="Runnable" seed="851682378" result="Passed" start-time="2026-10-25 07:00:07Z" end-time="2026-10-25 07:00:11Z" duration="3.630103" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = -2026
+]]></output>
+        </test-case>
+        <test-case id="1008" name="TownWalkingTalentPurchaseWarehouseAndDepartureWork" fullname="PrototypePlayTests.TownWalkingTalentPurchaseWarehouseAndDepartureWork" methodname="TownWalkingTalentPurchaseWarehouseAndDepartureWork" classname="PrototypePlayTests" runstate="Runnable" seed="1788545583" result="Passed" start-time="2026-10-25 07:00:11Z" end-time="2026-10-25 07:00:23Z" duration="12.232358" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1022" name="UnknownCrossShowsOnlyTheKnownCornerAndRefreshesWhenDiscovered" fullname="PrototypePlayTests.UnknownCrossShowsOnlyTheKnownCornerAndRefreshesWhenDiscovered" methodname="UnknownCrossShowsOnlyTheKnownCornerAndRefreshesWhenDiscovered" classname="PrototypePlayTests" runstate="Runnable" seed="1397851250" result="Passed" start-time="2026-10-25 07:00:23Z" end-time="2026-10-25 07:00:24Z" duration="0.421444" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1020" name="UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem" fullname="PrototypePlayTests.UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem" methodname="UnseenCorridorWallsRemainFoggedUntilThePlayerDiscoversThem" classname="PrototypePlayTests" runstate="Runnable" seed="2096182714" result="Passed" start-time="2026-10-25 07:00:24Z" end-time="2026-10-25 07:00:24Z" duration="0.476105" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1012" name="WallStopsMovementRightClickBreaksAndLeftClickWalksThrough" fullname="PrototypePlayTests.WallStopsMovementRightClickBreaksAndLeftClickWalksThrough" methodname="WallStopsMovementRightClickBreaksAndLeftClickWalksThrough" classname="PrototypePlayTests" runstate="Runnable" seed="141148111" result="Passed" start-time="2026-10-25 07:00:24Z" end-time="2026-10-25 07:00:26Z" duration="1.466993" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = 12345
+]]></output>
+        </test-case>
+        <test-case id="1010" name="WisdomDepartureCharacterEquipmentAndDynamicCardTextWork" fullname="PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork" methodname="WisdomDepartureCharacterEquipmentAndDynamicCardTextWork" classname="PrototypePlayTests" runstate="Runnable" seed="8532712" result="Passed" start-time="2026-10-25 07:00:26Z" end-time="2026-10-25 07:00:27Z" duration="1.844419" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v2.
+[MagicCave] Run Seed = -365519571
+[MagicCave] Continue Run Seed = -365519571
+Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

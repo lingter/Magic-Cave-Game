@@ -5,7 +5,9 @@ using UnityEngine;
 namespace MagicCave.Prototype
 {
     public enum Tile { Ground, Wall, Advance, Return }
-    public enum ItemKind { Ore, Crystal, Relic, Potion }
+    // Existing values are save identifiers. Append new kinds; never reorder them.
+    public enum ItemKind { Ore, Crystal, Relic, Potion, IronSword, SwiftSword, InscribedSword, RefinedSword,
+        WoodShield, LeatherArmor, InsightArmor, IronArmor, StrengthEssence, AgilityEssence, WisdomEssence, AssaultPotion }
     public enum EnemyKind { Bat, Beetle, Boss }
     public enum EnemyRole { Roaming, ItemGuard, CorridorGuard }
     public enum CardKind { Strike, Defend, Prepare, Heavy, Double, Shield, Fortify, Quick, Spirit, Steady }
@@ -77,6 +79,7 @@ namespace MagicCave.Prototype
         public EnemyKind kind;
         public EnemyRole role;
         public int level = 1;
+        public int physicalDefense;
         public bool defeated;
         public int Level => Math.Max(1, level);
     }
@@ -121,9 +124,16 @@ namespace MagicCave.Prototype
     public sealed class RunData
     {
         public string id;
-        public int seed, mapIndex, health = 60, level = 1, experience, totalExperience;
+        public int seed, mapIndex, level = 1, experience, totalExperience;
+        public double health = 60;
         public int maxHealth = 60, attackBonus, defenseBonus, openingEnergy, victoryHealing, openingBlock;
-        public int MaxHealth => maxHealth == 0 ? 60 : maxHealth;
+        public int MaxHealth => UsesAttributes ? CharacterAttributes.Calculate(this).maxHealth : maxHealth == 0 ? 60 : maxHealth;
+        // Zero is deliberately the legacy format, including when old JSON has no such fields.
+        public int attributeVersion;
+        public CharacterState character;
+        public AttributeRules attributeRules;
+        public RandomStream lootRandom;
+        public bool UsesAttributes => attributeVersion == 1;
         public int nextEntityId = 1, nextItemId = 1, nextAcquisitionOrder = 1;
         public float x, y;
         public bool bossDefeated;
@@ -145,7 +155,7 @@ namespace MagicCave.Prototype
     [Serializable]
     public sealed class SessionData : ISerializationCallbackReceiver
     {
-        public int version = 1;
+        public int version = 2;
         // Inline Unity serialization materializes null classes. Presence flags retain empty states.
         public bool hasCheckpoint, hasPending;
         public RunData checkpoint;
@@ -160,8 +170,9 @@ namespace MagicCave.Prototype
     [Serializable]
     public sealed class WarehouseData
     {
-        public int version = 2;
-        public long[] counts = new long[4];
+        public int version = 3;
+        public long[] counts = new long[16];
+        public List<StoredEquipment> equipment = new List<StoredEquipment>();
         public List<string> committedRuns = new List<string>();
         public long baseCapacity = 100;
         public TownProgress town = new TownProgress();
@@ -169,7 +180,8 @@ namespace MagicCave.Prototype
 
     public static class Rules
     {
-        public static readonly string[] ItemNames = { "碎矿石", "晶簇", "古代遗物", "治疗药剂" };
+        public static readonly string[] ItemNames = { "碎矿石", "晶簇", "古代遗物", "治疗药剂", "铁剑", "迅捷剑", "铭文剑", "精制长剑",
+            "木盾", "皮甲", "启迪皮甲", "铁甲", "力量精华", "敏捷精华", "智慧精华", "强攻药剂" };
         public static readonly string[] EnemyNames = { "洞穴蝠", "岩甲虫", "岩洞守卫" };
         public static readonly int[] EnemyHealth = { 18, 30, 80 };
         public static int Health(EnemyData enemy) { return EnemyHealth[(int)enemy.kind] + 4 * (enemy.Level - 1); }
@@ -177,7 +189,12 @@ namespace MagicCave.Prototype
         public static readonly string[] CardNames = { "打击", "防御", "整备", "重击", "连击", "盾击", "固守", "迅击", "战意", "稳守" };
         public static readonly int[] Costs = { 1, 1, 1, 2, 1, 1, 2, 1, 1, 1 };
         public static readonly string[] Effects = { "造成6点伤害", "获得5点格挡", "抽2张牌", "造成15点伤害", "两次4点伤害", "造成当前格挡等量伤害\n不消耗格挡", "获得12点格挡", "造成5点伤害，抽1张", "本回合每段攻击+2\n可叠加", "获得4点格挡，抽1张" };
-        public static int Rarity(ItemKind kind) { return kind == ItemKind.Relic ? 2 : kind == ItemKind.Crystal ? 1 : 0; }
+        public static bool IsEquipment(ItemKind kind) => kind >= ItemKind.IronSword && kind <= ItemKind.IronArmor;
+        public static int StackLimit(ItemKind kind) => IsEquipment(kind) ? 1 : 20;
+        public static int ArtIndex(ItemKind kind) => kind <= ItemKind.Potion ? (int)kind : IsEquipment(kind) ? 0 : 3;
+        public static int Rarity(ItemKind kind) { return kind == ItemKind.Relic ? 2 : kind == ItemKind.Crystal ||
+            kind == ItemKind.RefinedSword || kind == ItemKind.IronArmor ||
+            kind >= ItemKind.StrengthEssence && kind <= ItemKind.WisdomEssence ? 1 : 0; }
         public static string RarityName(ItemKind kind) { return new[] { "常见", "罕见", "稀有" }[Rarity(kind)]; }
         public static int RequiredExperience(int level) { return 20 + 10 * (level - 1); }
         public static T Copy<T>(T value) { return JsonUtility.FromJson<T>(JsonUtility.ToJson(value)); }

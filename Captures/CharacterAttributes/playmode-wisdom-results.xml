@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Failed(Child)" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-25 04:11:30Z" end-time="2026-10-25 04:11:31Z" duration="0.5816471">
+  <test-suite type="TestSuite" id="1029" name="Magic Cave Game" fullname="Magic Cave Game" runstate="Runnable" testcasecount="21" result="Failed" site="Child" start-time="2026-10-25 04:11:30Z" end-time="2026-10-25 04:11:31Z" duration="0.581647" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1025" name="MagicCave.Prototype.PlayTests.dll" fullname="E:/UnityProject/Magic Cave Game/Captures/CharacterAttributes/UnityVerification/Library/ScriptAssemblies/MagicCave.Prototype.PlayTests.dll" runstate="Runnable" testcasecount="17" result="Failed" site="Child" start-time="2026-10-25 04:11:30Z" end-time="2026-10-25 04:11:31Z" duration="0.574872" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="34076" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestFixture" id="1007" name="PrototypePlayTests" fullname="PrototypePlayTests" classname="PrototypePlayTests" runstate="Runnable" testcasecount="17" result="Failed" site="Child" start-time="2026-10-25 04:11:30Z" end-time="2026-10-25 04:11:31Z" duration="0.573506" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-case id="1010" name="WisdomDepartureCharacterEquipmentAndDynamicCardTextWork" fullname="PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork" methodname="WisdomDepartureCharacterEquipmentAndDynamicCardTextWork" classname="PrototypePlayTests" runstate="Runnable" seed="731946236" result="Failed" label="Error" start-time="2026-10-25 04:11:30Z" end-time="2026-10-25 04:11:31Z" duration="0.564725" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <failure>
+            <message><![CDATA[System.NullReferenceException : Object reference not set to an instance of an object]]></message>
+            <stack-trace><![CDATA[  at PrototypePlayTests+<WisdomDepartureCharacterEquipmentAndDynamicCardTextWork>d__11.MoveNext () [0x001c1] in E:\UnityProject\Magic Cave Game\Captures\CharacterAttributes\UnityVerification\Assets\MagicCavePrototype\Tests\PlayMode\PrototypePlayTests.cs:179 
+  at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in E:\UnityProject\Magic Cave Game\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44 ]]></stack-trace>
+          </failure>
+          <output><![CDATA[[MagicCave] Character prototype ready; rules v1.
+Saving results to: C:/Users/cube0/AppData/LocalLow/DefaultCompany/Magic Cave Game\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -139,7 +139,7 @@ namespace MagicCave.Prototype
                 ItemKind kind = empty ? loot.appearanceKind : loot.units[0].kind;
                 var tint = kind == ItemKind.Crystal ? new Color(0.5f, 0.85f, 1) : Color.white;
                 if (empty) tint.a = 0.25f;
-                var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.loot[(int)kind], World(loot.x, loot.y),
+                var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.loot[Rules.ArtIndex(kind)], World(loot.x, loot.y),
                     empty || loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
                 if (empty)
                 {

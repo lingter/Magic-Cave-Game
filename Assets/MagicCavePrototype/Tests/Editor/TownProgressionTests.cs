@@ -60,7 +60,7 @@ public class TownProgressionTests
         var run = New(); TownRules.Apply(town, run); PrototypeStore.ValidateRun(run);
         var enemy = run.Map.enemies[0]; var battle = new Battle(run, enemy);
         Assert.That(battle.energy, Is.EqualTo(4)); Assert.That(battle.playerBlock, Is.EqualTo(6));
-        battle.hand.Clear(); battle.hand.Add(CardKind.Strike); int before = battle.enemyHealth;
+        battle.hand.Clear(); battle.hand.Add(CardKind.Strike); double before = battle.enemyHealth;
         Assert.That(battle.Play(0), Is.True); Assert.That(battle.enemyHealth, Is.EqualTo(before - 9));
         battle.hand.Add(CardKind.Defend); battle.Play(0); Assert.That(battle.playerBlock, Is.EqualTo(14));
         battle.EndPlayerTurn(); battle.ResolveEnemyTurn();
@@ -75,7 +75,7 @@ public class TownProgressionTests
     {
         var run = New(); run.attackBonus = 3;
         var battle = new Battle(run, run.Map.enemies[0]); battle.hand.Clear(); battle.hand.Add(CardKind.Shield);
-        battle.playerBlock = 5; int before = battle.enemyHealth; battle.Play(0);
+        battle.playerBlock = 5; double before = battle.enemyHealth; battle.Play(0);
         Assert.That(battle.enemyHealth, Is.EqualTo(before - 5));
     }
     [Test]
@@ -131,7 +131,7 @@ public class TownProgressionTests
         Assert.That(loaded.Warehouse.committedRuns.Single(), Is.EqualTo("old-run"));
         Assert.That(File.ReadAllText(Path.Combine(folder, "warehouse.json")), Is.EqualTo(json));
         loaded.SellWarehouse(ItemKind.Ore, 1); loaded = new PrototypeStore(folder);
-        Assert.That(loaded.Warehouse.version, Is.EqualTo(2)); Assert.That(TownRules.Used(loaded.Warehouse), Is.EqualTo(205));
+        Assert.That(loaded.Warehouse.version, Is.EqualTo(3)); Assert.That(TownRules.Used(loaded.Warehouse), Is.EqualTo(205));
     }
     [Test]
     public void EveryTownServiceHasAConnectedWalkableEntrance()

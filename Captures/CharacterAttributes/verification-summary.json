@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-25",
+  "unity": "6000.5.4f1",
+  "status": "current-revision-pending-unity-mcp",
+  "verificationScope": "The editMode, playMode, build, playerSmoke, screenshots and sourceHashes below describe the previous 1% secondary-attribute revision, before integer damage and simplified card text.",
+  "currentRevision": {
+    "change": "Round final outgoing damage once to an integer, halfway away from zero; remove formula and duplicate damage preview lines from attack cards.",
+    "staticChecks": "passed",
+    "roundingExamples": { "4.45": 4, "4.4994": 4, "4.5": 5, "37.5": 38, "39.375": 39, "41.25": 41 },
+    "unityTests": "not-run",
+    "build": "not-run",
+    "mcpServiceHealth": "HTTP 200, version 10.3.0",
+    "codexMcpConnection": "initialize fails with HTTP 502; no Unity tools available in this session"
+  },
+  "editMode": {
+    "result": "Passed",
+    "total": "105",
+    "passed": "105",
+    "failed": "0",
+    "start-time": "2026-10-25 06:58:41Z",
+    "end-time": "2026-10-25 06:58:44Z",
+    "duration": "2.3674349"
+  },
+  "playMode": {
+    "result": "Passed",
+    "total": "17",
+    "passed": "17",
+    "failed": "0",
+    "start-time": "2026-10-25 06:59:57Z",
+    "end-time": "2026-10-25 07:00:27Z",
+    "duration": "30.3374495"
+  },
+  "playModeEnvironment": "Normal graphical Editor launched hidden; batchmode does not drive IMGUI interactions.",
+  "build": {
+    "executable": "Builds/WindowsAttributes/MagicCaveGame.exe",
+    "result": "Succeeded",
+    "errors": 0,
+    "warnings": 0,
+    "warningsSource": null,
+    "reportedBytes": 103346087
+  },
+  "playerSmoke": {
+    "result": "passed",
+    "isolatedStorage": true,
+    "processClosed": true,
+    "log": "player-smoke.log"
+  },
+  "screenshots": [
+    "departure-wisdom.png",
+    "equipment-comparison.png",
+    "character-wisdom.png",
+    "battle-dynamic-damage.png"
+  ],
+  "sourceHashes": {
+    "Assets/MagicCavePrototype/Runtime/CharacterAttributes.cs": "853888e633b583e3819015167a06f44dde0c6a73299a5d618b92934b0184e9c1",
+    "Assets/MagicCavePrototype/Runtime/MapGenerator.cs": "8820c0c1224d9dbe29596a2d632dcddbadf36dd89e34d7e85a5bb97096ac5da0",
+    "Assets/MagicCavePrototype/Runtime/PixelWallTiles.cs": "68a7dce297e8f6c5aa9286e287f36a3f65c76e00f5eb8b120210ba593492c5d2",
+    "Assets/MagicCavePrototype/Runtime/PrototypeArtSet.cs": "960541d6e40e17173e17fa8de56af0bf833a8110aebc4a46b2e6041c97bdcb58",
+    "Assets/MagicCavePrototype/Runtime/PrototypeAttributeSet.cs": "77c635ac26a616d39d3c0a27edc5912ab57ae8e7846f00cbfb549c9762ec26c4",
+    "Assets/MagicCavePrototype/Runtime/PrototypeAttributesInterface.cs": "94b199606f8c25b9b12489f55c4aa732a28c85b1efe81b90652a1484c2f677a4",
+    "Assets/MagicCavePrototype/Runtime/PrototypeData.cs": "7da233846e7274bed2803fc49308418a23f05ba67ddbbc2c59b30d683e01f3ff",
+    "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs": "179b48fa4ca5494c522cb773522df9688c7becc1946e77c73e5f964e7d69e724",
+    "Assets/MagicCavePrototype/Runtime/PrototypeInterface.cs": "ea7ff8d99fc38af2842ecc0f964c798e48c397bb0d63f8cf9ed881f1134e20d6",
+    "Assets/MagicCavePrototype/Runtime/PrototypeStore.cs": "cea214ae91d0f752f2affcec95775f76211770f40578c3df8602e8e122c99493",
+    "Assets/MagicCavePrototype/Runtime/PrototypeTarget.cs": "ae8533a4c8b0c5c2857f85c56ea8cc329633486eb3ff2b1507068ce6e80a3f3e",
+    "Assets/MagicCavePrototype/Runtime/PrototypeTown.cs": "bbd896b3d91fd983114beb5d1ed96fddc7f1dd60ca348ccffdf37a84ab415fb0",
+    "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs": "42cba15c708d51a271237bb5bd1b2d652eb4e1465079a712a795186604f975b4",
+    "Assets/MagicCavePrototype/Runtime/RunSystems.cs": "e92f42ad480e8dde8a8152eca87d0ed258efbf5401a3433b7d7341cc4fee0ca0",
+    "Assets/MagicCavePrototype/Runtime/TownProgression.cs": "28d8d3e2d589e3f99f7db2dd13d1ea008d5f77586646934e3c176170cceea161"
+  },
+  "attributeRulesVersion": 2,
+  "secondaryBonusPerPoint": "1%",
+  "existingAttributeSaveMigration": true,
+  "unityMcpUsed": false
+}

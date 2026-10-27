@@ -355,7 +355,9 @@ namespace MagicCave.Prototype
             var warehouse = Store.Warehouse; var town = warehouse.town;
             Label(new Rect(70, 133, 1100, 45), "仓库  " + TownRules.Used(warehouse) + " / " + TownRules.Capacity(warehouse) + " 件", headingStyle, Gold);
             Label(new Rect(70, 187, 1100, 35), "每件占用 1 容量。出售获得金币；捐赠古代遗物获得声望。新局背包为空。", smallStyle);
-            for (int i = 0; i < 4; i++)
+            if (warehousePage == 0)
+            Button(new Rect(947, 180, 260, 32), "装备与新增物品 →", () => warehousePage = 1);
+            for (int i = 0; i < 4 && warehousePage == 0; i++)
             {
                 int kind = i; float y = 241 + i * 70;
                 Box(new Rect(70, y, 1140, 58));
@@ -364,6 +366,24 @@ namespace MagicCave.Prototype
                 Button(new Rect(664, y + 9, 135, 39), "出售 1 件", () => { Store.SellWarehouse((ItemKind)kind, 1); Notify("出售成功"); }, warehouse.counts[i] > 0);
                 Button(new Rect(815, y + 9, 135, 39), "出售 10 件", () => { Store.SellWarehouse((ItemKind)kind, 10); Notify("出售成功"); }, warehouse.counts[i] >= 10);
                 if (i == (int)ItemKind.Relic) Button(new Rect(967, y + 9, 220, 39), "捐赠 1 件 · 声望 +10", () => { Store.DonateRelic(); Notify("捐赠成功，声望 +10"); }, warehouse.counts[i] > 0);
+            }
+            if (warehousePage > 0)
+            {
+                Button(new Rect(883, 181, 145, 31), "上一页", () => warehousePage--);
+                Button(new Rect(1045, 181, 162, 31), "下一页", () => warehousePage++, warehousePage < 2);
+                int first = 4 + (warehousePage - 1) * 6;
+                for (int i = first; i < Math.Min(first + 6, Rules.ItemNames.Length); i++)
+                {
+                    var kind = (ItemKind)i; float y = 228 + (i - first) * 49;
+                    long count = warehouse.counts[i] + warehouse.equipment.Count(e => e.item.kind == kind);
+                    Box(new Rect(70, y, 1140, 45));
+                    Label(new Rect(87, y + 8, 330, 30), Rules.ItemNames[i] + " ×" + count);
+                    var stored = warehouse.equipment.FirstOrDefault(e => e.item.kind == kind);
+                    string detail = stored == null ? "首版仅存储，暂不出售或携入新局" : stored.definition.slot == EquipmentSlot.MainHand ?
+                        "基础ATK " + stored.definition.baseAttack + "；力/敏/智修正 " + stored.definition.strengthScaling / 100m + "% / " + stored.definition.agilityScaling / 100m + "% / " + stored.definition.wisdomScaling / 100m + "%" :
+                        "力/敏/智 +" + stored.definition.strength + "/" + stored.definition.agility + "/" + stored.definition.wisdom + "；生命 +" + stored.definition.health + "；防御 +" + stored.definition.defense;
+                    Label(new Rect(420, y + 10, 770, 30), detail, smallStyle, Cyan);
+                }
             }
             Button(new Rect(70, 553, 560, 48), town.warehouseUpgrades >= 10 ? "仓库已扩容至上限" : "扩容 +50  /  " + TownRules.ExpansionGold(town) + " 金币", () => { Store.ExpandWarehouse(); Notify("仓库已扩容"); }, town.warehouseUpgrades < 10 && town.gold >= TownRules.ExpansionGold(town), true);
             Button(new Rect(722, 553, 488, 48), Store.Session.pending != null ? "返回待完成结算" : InGuild ? "返回公会" : "返回世界地图", () =>
@@ -377,18 +397,7 @@ namespace MagicCave.Prototype
         }
         string CardEffect(CardKind card)
         {
-            if (Run == null) return Rules.Effects[(int)card];
-            switch (card)
-            {
-                case CardKind.Strike: return "造成" + (6 + Run.attackBonus) + "点伤害";
-                case CardKind.Heavy: return "造成" + (15 + Run.attackBonus) + "点伤害";
-                case CardKind.Double: return "两次" + (4 + Run.attackBonus) + "点伤害";
-                case CardKind.Quick: return "造成" + (5 + Run.attackBonus) + "点伤害，抽1张";
-                case CardKind.Defend: return "获得" + (5 + Run.defenseBonus) + "点格挡";
-                case CardKind.Fortify: return "获得" + (12 + Run.defenseBonus) + "点格挡";
-                case CardKind.Steady: return "获得" + (4 + Run.defenseBonus) + "点格挡，抽1张";
-                default: return Rules.Effects[(int)card];
-            }
+            return Run == null ? Rules.Effects[(int)card] : CardDescription(Run, card, ScreenMode == GameScreen.Battle);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace MagicCave.Prototype
@@ -9,6 +10,13 @@ namespace MagicCave.Prototype
         public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
 
         public static RunData NewRun(int seed, bool logSeed = true)
+            => CreateRun(seed, AttributeKind.None, logSeed);
+
+        public static RunData NewRun(int seed, AttributeKind secondary, bool logSeed = true)
+            => CreateRun(seed, secondary, logSeed);
+
+        // The original overload retains the legacy rules for old-save regression fixtures.
+        static RunData CreateRun(int seed, AttributeKind secondary, bool logSeed)
         {
             if (logSeed) Debug.Log("[MagicCave] Run Seed = " + seed);
             var run = new RunData
@@ -18,6 +26,7 @@ namespace MagicCave.Prototype
                 battleRandom = new RandomStream(RandomStream.Derive(seed, 0x42415402)),
                 cardRandom = new RandomStream(RandomStream.Derive(seed, 0x43415203))
             };
+            if (secondary != AttributeKind.None) CharacterAttributes.Initialize(run, secondary);
             for (int i = 0; i < 5; i++) run.deck.Add(CardKind.Strike);
             for (int i = 0; i < 4; i++) run.deck.Add(CardKind.Defend);
             run.deck.Add(CardKind.Prepare);
@@ -73,9 +82,11 @@ namespace MagicCave.Prototype
                 if (number == 3) map.Set(candidates[0].x, candidates[0].y, Tile.Return);
                 if (!ValidateTerrain(map, out _, out _)) continue;
                 int entityId = run.nextEntityId, itemId = run.nextItemId;
+                uint lootState = run.UsesAttributes ? run.lootRandom.state : 0;
                 if (!PlaceObjects(run, map))
                 {
                     run.nextEntityId = entityId; run.nextItemId = itemId;
+                    if (run.UsesAttributes) run.lootRandom.state = lootState;
                     continue;
                 }
                 return map;
@@ -270,6 +281,11 @@ namespace MagicCave.Prototype
             var kinds = new List<ItemKind> { ItemKind.Ore, ItemKind.Ore, ItemKind.Ore, ItemKind.Ore,
                 ItemKind.Crystal, ItemKind.Crystal, ItemKind.Crystal, ItemKind.Potion, ItemKind.Potion,
                 run.mapRandom.Range(0, 4) == 0 ? ItemKind.Relic : ItemKind.Ore };
+            if (run.UsesAttributes)
+            {
+                kinds[0] = map.number == 1 || run.lootRandom.Range(0, 10) < 6 ? DrawWeapon(run, map.number == 1) : DrawArmor(run);
+                kinds[1] = new[] { ItemKind.StrengthEssence, ItemKind.AgilityEssence, ItemKind.WisdomEssence, ItemKind.AssaultPotion }[run.lootRandom.Range(0, 4)];
+            }
             run.mapRandom.Shuffle(kinds);
             kinds.Sort((a, b) => Rules.Rarity(b).CompareTo(Rules.Rarity(a)));
             // Assign scarce high levels to the rarest guarded loot first.
@@ -307,6 +323,28 @@ namespace MagicCave.Prototype
                 map.spawnX = p.x; map.spawnY = p.y; return true;
             }
             return false;
+        }
+
+        public static ItemKind DrawWeapon(RunData run, bool commonOnly = false)
+        {
+            var candidates = run.attributeRules.equipment.Where(e => e.slot == EquipmentSlot.MainHand &&
+                e.ownerCharacterId == run.character.templateId && Rules.IsEquipment(e.kind) &&
+                run.attributeRules.template.allowedTypes.Contains(e.type) && (!commonOnly || Rules.Rarity(e.kind) == 0)).ToArray();
+            if (candidates.Length == 0) return ItemKind.IronSword;
+            int total = candidates.Sum(e => Rules.Rarity(e.kind) == 0 ? 3 : 1);
+            int roll = run.lootRandom.Range(0, total);
+            foreach (var candidate in candidates)
+            {
+                roll -= Rules.Rarity(candidate.kind) == 0 ? 3 : 1;
+                if (roll < 0) return candidate.kind;
+            }
+            return ItemKind.IronSword;
+        }
+        static ItemKind DrawArmor(RunData run)
+        {
+            var pool = new[] { ItemKind.WoodShield, ItemKind.LeatherArmor, ItemKind.InsightArmor, ItemKind.IronArmor };
+            int roll = run.lootRandom.Range(0, 10);
+            return pool[Math.Min(3, roll / 3)];
         }
 
         static GroundLoot AddPile(RunData run, MapData map, Vector2Int p, ItemKind kind)
