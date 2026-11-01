@@ -32,6 +32,8 @@ public class CharacterAttributeTests
         Assert.That(CombatNumbers.Damage(a, CardKind.Heavy), Is.EqualTo(9));
         Assert.That(CombatNumbers.Damage(a, CardKind.Double), Is.EqualTo(2));
         Assert.That(CombatNumbers.Block(a, CardKind.Defend), Is.EqualTo(10));
+        Assert.That(CombatNumbers.Block(a, CardKind.Fortify), Is.EqualTo(20));
+        Assert.That(CombatNumbers.Block(a, CardKind.Steady), Is.EqualTo(6));
         a.attributeRules.template.wisdom = 20;
         Assert.That(b.attributeRules.template.wisdom, Is.EqualTo(5));
         Assert.That(PrototypeAttributeSet.LoadRules().template.wisdom, Is.EqualTo(5));
@@ -92,6 +94,74 @@ public class CharacterAttributeTests
         Assert.That(CombatNumbers.Damage(run, CardKind.Strike), Is.EqualTo(expected));
     }
     [Test]
+    public void DefenseUsesPrimaryAttributeWithoutDirectAgilityOrSecondaryMultiplier()
+    {
+        var run = New(); run.attributeRules.template.agility = 100; run.attributeRules.template.wisdom = 100;
+        Assert.That(CombatNumbers.Block(run, CardKind.Defend), Is.EqualTo(10));
+        run.character.modifiers.Add(new AttributeModifier { source = "assault-potion", attribute = AttributeKind.Strength, value = 2, remainingBattles = 2 });
+        Assert.That(CombatNumbers.Block(run, CardKind.Defend, false), Is.EqualTo(10));
+        Assert.That(CombatNumbers.Block(run, CardKind.Defend), Is.EqualTo(12));
+        var battle = Hand(run, CardKind.Defend); battle.Play(0);
+        Assert.That(battle.playerBlock, Is.EqualTo(12));
+        Assert.That(CombatNumbers.Block(run, CardKind.Strike), Is.Zero);
+    }
+    [Test]
+    public void DefenseCanUseActualWeaponAttackAndItsScalingWithoutDamageBonuses()
+    {
+        var run = New(); var card = run.attributeRules.DefenseCard(CardKind.Defend);
+        card.source = DefenseScalingSource.ActualAttack; card.multiplier = 15000;
+        var weapon = run.attributeRules.Weapon("training-sword"); weapon.baseAttack = 0; weapon.strengthScaling = 0; weapon.agilityScaling = 10000;
+        Assert.That(CombatNumbers.Block(run, CardKind.Defend), Is.EqualTo(8)); // ATK 5 * 150% = 7.5.
+        run.attributeRules.template.agility++;
+        run.attributeRules.template.wisdom = 100;
+        Assert.That(CombatNumbers.Block(run, CardKind.Defend), Is.EqualTo(9)); // ATK 6; secondary damage bonus is excluded.
+        Assert.That(CombatNumbers.Block(run, CardKind.Fortify), Is.EqualTo(20)); // Other cards retain their own source.
+        var battle = Hand(run, CardKind.Defend); battle.spirit = 20; battle.Play(0);
+        Assert.That(battle.playerBlock, Is.EqualTo(9));
+        var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
+        var loaded = new PrototypeStore(folder).Continue();
+        Assert.That(loaded.attributeRules.DefenseCard(CardKind.Defend).source, Is.EqualTo(DefenseScalingSource.ActualAttack));
+        Assert.That(CombatNumbers.Block(loaded, CardKind.Defend), Is.EqualTo(9));
+    }
+    [TestCase(7499, 4)] [TestCase(7500, 5)]
+    public void DefenseRoundsOnceAfterCardMultiplier(int strengthScaling, int expected)
+    {
+        var run = New(); var card = run.attributeRules.DefenseCard(CardKind.Defend);
+        card.source = DefenseScalingSource.ActualAttack; card.multiplier = 6000;
+        var weapon = run.attributeRules.Weapon("training-sword"); weapon.baseAttack = 0; weapon.strengthScaling = strengthScaling;
+        Assert.That(CombatNumbers.Block(run, CardKind.Defend), Is.EqualTo(expected));
+    }
+    [TestCase(false)] [TestCase(true)]
+    public void SavesWithoutDefenseTemplatesAdoptPrimaryScalingWithoutLosingProgress(bool pending)
+    {
+        var run = New(); run.health = 32.75;
+        var store = new PrototypeStore(folder);
+        if (pending) store.BeginSettlement(run, false); else store.SaveCheckpoint(run);
+        var session = Rules.Copy(store.Session);
+        (pending ? session.pending.run : session.checkpoint).attributeRules.defenseCards = null;
+        string original = JsonUtility.ToJson(session);
+        File.WriteAllText(Path.Combine(folder, "session.json"), original);
+        var loaded = new PrototypeStore(folder);
+        var restored = pending ? loaded.Session.pending.run : loaded.Continue();
+        Assert.That(restored.attributeRules.defenseCards, Has.Length.EqualTo(3));
+        Assert.That(CombatNumbers.Block(restored, CardKind.Defend), Is.EqualTo(10));
+        Assert.That(restored.health, Is.EqualTo(32.75));
+        Assert.That(File.ReadAllText(Path.Combine(folder, "session.json.pre-defense-scaling.bak")), Is.EqualTo(original));
+        Assert.That(File.ReadAllText(Path.Combine(folder, "session.json")), Is.EqualTo(original));
+    }
+    [Test]
+    public void InvalidDefenseTemplatesAndNonWeaponAttackScalingAreRejected()
+    {
+        var rules = AttributeRules.Defaults(); rules.defenseCards[0].source = (DefenseScalingSource)99;
+        Assert.Throws<InvalidOperationException>(() => CharacterAttributes.ValidateRules(rules));
+        rules = AttributeRules.Defaults(); rules.defenseCards[1].card = CardKind.Defend;
+        Assert.Throws<InvalidOperationException>(() => CharacterAttributes.ValidateRules(rules));
+        rules = AttributeRules.Defaults(); rules.defenseCards[2].multiplier = -1;
+        Assert.Throws<InvalidOperationException>(() => CharacterAttributes.ValidateRules(rules));
+        rules = AttributeRules.Defaults(); rules.Find(ItemKind.WoodShield).agilityScaling = 5000;
+        Assert.Throws<InvalidOperationException>(() => CharacterAttributes.ValidateRules(rules));
+    }
+    [Test]
     public void TemplateFilteredLootDoesNotDependOnSecondaryChoice()
     {
         var a = New(AttributeKind.Agility); var b = New(AttributeKind.Wisdom);
@@ -99,12 +169,14 @@ public class CharacterAttributeTests
         foreach (var run in new[] { a, b }) foreach (var map in run.maps.Take(4))
         {
             Assert.That(map.loot.Count, Is.EqualTo(10));
-            Assert.That(map.loot.Count(l => l.units.Any(i => Rules.IsEquipment(i.kind))), Is.EqualTo(1));
-            Assert.That(map.loot.Count(l => l.units.Any(i => i.kind >= ItemKind.StrengthEssence)), Is.EqualTo(1));
+            Assert.That(map.loot.Count(l => l.containerKind == ContainerKind.Equipment), Is.EqualTo(2));
+            Assert.That(map.loot.Count(l => l.containerKind == ContainerKind.Treasure), Is.EqualTo(5));
+            Assert.That(map.loot.Count(l => l.containerKind == ContainerKind.Supplies), Is.EqualTo(3));
+            Assert.That(map.loot.All(l => l.unopened && l.units.Count == 0), Is.True);
             foreach (var item in map.loot.SelectMany(l => l.units).Where(i => i.kind >= ItemKind.IronSword && i.kind <= ItemKind.RefinedSword))
                 Assert.That(run.attributeRules.Find(item.kind).ownerCharacterId, Is.EqualTo(run.character.templateId));
             foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.ItemGuard))
-                Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.guardEnemyId == guard.id).Max(l => Rules.Rarity(l.units[0].kind)) + 1));
+                Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.guardEnemyId == guard.id).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
         }
         a.attributeRules.Find(ItemKind.SwiftSword).ownerCharacterId = "other";
         for (int i = 0; i < 100; i++) Assert.That(MapGenerator.DrawWeapon(a), Is.Not.EqualTo(ItemKind.SwiftSword));
@@ -243,7 +315,7 @@ public class CharacterAttributeTests
                 Assert.That(MapGenerator.ValidateTerrain(map, out _, out _), Is.True, "Seed " + seed);
                 Assert.That(map.loot.Count, Is.EqualTo(10)); Assert.That(map.enemies.Count, Is.EqualTo(10));
                 foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.ItemGuard))
-                    Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.guardEnemyId == guard.id).Max(l => Rules.Rarity(l.units[0].kind)) + 1));
+                    Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.guardEnemyId == guard.id).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
             }
         }
     }

@@ -10,6 +10,7 @@ namespace MagicCave.Prototype
         WoodShield, LeatherArmor, InsightArmor, IronArmor, StrengthEssence, AgilityEssence, WisdomEssence, AssaultPotion }
     public enum EnemyKind { Bat, Beetle, Boss }
     public enum EnemyRole { Roaming, ItemGuard, CorridorGuard }
+    public enum ContainerKind { Legacy, Equipment, Treasure, Supplies }
     public enum CardKind { Strike, Defend, Prepare, Heavy, Double, Shield, Fortify, Quick, Spirit, Steady }
 
     [Serializable]
@@ -66,11 +67,16 @@ namespace MagicCave.Prototype
         public int id, x, y;
         public int guardEnemyId;
         public bool loose;
+        // Missing fields in existing saves keep their already generated contents.
+        public ContainerKind containerKind;
+        public bool unopened, opened;
         // Retain container artwork after its last item is removed (including after loading).
         public ItemKind appearanceKind;
         public List<ItemUnit> units = new List<ItemUnit>();
         public bool IsContainer => !loose;
-        public bool BlocksMovement => IsContainer && units.Count > 0;
+        public bool HasContents => unopened || units.Count > 0;
+        public bool IsOpened => IsContainer && (opened || !HasContents);
+        public bool BlocksMovement => IsContainer && HasContents;
     }
     [Serializable]
     public sealed class EnemyData
@@ -133,6 +139,9 @@ namespace MagicCave.Prototype
         public CharacterState character;
         public AttributeRules attributeRules;
         public RandomStream lootRandom;
+        public int containerVersion;
+        public ContainerLootRules containerRules;
+        public RandomStream containerRandom;
         public bool UsesAttributes => attributeVersion == 1;
         public int nextEntityId = 1, nextItemId = 1, nextAcquisitionOrder = 1;
         public float x, y;

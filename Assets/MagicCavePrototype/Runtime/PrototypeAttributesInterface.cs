@@ -23,7 +23,7 @@ namespace MagicCave.Prototype
                 return description;
             }
             double block = CombatNumbers.Block(run, card, inBattle);
-            if (block > 0) return "获得" + CharacterAttributes.Number(block) + "点格挡" + (card == CardKind.Steady ? "，抽1张" : "");
+            if (CombatNumbers.IsDefense(card)) return "获得" + CharacterAttributes.Number(block) + "点格挡" + (card == CardKind.Steady ? "，抽1张" : "");
             return Rules.Effects[(int)card];
         }
 

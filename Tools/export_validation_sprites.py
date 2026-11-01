@@ -5,6 +5,7 @@ Run from the project root with Python + Pillow. Original Aseprite files stay unt
 from pathlib import Path
 import struct
 import zlib
+import argparse
 
 from PIL import Image
 
@@ -43,8 +44,30 @@ def read_sprite(path):
     return result
 
 
+def export_container_art(root, destination):
+    """Stage new art outside Assets; import/configure it through Unity MCP."""
+    destination.mkdir(parents=True, exist_ok=True)
+    empty = read_sprite(root / 'Assets/ART Assets/Proactive Object/Chest/Chest_All_Empty.aseprite')
+    for index, name in enumerate(('Equipment', 'Treasure', 'Supplies')):
+        empty.crop((index * 16, 0, (index + 1) * 16, 16)).save(destination / f'Chest_Open_{name}.png')
+    equipment = read_sprite(root / 'Assets/ART Assets/Equipmen/Equipment.aseprite')
+    for name, column, row in (('Sword_Iron', 1, 4), ('Sword_Swift', 2, 4), ('Sword_Inscribed', 2, 4),
+                              ('Sword_Refined', 3, 4), ('Shield_Wood', 0, 0), ('Armor_Leather', 0, 1),
+                              ('Armor_Insight', 2, 1), ('Armor_Iron', 1, 1)):
+        x, y = 16 + column * 32, 16 + row * 32
+        equipment.crop((x, y, x + 16, y + 16)).save(destination / f'Item_{name}.png')
+
+
 if __name__ == '__main__':
     root = Path(__file__).resolve().parents[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--container-art-destination', type=Path,
+                        help='Stage container and equipment PNGs in an external directory for Unity MCP import.')
+    args = parser.parse_args()
+    if args.container_art_destination:
+        export_container_art(root, args.container_art_destination)
+        print(f'Staged container/equipment art in {args.container_art_destination}')
+        raise SystemExit(0)
     destination = root / 'Assets/ArtValidation/Sprites'
     destination.mkdir(parents=True, exist_ok=True)
     files = sorted((root / 'Assets/ART Assets').rglob('*.aseprite'))

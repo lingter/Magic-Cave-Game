@@ -134,12 +134,12 @@ namespace MagicCave.Prototype
             }
             foreach (var loot in Run.Map.loot)
             {
-                bool empty = loot.units.Count == 0;
+                bool empty = !loot.HasContents;
                 if (empty && !loot.IsContainer) continue;
-                ItemKind kind = empty ? loot.appearanceKind : loot.units[0].kind;
-                var tint = kind == ItemKind.Crystal ? new Color(0.5f, 0.85f, 1) : Color.white;
+                ItemKind kind = loot.unopened || empty ? loot.appearanceKind : loot.units[0].kind;
+                var tint = loot.containerKind == ContainerKind.Legacy && kind == ItemKind.Crystal ? new Color(0.5f, 0.85f, 1) : Color.white;
                 if (empty) tint.a = 0.25f;
-                var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.loot[Rules.ArtIndex(kind)], World(loot.x, loot.y),
+                var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.LootSprite(loot), World(loot.x, loot.y),
                     empty || loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
                 if (empty)
                 {
@@ -155,7 +155,7 @@ namespace MagicCave.Prototype
                     image.transform.localScale = Vector3.one * 0.55f; visual.enabled = false;
                 }
                 var labelRoot = new GameObject("Item label"); labelRoot.transform.SetParent(worldRoot.transform, false); labelRoot.transform.localPosition = World(loot.x, loot.y);
-                WorldLabel(labelRoot.transform, Rules.ItemNames[(int)kind] + " ×" + loot.units.Count, 0.65f);
+                WorldLabel(labelRoot.transform, loot.unopened ? ContainerLoot.Name(loot) : Rules.ItemNames[(int)kind] + " ×" + loot.units.Count, 0.65f);
                 objects.Add(new ObjectVisual { root = visual.gameObject, x = loot.x, y = loot.y });
                 objects.Add(new ObjectVisual { root = labelRoot, x = loot.x, y = loot.y });
             }

@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "message": "Build Succeeded.",
+  "data": {
+    "job_id": "build-2f3a29a022",
+    "result": "succeeded",
+    "platform": "StandaloneWindows64",
+    "output_path": "Builds/WindowsAttributes/MagicCaveGame.exe",
+    "started_at": "2026-10-27T11:33:46.1840418Z",
+    "duration_seconds": 40.286637299999995,
+    "completed_at": "2026-10-27T11:34:26.4706791Z",
+    "total_size_mb": 101.93,
+    "errors": 0,
+    "warnings": 0
+  }
+}

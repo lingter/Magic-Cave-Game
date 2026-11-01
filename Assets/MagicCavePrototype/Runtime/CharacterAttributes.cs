@@ -8,6 +8,15 @@ namespace MagicCave.Prototype
     public enum AttributeKind { None = -1, Strength, Agility, Wisdom }
     public enum EquipmentSlot { MainHand, OffHand, Armor }
     public enum EquipmentType { Sword, Shield, LightArmor, HeavyArmor }
+    public enum DefenseScalingSource { MainAttribute, ActualAttack }
+
+    [Serializable]
+    public sealed class DefenseCardDefinition
+    {
+        public CardKind card;
+        public int multiplier = 10000;
+        public DefenseScalingSource source;
+    }
 
     [Serializable]
     public sealed class CharacterTemplate
@@ -40,10 +49,19 @@ namespace MagicCave.Prototype
         public CharacterTemplate template = new CharacterTemplate();
         public EquipmentDefinition[] equipment;
         public int[] cardMultipliers = { 6000, 0, 0, 15000, 3500, 0, 0, 5000, 0, 0 };
+        public DefenseCardDefinition[] defenseCards;
         public EquipmentDefinition Find(ItemKind kind) => equipment.FirstOrDefault(e => e.kind == kind);
         public EquipmentDefinition Weapon(string id) => equipment.FirstOrDefault(e => e.id == id && e.slot == EquipmentSlot.MainHand);
+        public DefenseCardDefinition DefenseCard(CardKind card) => (defenseCards == null || defenseCards.Length == 0 ? DefaultDefenseCards() : defenseCards).FirstOrDefault(c => c.card == card);
+        public static DefenseCardDefinition[] DefaultDefenseCards() => new[]
+        {
+            new DefenseCardDefinition { card = CardKind.Defend },
+            new DefenseCardDefinition { card = CardKind.Fortify, multiplier = 20000 },
+            new DefenseCardDefinition { card = CardKind.Steady, source = DefenseScalingSource.ActualAttack }
+        };
         public static AttributeRules Defaults() => new AttributeRules
         {
+            defenseCards = DefaultDefenseCards(),
             equipment = new[]
             {
                 Sword("training-sword", (ItemKind)(-1), 1, 5000),
@@ -107,6 +125,7 @@ namespace MagicCave.Prototype
         {
             var snapshot = Rules.Copy(rules ?? PrototypeAttributeSet.LoadRules());
             UpgradeSecondaryRules(snapshot);
+            UpgradeDefenseRules(snapshot);
             ValidateRules(snapshot);
             if (secondary < AttributeKind.Strength || secondary > AttributeKind.Wisdom || secondary == snapshot.template.primary)
                 throw new InvalidOperationException("请从主属性以外的两项属性中选择副属性。");
@@ -154,6 +173,12 @@ namespace MagicCave.Prototype
             rules.secondaryPerPoint = AttributeRules.SecondaryBonusPerPoint;
             return true;
         }
+        public static bool UpgradeDefenseRules(AttributeRules rules)
+        {
+            if (rules == null || rules.defenseCards != null && rules.defenseCards.Length > 0) return false;
+            rules.defenseCards = AttributeRules.DefaultDefenseCards();
+            return true;
+        }
         static void Add(CharacterStats stats, AttributeKind attribute, int amount)
         {
             if (attribute == AttributeKind.Strength) stats.strength += amount;
@@ -185,6 +210,12 @@ namespace MagicCave.Prototype
                 rules.secondaryPerPoint != AttributeRules.SecondaryBonusPerPoint || rules.equipment == null || rules.equipment.Length < 2 || rules.equipment.Length > 100 ||
                 rules.cardMultipliers == null || rules.cardMultipliers.Length != 10 || rules.cardMultipliers.Any(n => n < 0 || n > 100000))
                 throw new InvalidOperationException("角色属性配置无效。");
+            var defenseCards = rules.defenseCards == null || rules.defenseCards.Length == 0 ? AttributeRules.DefaultDefenseCards() : rules.defenseCards;
+            if (defenseCards.Length != 3 || defenseCards.Any(c => c == null || !CombatNumbers.IsDefense(c.card) ||
+                c.multiplier < 0 || c.multiplier > 100000 ||
+                c.source != DefenseScalingSource.MainAttribute && c.source != DefenseScalingSource.ActualAttack) ||
+                defenseCards.Select(c => c.card).Distinct().Count() != 3)
+                throw new InvalidOperationException("防御卡牌模板配置无效。");
             var ids = new HashSet<string>(); var kinds = new HashSet<ItemKind>();
             foreach (var e in rules.equipment)
                 if (e == null || string.IsNullOrEmpty(e.id) || !ids.Add(e.id) || !kinds.Add(e.kind) ||
@@ -193,6 +224,7 @@ namespace MagicCave.Prototype
                     e.strengthScaling < 0 || e.strengthScaling > 100000 || e.agilityScaling < 0 || e.agilityScaling > 100000 ||
                     e.wisdomScaling < 0 || e.wisdomScaling > 100000 || e.strength < 0 || e.strength > 1000 ||
                     e.agility < 0 || e.agility > 1000 || e.wisdom < 0 || e.wisdom > 1000 || e.health < 0 || e.health > 10000 || e.defense < 0 || e.defense > 1000 ||
+                    e.slot != EquipmentSlot.MainHand && (e.baseAttack != 0 || e.strengthScaling != 0 || e.agilityScaling != 0 || e.wisdomScaling != 0) ||
                     e.slot == EquipmentSlot.MainHand && (string.IsNullOrEmpty(e.ownerCharacterId) || e.type != EquipmentType.Sword) ||
                     e.slot == EquipmentSlot.OffHand && e.type != EquipmentType.Shield ||
                     e.slot == EquipmentSlot.Armor && e.type != EquipmentType.LightArmor && e.type != EquipmentType.HeavyArmor)
@@ -210,6 +242,7 @@ namespace MagicCave.Prototype
         // Round only after all outgoing damage multipliers; 4.5 becomes 5.
         public static double RoundDamage(decimal value) => (double)decimal.Round(value, 0, MidpointRounding.AwayFromZero);
         public static bool IsAttack(CardKind card) => card == CardKind.Strike || card == CardKind.Heavy || card == CardKind.Double || card == CardKind.Quick || card == CardKind.Shield;
+        public static bool IsDefense(CardKind card) => card == CardKind.Defend || card == CardKind.Fortify || card == CardKind.Steady;
         public static int Segments(CardKind card) => card == CardKind.Double ? 2 : 1;
         public static double Damage(RunData run, CardKind card, int spirit = 0, double block = 0, bool inBattle = true)
         {
@@ -225,8 +258,13 @@ namespace MagicCave.Prototype
         }
         public static double Block(RunData run, CardKind card, bool inBattle = true)
         {
+            if (!IsDefense(card)) return 0;
             int basis = card == CardKind.Defend ? 5 : card == CardKind.Fortify ? 12 : card == CardKind.Steady ? 4 : 0;
-            return basis == 0 ? 0 : basis + (run.UsesAttributes ? CharacterAttributes.Calculate(run, inBattle).agility : run.defenseBonus);
+            if (!run.UsesAttributes) return basis + run.defenseBonus;
+            var stats = CharacterAttributes.Calculate(run, inBattle);
+            var definition = run.attributeRules.DefenseCard(card);
+            decimal value = definition.source == DefenseScalingSource.ActualAttack ? stats.attack : stats.Value(run.attributeRules.template.primary);
+            return RoundDamage(Math.Max(0m, value * definition.multiplier / 10000m));
         }
         public static double Apply(double damage, int defense, ref double block, ref double health)
         {

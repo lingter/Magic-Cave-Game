@@ -26,7 +26,12 @@ namespace MagicCave.Prototype
                 battleRandom = new RandomStream(RandomStream.Derive(seed, 0x42415402)),
                 cardRandom = new RandomStream(RandomStream.Derive(seed, 0x43415203))
             };
-            if (secondary != AttributeKind.None) CharacterAttributes.Initialize(run, secondary);
+            if (secondary != AttributeKind.None)
+            {
+                CharacterAttributes.Initialize(run, secondary);
+                run.containerVersion = 1; run.containerRules = ContainerLootRules.Defaults(); run.containerRules.Validate();
+                run.containerRandom = new RandomStream(RandomStream.Derive(seed, 0x434f4e04));
+            }
             for (int i = 0; i < 5; i++) run.deck.Add(CardKind.Strike);
             for (int i = 0; i < 4; i++) run.deck.Add(CardKind.Defend);
             run.deck.Add(CardKind.Prepare);
@@ -281,18 +286,24 @@ namespace MagicCave.Prototype
             var kinds = new List<ItemKind> { ItemKind.Ore, ItemKind.Ore, ItemKind.Ore, ItemKind.Ore,
                 ItemKind.Crystal, ItemKind.Crystal, ItemKind.Crystal, ItemKind.Potion, ItemKind.Potion,
                 run.mapRandom.Range(0, 4) == 0 ? ItemKind.Relic : ItemKind.Ore };
-            if (run.UsesAttributes)
+            if (run.containerVersion == 1)
+            {
+                kinds = Enumerable.Repeat(ItemKind.IronSword, run.containerRules.equipmentCount)
+                    .Concat(Enumerable.Repeat(ItemKind.Relic, run.containerRules.treasureCount))
+                    .Concat(Enumerable.Repeat(ItemKind.Potion, run.containerRules.suppliesCount)).ToList();
+            }
+            else if (run.UsesAttributes)
             {
                 kinds[0] = map.number == 1 || run.lootRandom.Range(0, 10) < 6 ? DrawWeapon(run, map.number == 1) : DrawArmor(run);
                 kinds[1] = new[] { ItemKind.StrengthEssence, ItemKind.AgilityEssence, ItemKind.WisdomEssence, ItemKind.AssaultPotion }[run.lootRandom.Range(0, 4)];
             }
             run.mapRandom.Shuffle(kinds);
-            kinds.Sort((a, b) => Rules.Rarity(b).CompareTo(Rules.Rarity(a)));
+            kinds.Sort((a, b) => PileRarity(run, b, map.number).CompareTo(PileRarity(run, a, map.number)));
             // Assign scarce high levels to the rarest guarded loot first.
             for (int i = 0; i < guarded.Count; i++)
             {
                 var pair = guarded[i];
-                int level = Rules.Rarity(kinds[i]) + 1;
+                int level = PileRarity(run, kinds[i], map.number) + 1;
                 pair.Value.level = Math.Max(pair.Value.level, level);
                 AddPile(run, map, pair.Key, kinds[i]).guardEnemyId = pair.Value.id;
             }
@@ -349,10 +360,20 @@ namespace MagicCave.Prototype
 
         static GroundLoot AddPile(RunData run, MapData map, Vector2Int p, ItemKind kind)
         {
+            if (run.containerVersion == 1)
+            {
+                var loot = new GroundLoot { id = run.nextEntityId++, x = p.x, y = p.y,
+                    containerKind = PileContainer(kind), unopened = true, appearanceKind = kind };
+                map.loot.Add(loot); return loot;
+            }
             int count = kind == ItemKind.Ore ? run.mapRandom.Range(2, 5) :
                 kind == ItemKind.Crystal ? run.mapRandom.Range(1, 3) : 1;
             return AddLoot(run, map, p, kind, count);
         }
+        static ContainerKind PileContainer(ItemKind kind) => Rules.IsEquipment(kind) ? ContainerKind.Equipment :
+            kind == ItemKind.Relic ? ContainerKind.Treasure : ContainerKind.Supplies;
+        static int PileRarity(RunData run, ItemKind kind, int floor) => run.containerVersion == 1 ?
+            run.containerRules.Pool(PileContainer(kind), floor).Max(d => Rules.Rarity(d.kind)) : Rules.Rarity(kind);
         public static GroundLoot AddLoot(RunData run, MapData map, Vector2Int position, ItemKind kind, int count)
         {
             var loot = new GroundLoot { id = run.nextEntityId++, x = position.x, y = position.y, appearanceKind = kind };

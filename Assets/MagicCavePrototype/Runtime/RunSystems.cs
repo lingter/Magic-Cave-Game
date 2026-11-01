@@ -13,7 +13,9 @@ namespace MagicCave.Prototype
         public static int Pickup(RunData run, GroundLoot loot)
         {
             if (run.Map.LivingGuard(loot) != null) return 0;
-            if (loot.units.Count > 0) loot.appearanceKind = loot.units[0].kind;
+            ContainerLoot.Open(run, loot);
+            if (loot.IsContainer && loot.units.Count > 0) loot.opened = true;
+            if (loot.units.Count > 0 && loot.containerKind == ContainerKind.Legacy) loot.appearanceKind = loot.units[0].kind;
             int taken = 0;
             while (loot.units.Count > 0)
             {

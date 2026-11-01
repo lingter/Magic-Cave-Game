@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "message": "Test job status retrieved.",
+  "error": null,
+  "data": {
+    "job_id": "e70ea5f24a2f4e35b62f6e64a8899a7b",
+    "status": "succeeded",
+    "mode": "EditMode",
+    "started_unix_ms": 1793100697486,
+    "finished_unix_ms": 1793100706881,
+    "last_update_unix_ms": 1793100706881,
+    "progress": {
+      "completed": 115,
+      "total": 115,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "TownProgressionTests.TalentPurchaseAndResetPersistExactGoldAndRanks",
+      "last_finished_unix_ms": 1793100706803,
+      "stuck_suspected": false,
+      "editor_is_focused": false,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "EditMode",
+      "summary": {
+        "total": 115,
+        "passed": 115,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 4.6830491,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "hint": null
+}

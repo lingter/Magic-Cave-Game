@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-27",
+  "project": "E:/UnityProject/Magic Cave Game",
+  "method": "Unity MCP execute_code；独立内存对象；无项目资产或玩家存档写入",
+  "fullWarehouse": {
+    "success": true,
+    "message": "Code executed successfully.",
+    "error": null,
+    "data": {
+      "result": {
+        "used": 600,
+        "capacity": 600,
+        "commit": "仓库空间不足，请先出售物品或扩容；本次结算已保留。",
+        "cancel": "此结算不能取消。",
+        "expand": "金币不足或仓库已扩容至上限。",
+        "sell": "出售数量无效。",
+        "continue": "请先处理未完成的结算。",
+        "newRunGate": "请先处理未完成的结算。",
+        "selectionAfterClearAttempt": 1,
+        "confirmed": false,
+        "equipmentStackLimit": 1,
+        "essenceStackLimit": 20
+      },
+      "compiler": "codedom"
+    },
+    "hint": null
+  },
+  "actualAssetFormula": {
+    "success": true,
+    "message": "Code executed successfully.",
+    "error": null,
+    "data": {
+      "result": {
+        "rulesVersion": 2,
+        "secondaryPerPointBasisPoints": 100,
+        "strength": 10,
+        "agility": 5,
+        "wisdom": 5,
+        "attack": 6,
+        "secondaryMultiplier": 1.05,
+        "strike": 4,
+        "heavy": 9,
+        "doublePerHit": 2,
+        "defend": 10,
+        "fortify": 20,
+        "steady": 6
+      },
+      "compiler": "codedom"
+    },
+    "hint": null
+  }
+}

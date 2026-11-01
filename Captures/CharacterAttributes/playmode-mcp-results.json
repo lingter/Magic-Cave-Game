@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "message": "Test job status retrieved.",
+  "error": null,
+  "data": {
+    "job_id": "09bbd3b2fd1a4946866ce6209bbe0f1f",
+    "status": "succeeded",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793100724649,
+    "finished_unix_ms": 1793100770403,
+    "last_update_unix_ms": 1793100770403,
+    "progress": {
+      "completed": 21,
+      "total": 21,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+      "last_finished_unix_ms": 1793100770394,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": null
+  },
+  "hint": null
+}

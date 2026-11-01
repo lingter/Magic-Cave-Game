@@ -17,7 +17,7 @@ MonoBehaviour:
     secondaryPerPoint: 100
     template:
       id: knight
-      name: 骑士
+      name: "\u9A91\u58EB"
       baseWeaponId: training-sword
       primary: 0
       health: 60
@@ -156,3 +156,13 @@ MonoBehaviour:
       health: 0
       defense: 1
     cardMultipliers: 701700000000000000000000983a0000ac0d00000000000000000000881300000000000000000000
+    defenseCards:
+    - card: 1
+      multiplier: 10000
+      source: 0
+    - card: 6
+      multiplier: 20000
+      source: 0
+    - card: 9
+      multiplier: 10000
+      source: 1

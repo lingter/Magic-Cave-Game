@@ -159,8 +159,9 @@ namespace MagicCave.Prototype
             if (target.kind == TargetKind.Loot)
             {
                 var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
-                if (loot != null && loot.units.Count > 0) hint = Rules.ItemNames[(int)loot.units[0].kind] + " ×" + loot.units.Count + " · " + Rules.RarityName(loot.units[0].kind) +
-                    (Run.Map.LivingGuard(loot) != null ? " · 需先击败镇守怪" : " · 点击 / E拾取");
+                if (loot != null && loot.HasContents) hint = (loot.unopened ? ContainerLoot.Name(loot) + " · 开启后获得随机物品" :
+                    Rules.ItemNames[(int)loot.units[0].kind] + " ×" + loot.units.Count + " · " + Rules.RarityName(loot.units[0].kind)) +
+                    (Run.Map.LivingGuard(loot) != null ? " · 需先击败镇守怪" : loot.unopened ? " · 点击 / E开启" : " · 点击 / E拾取");
             }
             Label(new Rect(26, 671, 750, 38), hint, textStyle, Gold);
             Button(new Rect(805, 669, 140, 36), "角色 [C]", () => { Panel = GamePanel.Character; CancelRoute(); });
@@ -321,9 +322,11 @@ namespace MagicCave.Prototype
                 Fill(new Rect(x, y, 208, 91), "slot", new Color(0.09f, 0.14f, 0.21f));
                 if (slot.units.Count == 0) { Label(new Rect(x + 8, y + 23, 190, 35), "空格", smallStyle, new Color(0.34f, 0.43f, 0.52f)); continue; }
                 ItemKind kind = slot.units[0].kind;
-                Label(new Rect(x + 8, y + 6, 190, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count, textStyle, Gold);
+                var icon = artSet.ItemIcon(kind);
+                if (icon != null) GUI.DrawTexture(new Rect(x + 7, y + 5, 26, 26), icon.texture, ScaleMode.ScaleToFit, true);
+                Label(new Rect(x + (icon == null ? 8 : 38), y + 6, icon == null ? 190 : 164, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count, textStyle, Gold);
                 Label(new Rect(x + 8, y + 33, 190, 23), Rules.RarityName(kind), smallStyle);
-                Button(new Rect(x + 8, y + 60, 88, 26), Rules.IsEquipment(kind) ? "装备/对比" : "使用", () =>
+                Button(new Rect(x + 8, y + 60, 88, 26), Rules.IsEquipment(kind) ? "装备" : "使用", () =>
                 {
                     if (Rules.IsEquipment(kind)) { equipmentPreviewSlot = slotIndex; Panel = GamePanel.Character; }
                     else if (UseInventory(slotIndex)) Notify("已使用" + Rules.ItemNames[(int)kind]);

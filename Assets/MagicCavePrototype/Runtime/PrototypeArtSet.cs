@@ -12,7 +12,21 @@ namespace MagicCave.Prototype
         // Array order follows the existing save-compatible EnemyKind / ItemKind enum values.
         public Sprite[] enemies = new Sprite[3];
         public Sprite[] loot = new Sprite[4];
+        // Equipment chest, treasure chest, supplies bag (Chest_All_Empty, left to right).
+        public Sprite[] openedLoot = new Sprite[3];
+        public Sprite[] itemIcons = new Sprite[16];
         public Material spriteMaterial;
+
+        public Sprite LootSprite(GroundLoot item)
+        {
+            if (item.IsOpened && openedLoot != null && openedLoot.Length == 3 && openedLoot[ContainerLoot.OpenArtIndex(item)] != null)
+                return openedLoot[ContainerLoot.OpenArtIndex(item)];
+            if (item.loose && item.units.Count > 0 && itemIcons != null && itemIcons.Length > (int)item.units[0].kind && itemIcons[(int)item.units[0].kind] != null)
+                return itemIcons[(int)item.units[0].kind];
+            return loot[item.loose && item.units.Count > 0 ? Rules.ArtIndex(item.units[0].kind) : ContainerLoot.ArtIndex(item)];
+        }
+
+        public Sprite ItemIcon(ItemKind kind) => itemIcons != null && itemIcons.Length > (int)kind ? itemIcons[(int)kind] : null;
 
         public void Validate()
         {

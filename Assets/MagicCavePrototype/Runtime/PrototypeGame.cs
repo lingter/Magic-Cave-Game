@@ -192,7 +192,7 @@ namespace MagicCave.Prototype
             foreach (var enemy in Run.Map.enemies)
                 if (!enemy.defeated && enemy.x == x && enemy.y == y) return new Target { kind = TargetKind.Enemy, x = x, y = y, id = enemy.id };
             foreach (var loot in Run.Map.loot)
-                if (loot.units.Count > 0 && loot.x == x && loot.y == y) return new Target { kind = TargetKind.Loot, x = x, y = y, id = loot.id };
+                if (loot.HasContents && loot.x == x && loot.y == y) return new Target { kind = TargetKind.Loot, x = x, y = y, id = loot.id };
             Tile tile = Run.Map.At(x, y);
             return new Target { kind = tile == Tile.Wall ? TargetKind.Wall : tile == Tile.Ground ? TargetKind.Ground : TargetKind.Door, x = x, y = y };
         }
@@ -204,7 +204,7 @@ namespace MagicCave.Prototype
             foreach (var enemy in Run.Map.enemies)
                 if (!enemy.defeated && Run.Map.Known(enemy.x, enemy.y)) options.Add(new Target { kind = TargetKind.Enemy, id = enemy.id, x = enemy.x, y = enemy.y });
             foreach (var loot in Run.Map.loot)
-                if (loot.units.Count > 0 && Run.Map.Known(loot.x, loot.y)) options.Add(new Target { kind = TargetKind.Loot, id = loot.id, x = loot.x, y = loot.y });
+                if (loot.HasContents && Run.Map.Known(loot.x, loot.y)) options.Add(new Target { kind = TargetKind.Loot, id = loot.id, x = loot.x, y = loot.y });
             foreach (var direction in MapGenerator.Directions.Concat(new[] { Vector2Int.zero }))
             {
                 int x = Run.CellX + direction.x, y = Run.CellY + direction.y;
@@ -240,9 +240,10 @@ namespace MagicCave.Prototype
                     Run.Map.Set(target.x, target.y, Tile.Ground); MapGenerator.Reveal(Run); BuildWorld(false); Notify("墙体已破坏"); break;
                 case TargetKind.Loot:
                     var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
-                    if (loot == null || loot.units.Count == 0) return;
+                    if (loot == null || !loot.HasContents) return;
                     var guard = Run.Map.LivingGuard(loot);
                     if (guard != null) { Notify("需要先击败镇守怪：" + Rules.EnemyLabel(guard)); return; }
+                    ContainerLoot.Open(Run, loot);
                     ItemKind kind = loot.units[0].kind; int count = Inventory.Pickup(Run, loot);
                     Notify(count > 0 ? "拾取 " + Rules.ItemNames[(int)kind] + " ×" + count : "背包已满，物品留在地面"); BuildWorld(false); break;
                 case TargetKind.Enemy:

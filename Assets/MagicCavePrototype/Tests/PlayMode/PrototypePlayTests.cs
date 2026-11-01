@@ -210,6 +210,13 @@ public class PrototypePlayTests
         Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成16点物理伤害"));
         game.Combat.enemyBlock = 5;
         Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成16点物理伤害"));
+        Assert.That(game.CardDescription(run, CardKind.Defend, true), Is.EqualTo("获得10点格挡"));
+        var defense = run.attributeRules.DefenseCard(CardKind.Defend);
+        defense.source = DefenseScalingSource.ActualAttack; defense.multiplier = 10000;
+        Assert.That(game.CardDescription(run, CardKind.Defend, true), Is.EqualTo("获得9点格挡"));
+        defense.multiplier = 0;
+        Assert.That(game.CardDescription(run, CardKind.Defend, true), Is.EqualTo("获得0点格挡"));
+        defense.multiplier = 10000; defense.source = DefenseScalingSource.MainAttribute;
         Assert.That(game.EquipInventory(0), Does.Contain("探索")); Assert.That(game.UseInventory(1), Is.False);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "battle-dynamic-damage.png")); yield return null; yield return null;
         game.Store.SaveCheckpoint(run); game.ContinueRun(); yield return null;
@@ -433,6 +440,47 @@ public class PrototypePlayTests
         Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Battle)); Assert.That(game.Run.CellY, Is.EqualTo(8));
     }
     [UnityTest]
+    public IEnumerator ThreeContainerKindsReplaceArtOnOpeningAndKeepExistingEmptyBehavior()
+    {
+        game.StartNewRun(12345); game.Run.mapIndex = 4;
+        string captures = Path.GetFullPath("Captures/ContainerLoot"); Directory.CreateDirectory(captures);
+        var map = game.Run.Map; map.enemies.Clear(); map.loot.Clear();
+        game.Run.x = 6; game.Run.y = 5;
+        for (int i = 0; i < 3; i++)
+            map.loot.Add(new GroundLoot { id = game.Run.nextEntityId++, x = 3 + i * 3, y = 6,
+                containerKind = (ContainerKind)(i + 1), unopened = true });
+        for (int i = 0; i < 20; i++) game.Run.inventory[i].units.Add(new ItemUnit { id = game.Run.nextItemId++, kind = ItemKind.IronSword });
+        typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+        yield return null;
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "three-containers-closed.png")); yield return null; yield return null;
+        foreach (var loot in map.loot)
+        {
+            var visual = game.GetComponentsInChildren<SpriteRenderer>().Single(r => r.name == "Item " + loot.id);
+            Assert.That(visual.sprite, Is.SameAs(game.artSet.loot[ContainerLoot.ArtIndex(loot)]));
+            game.Run.x = loot.x; InteractWithLoot(loot); yield return null;
+            visual = game.GetComponentsInChildren<SpriteRenderer>().Single(r => r.name == "Item " + loot.id);
+            Assert.That(loot.opened && loot.HasContents, Is.True, "A full bag opens the container and preserves its items.");
+            Assert.That(visual.sprite, Is.SameAs(game.artSet.openedLoot[(int)loot.containerKind - 1]));
+            Assert.That(visual.color.a, Is.EqualTo(1)); Assert.That(visual.GetComponent<BoxCollider2D>().isTrigger, Is.False);
+            Assert.That(map.CanTraverse(loot.x, loot.y), Is.False);
+        }
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "three-containers-open-with-items.png")); yield return null; yield return null;
+        foreach (var slot in game.Run.inventory) slot.units.Clear();
+        foreach (var loot in map.loot)
+        {
+            game.Run.x = loot.x; InteractWithLoot(loot); yield return null;
+            var visual = game.GetComponentsInChildren<SpriteRenderer>().Single(r => r.name == "Item " + loot.id);
+            Assert.That(visual.sprite, Is.SameAs(game.artSet.openedLoot[(int)loot.containerKind - 1]));
+            Assert.That(visual.color.a, Is.EqualTo(0.25f)); Assert.That(visual.GetComponent<Collider2D>(), Is.Null);
+            Assert.That(visual.GetComponent<PrototypeTarget>(), Is.Null); Assert.That(map.CanTraverse(loot.x, loot.y), Is.True);
+        }
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "three-containers-empty.png")); yield return null; yield return null;
+        yield return Click(1010, 687);
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "random-loot-inventory.png")); yield return null; yield return null;
+    }
+
+    [UnityTest]
     public IEnumerator DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup()
     {
         game.StartNewRun(12345); var map = game.Run.Map; var loot = map.loot[0];
@@ -458,7 +506,7 @@ public class PrototypePlayTests
         var remnant = game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == "Item " + loot.id && r.gameObject.activeInHierarchy);
         Assert.That(remnant.color.a, Is.EqualTo(0.25f));
         Assert.That(remnant.GetComponent<Collider2D>(), Is.Null);
-        Assert.That(remnant.sprite, Is.EqualTo(game.artSet.loot[(int)loot.appearanceKind]));
+        Assert.That(remnant.sprite, Is.EqualTo(game.artSet.openedLoot[ContainerLoot.OpenArtIndex(loot)]));
         Assert.That(map.CanTraverse(loot.x, loot.y), Is.True);
     }
 

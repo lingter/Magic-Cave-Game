@@ -24,6 +24,8 @@ namespace MagicCave.Prototype
             Warehouse = Read<WarehouseData>(WarehousePath) ?? new WarehouseData();
             if (UpgradeSecondaryRules(Session) && File.Exists(SessionPath) && !File.Exists(SessionPath + ".pre-secondary-1pct.bak"))
                 File.Copy(SessionPath, SessionPath + ".pre-secondary-1pct.bak");
+            if (UpgradeDefenseRules(Session) && File.Exists(SessionPath) && !File.Exists(SessionPath + ".pre-defense-scaling.bak"))
+                File.Copy(SessionPath, SessionPath + ".pre-defense-scaling.bak");
             ValidateSession(Session, true);
             // Keep old files intact; repair valid older saves that allowed enemy/door overlap in memory.
             if (Session.checkpoint != null) MapGenerator.EnsureSafePlayerPosition(Session.checkpoint);
@@ -72,6 +74,7 @@ namespace MagicCave.Prototype
         void SaveSession(SessionData next)
         {
             UpgradeSecondaryRules(next);
+            UpgradeDefenseRules(next);
             next.version = 2;
             if (Session.version == 1 && File.Exists(SessionPath) && !File.Exists(SessionPath + ".pre-attributes.bak"))
                 File.Copy(SessionPath, SessionPath + ".pre-attributes.bak");
@@ -81,6 +84,12 @@ namespace MagicCave.Prototype
         {
             bool checkpoint = session.checkpoint != null && session.checkpoint.UsesAttributes && CharacterAttributes.UpgradeSecondaryRules(session.checkpoint.attributeRules);
             bool pending = session.pending != null && session.pending.run != null && session.pending.run.UsesAttributes && CharacterAttributes.UpgradeSecondaryRules(session.pending.run.attributeRules);
+            return checkpoint || pending;
+        }
+        static bool UpgradeDefenseRules(SessionData session)
+        {
+            bool checkpoint = session.checkpoint != null && session.checkpoint.UsesAttributes && CharacterAttributes.UpgradeDefenseRules(session.checkpoint.attributeRules);
+            bool pending = session.pending != null && session.pending.run != null && session.pending.run.UsesAttributes && CharacterAttributes.UpgradeDefenseRules(session.pending.run.attributeRules);
             return checkpoint || pending;
         }
         public void SaveCheckpoint(RunData run)
@@ -269,6 +278,14 @@ namespace MagicCave.Prototype
         public static void ValidateRun(RunData run, bool allowLegacyPosition = false)
         {
             if (run == null) throw new InvalidDataException("玩家数据不存在。");
+            if (run.containerVersion < 0 || run.containerVersion > 1) throw new InvalidDataException("容器规则版本不支持。");
+            if (run.containerVersion == 1)
+            {
+                if (!run.UsesAttributes || run.containerRules == null || run.containerRandom == null || run.containerRandom.state == 0)
+                    throw new InvalidDataException("容器规则或随机进度无效。");
+                try { run.containerRules.Validate(); }
+                catch (InvalidOperationException exception) { throw new InvalidDataException(exception.Message); }
+            }
             if (run.attributeVersion != 0 && run.attributeVersion != 1) throw new InvalidDataException("角色规则版本不支持。");
             if (run.UsesAttributes) ValidateCharacter(run);
             if (run == null || string.IsNullOrEmpty(run.id) || run.maps == null || run.maps.Count != 5 ||
@@ -312,6 +329,10 @@ namespace MagicCave.Prototype
                 foreach (var loot in map.loot)
                 {
                     if (loot == null || loot.units == null || !map.Walkable(loot.x, loot.y)) throw new InvalidDataException("地面物品数据无效。");
+                    if (loot.containerKind < ContainerKind.Legacy || loot.containerKind > ContainerKind.Supplies ||
+                        (loot.containerKind != ContainerKind.Legacy && (run.containerVersion != 1 || loot.loose ||
+                        loot.unopened == loot.opened || loot.unopened && loot.units.Count != 0 || loot.units.Any(i => i == null || !ContainerLoot.Matches(loot.containerKind, i.kind)))) ||
+                        (loot.containerKind == ContainerKind.Legacy && loot.unopened)) throw new InvalidDataException("容器开启状态无效。");
                     if ((int)loot.appearanceKind < 0 || (int)loot.appearanceKind >= Rules.ItemNames.Length)
                         throw new InvalidDataException("物品容器外观无效。");
                     if (loot.guardEnemyId != 0 && !map.enemies.Any(e => e.id == loot.guardEnemyId && e.role == EnemyRole.ItemGuard))

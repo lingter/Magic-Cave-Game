@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-28",
+  "project": "E:/UnityProject/Magic Cave Game",
+  "editorOperations": "Unity MCP only",
+  "buildUpdated": false,
+  "editMode": {
+    "job_id": "5a40b1c640984955850003c5a74445e4",
+    "status": "succeeded",
+    "mode": "EditMode",
+    "started_unix_ms": 1793166544069,
+    "finished_unix_ms": 1793166546376,
+    "last_update_unix_ms": 1793166546376,
+    "progress": {
+      "completed": 123,
+      "total": 123,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "TownProgressionTests.TalentPurchaseAndResetPersistExactGoldAndRanks",
+      "last_finished_unix_ms": 1793166546340,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "focus_nudge_attempts": null,
+      "focus_nudge_limit": null,
+      "focus_nudge_status": null,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "EditMode",
+      "summary": {
+        "total": 123,
+        "passed": 123,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 1.890646,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "playMode": {
+    "job_id": "0813672b020e4a98a2e58445472b52d9",
+    "status": "failed",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793166558801,
+    "finished_unix_ms": 1793166589428,
+    "last_update_unix_ms": 1793166589428,
+    "progress": {
+      "completed": 18,
+      "total": 18,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+      "last_finished_unix_ms": 1793166589418,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "focus_nudge_attempts": null,
+      "focus_nudge_limit": null,
+      "focus_nudge_status": null,
+      "blocked_reason": null,
+      "failures_so_far": [
+        {
+          "full_name": "PrototypePlayTests.TownWalkingTalentPurchaseWarehouseAndDepartureWork",
+          "message": "Unhandled log message: '[Error] Failed to store screen shot (E:\\UnityProject\\Magic Cave Game\\Captures\\WorldMap\\guild-upgrade.png)'. Use UnityEngine.TestTools.LogAssert.Expect"
+        }
+      ],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "PlayMode",
+      "summary": {
+        "total": 18,
+        "passed": 17,
+        "failed": 1,
+        "skipped": 0,
+        "durationSeconds": 29.9178719,
+        "resultState": "Failed(Child)"
+      },
+      "results": [
+        {
+          "name": "TownWalkingTalentPurchaseWarehouseAndDepartureWork",
+          "fullName": "PrototypePlayTests.TownWalkingTalentPurchaseWarehouseAndDepartureWork",
+          "state": "Failed",
+          "durationSeconds": 11.9060943,
+          "message": "Unhandled log message: '[Error] Failed to store screen shot (E:\\UnityProject\\Magic Cave Game\\Captures\\WorldMap\\guild-upgrade.png)'. Use UnityEngine.TestTools.LogAssert.Expect",
+          "stackTrace": "UnityEditor.GUIView:ProcessEvent (UnityEngine.EntityId,intptr,bool&)\r\n\r\n",
+          "output": "[MagicCave] Character prototype ready; rules v2.\r\nFailed to store screen shot (E:\\UnityProject\\Magic Cave Game\\Captures\\WorldMap\\guild-upgrade.png)\r\n"
+        }
+      ]
+    }
+  },
+  "townScreenshotRetry": {
+    "job_id": "1000541187d849abb59a34bb5957a273",
+    "status": "succeeded",
+    "passed": 1,
+    "failed": 0
+  },
+  "containerCapture": {
+    "job_id": "f3e46b497547469da5b0f17e3c9090d2",
+    "status": "succeeded",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793166665151,
+    "finished_unix_ms": 1793166666949,
+    "last_update_unix_ms": 1793166666949,
+    "progress": {
+      "completed": 1,
+      "total": 1,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "PrototypePlayTests.ThreeContainerKindsReplaceArtOnOpeningAndKeepExistingEmptyBehavior",
+      "last_finished_unix_ms": 1793166666926,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "focus_nudge_attempts": null,
+      "focus_nudge_limit": null,
+      "focus_nudge_status": null,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "PlayMode",
+      "summary": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 0.9427874,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "notes": [
+    "PlayMode full run: 17/18 passed; town test failed only because guild-upgrade.png could not be written. The same test passed when rerun.",
+    "Final container test passed after shortening the inventory equipment button and spacing capture fixtures.",
+    "Original WorldMap scene restored by Unity Test Runner; no player saves used."
+  ]
+}
