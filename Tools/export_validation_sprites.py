@@ -51,9 +51,11 @@ def export_container_art(root, destination):
     for index, name in enumerate(('Equipment', 'Treasure', 'Supplies')):
         empty.crop((index * 16, 0, (index + 1) * 16, 16)).save(destination / f'Chest_Open_{name}.png')
     equipment = read_sprite(root / 'Assets/ART Assets/Equipmen/Equipment.aseprite')
-    for name, column, row in (('Sword_Iron', 1, 4), ('Sword_Swift', 2, 4), ('Sword_Inscribed', 2, 4),
-                              ('Sword_Refined', 3, 4), ('Shield_Wood', 0, 0), ('Armor_Leather', 0, 1),
-                              ('Armor_Insight', 2, 1), ('Armor_Iron', 1, 1)):
+    for name, column, row in (('Sword_Iron', 1, 0), ('Sword_Swift', 2, 0), ('Sword_Inscribed', 2, 0),
+                              ('Sword_Refined', 3, 0), ('Shield_Wood', 0, 0), ('Armor_Leather', 0, 1),
+                              ('Armor_Insight', 2, 1), ('Armor_Iron', 1, 1),
+                              ('SwordShield', 1, 0), ('Helmet', 0, 2), ('Gloves', 0, 4),
+                              ('Boots', 0, 3), ('Ring', 1, 5)):
         x, y = 16 + column * 32, 16 + row * 32
         equipment.crop((x, y, x + 16, y + 16)).save(destination / f'Item_{name}.png')
 

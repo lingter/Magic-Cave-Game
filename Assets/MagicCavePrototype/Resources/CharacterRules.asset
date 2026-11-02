@@ -27,13 +27,13 @@ MonoBehaviour:
       healthPerLevel: 4
       primaryEveryLevels: 2
       secondaryEveryLevels: 3
-      allowedTypes: 00000000010000000200000003000000
+      allowedTypes: 000000000100000002000000030000000400000005000000
     equipment:
     - id: training-sword
       ownerCharacterId: knight
       kind: -1
       slot: 0
-      type: 0
+      type: 4
       baseAttack: 1
       strengthScaling: 5000
       agilityScaling: 0
@@ -47,7 +47,7 @@ MonoBehaviour:
       ownerCharacterId: knight
       kind: 4
       slot: 0
-      type: 0
+      type: 4
       baseAttack: 2
       strengthScaling: 6000
       agilityScaling: 0
@@ -61,7 +61,7 @@ MonoBehaviour:
       ownerCharacterId: knight
       kind: 5
       slot: 0
-      type: 0
+      type: 4
       baseAttack: 2
       strengthScaling: 3000
       agilityScaling: 6000
@@ -75,7 +75,7 @@ MonoBehaviour:
       ownerCharacterId: knight
       kind: 6
       slot: 0
-      type: 0
+      type: 4
       baseAttack: 2
       strengthScaling: 3000
       agilityScaling: 0
@@ -89,7 +89,7 @@ MonoBehaviour:
       ownerCharacterId: knight
       kind: 7
       slot: 0
-      type: 0
+      type: 4
       baseAttack: 3
       strengthScaling: 7000
       agilityScaling: 0
@@ -155,6 +155,76 @@ MonoBehaviour:
       wisdom: 0
       health: 0
       defense: 1
+    - id: iron-sword-shield
+      ownerCharacterId: knight
+      kind: 16
+      slot: 0
+      type: 4
+      baseAttack: 2
+      strengthScaling: 6000
+      agilityScaling: 0
+      wisdomScaling: 0
+      strength: 0
+      agility: 0
+      wisdom: 0
+      health: 0
+      defense: 1
+    - id: leather-helm
+      ownerCharacterId: 
+      kind: 17
+      slot: 3
+      type: 2
+      baseAttack: 0
+      strengthScaling: 0
+      agilityScaling: 0
+      wisdomScaling: 0
+      strength: 0
+      agility: 0
+      wisdom: 0
+      health: 2
+      defense: 0
+    - id: leather-gloves
+      ownerCharacterId: 
+      kind: 18
+      slot: 4
+      type: 2
+      baseAttack: 0
+      strengthScaling: 0
+      agilityScaling: 0
+      wisdomScaling: 0
+      strength: 1
+      agility: 0
+      wisdom: 0
+      health: 0
+      defense: 0
+    - id: leather-boots
+      ownerCharacterId: 
+      kind: 19
+      slot: 5
+      type: 2
+      baseAttack: 0
+      strengthScaling: 0
+      agilityScaling: 0
+      wisdomScaling: 0
+      strength: 0
+      agility: 1
+      wisdom: 0
+      health: 0
+      defense: 0
+    - id: copper-ring
+      ownerCharacterId: 
+      kind: 20
+      slot: 6
+      type: 5
+      baseAttack: 0
+      strengthScaling: 0
+      agilityScaling: 0
+      wisdomScaling: 0
+      strength: 0
+      agility: 0
+      wisdom: 1
+      health: 0
+      defense: 0
     cardMultipliers: 701700000000000000000000983a0000ac0d00000000000000000000881300000000000000000000
     defenseCards:
     - card: 1

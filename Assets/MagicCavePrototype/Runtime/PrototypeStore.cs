@@ -31,8 +31,8 @@ namespace MagicCave.Prototype
             if (Session.checkpoint != null) MapGenerator.EnsureSafePlayerPosition(Session.checkpoint);
             if (Session.pending != null) MapGenerator.EnsureSafePlayerPosition(Session.pending.run);
             ValidateSession(Session);
-            if ((Warehouse.version < 1 || Warehouse.version > 3) || Warehouse.counts == null ||
-                Warehouse.counts.Length != (Warehouse.version < 3 ? 4 : Rules.ItemNames.Length) ||
+            if ((Warehouse.version < 1 || Warehouse.version > 5) || Warehouse.counts == null ||
+                (Warehouse.counts.Length != (Warehouse.version < 3 ? 4 : Rules.ItemNames.Length) && !(Warehouse.version >= 3 && Warehouse.version <= 4 && Warehouse.counts.Length == 16)) ||
                 Warehouse.counts.Any(c => c < 0) || Warehouse.committedRuns == null)
                 throw new InvalidDataException("仓库数据格式无效。原文件已保留。");
             if (Warehouse.equipment == null) Warehouse.equipment = new List<StoredEquipment>();
@@ -49,6 +49,25 @@ namespace MagicCave.Prototype
                     File.Copy(WarehousePath, WarehousePath + ".pre-attributes.bak");
                 var expanded = new long[Rules.ItemNames.Length]; Array.Copy(Warehouse.counts, expanded, 4);
                 Warehouse.counts = expanded; Warehouse.version = 3;
+            }
+            if (Warehouse.town != null && Warehouse.town.talents != null && Warehouse.town.talents.Length == 7)
+            {
+                if (File.Exists(WarehousePath) && !File.Exists(WarehousePath + ".pre-star-talents.bak"))
+                    File.Copy(WarehousePath, WarehousePath + ".pre-star-talents.bak");
+                Array.Resize(ref Warehouse.town.talents, TownRules.Talents.Length);
+            }
+            if (Warehouse.version == 3)
+            {
+                if (File.Exists(WarehousePath) && !File.Exists(WarehousePath + ".pre-talent-points.bak"))
+                    File.Copy(WarehousePath, WarehousePath + ".pre-talent-points.bak");
+                Warehouse.town.talentPoints = 3;
+                Warehouse.town.totalTalentPoints = 3 + Warehouse.town.talents.Skip(1).Sum();
+                Warehouse.version = 4;
+            }
+            if (Warehouse.version == 4)
+            {
+                if (File.Exists(WarehousePath) && !File.Exists(WarehousePath + ".pre-eight-slots.bak")) File.Copy(WarehousePath, WarehousePath + ".pre-eight-slots.bak");
+                Array.Resize(ref Warehouse.counts, Rules.ItemNames.Length); Warehouse.version = 5;
             }
             ValidateTown(Warehouse);
         }
@@ -182,6 +201,9 @@ namespace MagicCave.Prototype
                 town.warehouseUpgrades < 0 || town.warehouseUpgrades > 10 || warehouse.baseCapacity < 100 ||
                 town.talents == null || town.talents.Length != TownRules.Talents.Length)
                 throw new InvalidDataException("城镇养成数据无效，原文件已保留。");
+            if (town.talentPoints < 0 || town.totalTalentPoints < 3 || town.totalTalentPoints > 100000 ||
+                town.talentPoints + (long)town.talents.Skip(1).Sum() != town.totalTalentPoints)
+                throw new InvalidDataException("天赋点余额或已投入点数无效。");
             if (TownRules.Used(warehouse) > TownRules.Capacity(warehouse) || town.talents[0] != 1)
                 throw new InvalidDataException("仓库容量或职业数据无效，原文件已保留。");
             for (int i = 0; i < town.talents.Length; i++)
@@ -203,18 +225,20 @@ namespace MagicCave.Prototype
         {
             string reason = TownRules.TalentLock(Warehouse.town, id);
             if (reason.Length > 0) throw new InvalidOperationException(reason);
-            ChangeWarehouse(next => { next.town.gold -= TownRules.TalentGold(next.town, id); next.town.talents[id]++; });
+            ChangeWarehouse(next => { next.town.talentPoints -= TownRules.TalentPointCost(id); next.town.talents[id]++; });
+        }
+        public void RetractTalent(int id)
+        {
+            string reason = TownRules.RetractTalentLock(Warehouse.town, id);
+            if (reason.Length > 0) throw new InvalidOperationException(reason);
+            ChangeWarehouse(next => { next.town.talents[id]--; next.town.talentPoints += TownRules.TalentPointCost(id); });
         }
         public void ResetTalents()
         {
             ChangeWarehouse(next =>
             {
-                for (int i = 1; i < next.town.talents.Length; i++)
-                {
-                    long rank = next.town.talents[i];
-                    next.town.gold = checked(next.town.gold + TownRules.Talents[i].gold * rank * (rank + 1) / 2);
-                    next.town.talents[i] = 0;
-                }
+                for (int i = 1; i < next.town.talents.Length; i++) next.town.talents[i] = 0;
+                next.town.talentPoints = next.town.totalTalentPoints;
             });
         }
         public void UpgradeGuild()
@@ -335,7 +359,9 @@ namespace MagicCave.Prototype
                         (loot.containerKind == ContainerKind.Legacy && loot.unopened)) throw new InvalidDataException("容器开启状态无效。");
                     if ((int)loot.appearanceKind < 0 || (int)loot.appearanceKind >= Rules.ItemNames.Length)
                         throw new InvalidDataException("物品容器外观无效。");
-                    if (loot.guardEnemyId != 0 && !map.enemies.Any(e => e.id == loot.guardEnemyId && e.role == EnemyRole.ItemGuard))
+                    if ((loot.guardEnemyId != 0 && !map.enemies.Any(e => e.id == loot.guardEnemyId && e.role == EnemyRole.ItemGuard)) ||
+                        (loot.secondGuardEnemyId != 0 && (loot.guardEnemyId == 0 || loot.secondGuardEnemyId == loot.guardEnemyId ||
+                        !map.enemies.Any(e => e.id == loot.secondGuardEnemyId && e.role == EnemyRole.ItemGuard))))
                         throw new InvalidDataException("物品镇守关系无效。");
                     foreach (var item in loot.units) ValidateItem(item, ids);
                 }
@@ -351,17 +377,17 @@ namespace MagicCave.Prototype
             try { CharacterAttributes.ValidateRules(run.attributeRules); }
             catch (InvalidOperationException exception) { throw new InvalidDataException(exception.Message); }
             var state = run.character;
-            if (state == null || state.templateId != run.attributeRules.template.id || state.secondary < AttributeKind.Strength ||
-                state.secondary > AttributeKind.Wisdom || state.secondary == run.attributeRules.template.primary ||
-                state.talentStrength < 0 || state.talentStrength > 3 || state.talentAgility < 0 || state.talentAgility > 3 ||
+            if (state == null || state.templateId != run.attributeRules.template.id || (state.secondary != AttributeKind.None && (state.secondary < AttributeKind.Strength ||
+                state.secondary > AttributeKind.Wisdom || state.secondary == run.attributeRules.template.primary)) ||
+                state.equipmentLayoutVersion < 0 || state.equipmentLayoutVersion > 1 || state.talentWisdom < 0 || state.talentWisdom > 3 || state.talentStrength < 0 || state.talentStrength > 3 || state.talentAgility < 0 || state.talentAgility > 3 ||
                 state.talentHealth < 0 || state.talentHealth > 15 || state.talentHealth % 5 != 0 ||
-                state.equipment == null || state.equipment.Count > 3 || state.modifiers == null || state.modifiers.Count > 4 ||
+                state.equipment == null || state.equipment.Count > (state.equipmentLayoutVersion == 1 ? 8 : 9) || state.modifiers == null || state.modifiers.Count > 4 ||
                 run.lootRandom == null || run.lootRandom.state == 0)
                 throw new InvalidDataException("本局主副属性、装备或成长快照无效。");
             var slots = new HashSet<EquipmentSlot>();
             foreach (var item in state.equipment)
             {
-                if (CharacterAttributes.EquipLock(run, item).Length > 0 || !slots.Add(run.attributeRules.Find(item.kind).slot))
+                if (CharacterAttributes.EquipLock(run, item).Length > 0 || !CharacterAttributes.FitsSlot(run.attributeRules.Find(item.kind), CharacterAttributes.EquippedSlot(run, item)) || !slots.Add(CharacterAttributes.EquippedSlot(run, item)))
                     throw new InvalidDataException("装备槽或武器绑定无效。");
             }
             var sources = new HashSet<string>();

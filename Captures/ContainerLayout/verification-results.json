@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-02",
+  "projectRoot": "E:/UnityProject/Magic Cave Game",
+  "unityVersion": "6000.5.4f1",
+  "transport": "Unity MCP",
+  "editMode": {
+    "job_id": "599b876d539042d6b286fd78355171f3",
+    "status": "succeeded",
+    "mode": "EditMode",
+    "started_unix_ms": 1793595859044,
+    "finished_unix_ms": 1793595868841,
+    "last_update_unix_ms": 1793595868841,
+    "progress": {
+      "completed": 127,
+      "total": 127,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "TownProgressionTests.TalentPurchaseAndResetPersistExactGoldAndRanks",
+      "last_finished_unix_ms": 1793595868769,
+      "stuck_suspected": false,
+      "editor_is_focused": false,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "EditMode",
+      "summary": {
+        "total": 127,
+        "passed": 127,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 5.1765342,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "playMode": {
+    "job_id": "19edd9ba99084d67b5f502433971e0d1",
+    "status": "succeeded",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793595880402,
+    "finished_unix_ms": 1793595916331,
+    "last_update_unix_ms": 1793595916331,
+    "progress": {
+      "completed": 18,
+      "total": 18,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+      "last_finished_unix_ms": 1793595916321,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "PlayMode",
+      "summary": {
+        "total": 18,
+        "passed": 18,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 30.385934,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "consoleErrors": 0,
+  "restoredScene": {
+    "path": "Assets/Scenes/WorldMap.unity",
+    "isDirty": false
+  },
+  "visualCheck": {
+    "path": "Captures/ContainerLoot/three-containers-empty.png",
+    "result": "Three empty containers retain opaque opened artwork; PlayMode asserts solid colliders and non-traversable cells."
+  },
+  "standaloneCheck": {
+    "seeds": 1000,
+    "maps": 4000,
+    "scope": "Domain source with Unity value and JSON stubs; separate from Unity test results."
+  },
+  "playerBuildUpdated": false
+}

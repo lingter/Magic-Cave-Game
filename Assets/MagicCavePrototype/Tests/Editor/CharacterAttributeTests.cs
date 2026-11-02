@@ -39,7 +39,7 @@ public class CharacterAttributeTests
         Assert.That(PrototypeAttributeSet.LoadRules().template.wisdom, Is.EqualTo(5));
         Assert.That(Resources.Load<PrototypeAttributeSet>("CharacterRules").rules.secondaryPerPoint, Is.EqualTo(100));
     }
-    [TestCase(AttributeKind.Strength)] [TestCase(AttributeKind.None)] [TestCase((AttributeKind)99)]
+    [TestCase(AttributeKind.Strength)] [TestCase((AttributeKind)99)]
     public void MainAttributeCannotBeChosenAsSecondary(AttributeKind secondary)
     {
         Assert.Throws<InvalidOperationException>(() => CharacterAttributes.Initialize(new RunData(), secondary));
@@ -176,7 +176,7 @@ public class CharacterAttributeTests
             foreach (var item in map.loot.SelectMany(l => l.units).Where(i => i.kind >= ItemKind.IronSword && i.kind <= ItemKind.RefinedSword))
                 Assert.That(run.attributeRules.Find(item.kind).ownerCharacterId, Is.EqualTo(run.character.templateId));
             foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.ItemGuard))
-                Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.guardEnemyId == guard.id).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
+                Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.GuardedBy(guard.id)).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
         }
         a.attributeRules.Find(ItemKind.SwiftSword).ownerCharacterId = "other";
         for (int i = 0; i < 100; i++) Assert.That(MapGenerator.DrawWeapon(a), Is.Not.EqualTo(ItemKind.SwiftSword));
@@ -313,9 +313,9 @@ public class CharacterAttributeTests
             foreach (var map in run.maps.Take(4))
             {
                 Assert.That(MapGenerator.ValidateTerrain(map, out _, out _), Is.True, "Seed " + seed);
-                Assert.That(map.loot.Count, Is.EqualTo(10)); Assert.That(map.enemies.Count, Is.EqualTo(10));
+                Assert.That(map.loot.Count, Is.EqualTo(10)); Assert.That(map.enemies.Count, Is.EqualTo(19));
                 foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.ItemGuard))
-                    Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.guardEnemyId == guard.id).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
+                    Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.GuardedBy(guard.id)).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
             }
         }
     }
@@ -378,5 +378,84 @@ public class CharacterAttributeTests
         int selected = store.Session.pending.selectedIds.Count; store.CommitSettlement();
         Assert.That(TownRules.Used(store.Warehouse), Is.EqualTo(selected));
         Assert.That(new PrototypeStore(folder).Session.checkpoint, Is.Null);
+    }
+    [Test]
+    public void NoSecondaryRunHasNoDamageMultiplierOrSecondaryLevelGrowth()
+    {
+        var run = MapGenerator.NewRun(12345, AttributeKind.None, false);
+        Assert.That(run.UsesAttributes, Is.True);
+        Assert.That(run.containerVersion, Is.EqualTo(1));
+        Assert.That(run.character.secondary, Is.EqualTo(AttributeKind.None));
+        run.level = 6;
+        var stats = CharacterAttributes.Calculate(run);
+        Assert.That(stats.agility, Is.EqualTo(5)); Assert.That(stats.wisdom, Is.EqualTo(5));
+        Assert.That(stats.secondaryMultiplier, Is.EqualTo(1m));
+        Give(run, ItemKind.WisdomEssence); Inventory.Use(run, 0);
+        Assert.That(CharacterAttributes.Calculate(run).secondaryMultiplier, Is.EqualTo(1m));
+        PrototypeStore.ValidateRun(run);
+    }
+    [Test]
+    public void SwordShieldStaysOneInstanceThroughMoveEquipAndUnequip()
+    {
+        var run = MapGenerator.NewRun(12345, AttributeKind.None, false);
+        var weapon = run.attributeRules.Find(ItemKind.IronSword);
+        weapon.type = EquipmentType.SwordShield; weapon.defense = 1;
+        run.attributeRules.template.allowedTypes = run.attributeRules.template.allowedTypes.Concat(new[] { EquipmentType.SwordShield }).Distinct().ToArray();
+        CharacterAttributes.ValidateRules(run.attributeRules);
+        var item = Give(run, ItemKind.IronSword);
+        Assert.That(Inventory.MoveSlot(run, 0, 8), Is.Empty);
+        Assert.That(Inventory.Equip(run, 8), Is.Empty);
+        Assert.That(run.character.equipment.Single(), Is.SameAs(item));
+        Assert.That(CharacterAttributes.Calculate(run).defense, Is.EqualTo(1));
+        Assert.That(Inventory.UnequipTo(run, EquipmentSlot.MainHand, 15), Is.Empty);
+        Assert.That(run.inventory[15].units.Single(), Is.SameAs(item));
+        Assert.That(Inventory.Items(run).Count(i => i.id == item.id), Is.EqualTo(1));
+        Assert.That(item.acquiredTicks, Is.EqualTo(100));
+        PrototypeStore.ValidateRun(run);
+    }
+    [Test]
+    public void DragSwapRejectsWrongEquipmentAndKeepsOwnership()
+    {
+        var run = New(); var sword = Give(run, ItemKind.IronSword); Inventory.Equip(run, 0);
+        var armor = Give(run, ItemKind.LeatherArmor, 1);
+        Assert.That(Inventory.UnequipTo(run, EquipmentSlot.MainHand, 1), Is.Not.Empty);
+        Assert.That(run.inventory[1].units.Single(), Is.SameAs(armor));
+        Assert.That(run.character.equipment.Single(), Is.SameAs(sword));
+        Inventory.MoveSlot(run, 1, 3);
+        Assert.That(run.inventory[1].units, Is.Empty); Assert.That(run.inventory[3].units.Single(), Is.SameAs(armor));
+    }
+    [Test]
+    public void EightSlotsAndThreeRingsPersistWithoutDuplicatingInstances()
+    {
+        var run = MapGenerator.NewRun(12345, AttributeKind.None, false);
+        var kinds = new[] { ItemKind.SwordShield, ItemKind.LeatherHelm, ItemKind.LeatherArmor, ItemKind.LeatherGloves, ItemKind.LeatherBoots,
+            ItemKind.CopperRing, ItemKind.CopperRing, ItemKind.CopperRing, ItemKind.CopperRing };
+        for (int i = 0; i < kinds.Length; i++) Give(run, kinds[i], i);
+        for (int i = 0; i < 8; i++) Assert.That(Inventory.Equip(run, i), Is.Empty);
+        Assert.That(run.character.equipment.Count, Is.EqualTo(8));
+        var first = run.character.equipment.Single(i => CharacterAttributes.EquippedSlot(run, i) == EquipmentSlot.Ring1);
+        var second = run.character.equipment.Single(i => CharacterAttributes.EquippedSlot(run, i) == EquipmentSlot.Ring2);
+        var fourth = run.inventory[8].units.Single();
+        Assert.That(Inventory.Equip(run, 8, EquipmentSlot.Head), Is.Not.Empty);
+        Assert.That(Inventory.Equip(run, 8, EquipmentSlot.Ring2), Is.Empty);
+        Assert.That(run.inventory[8].units.Single(), Is.SameAs(second));
+        Assert.That(run.character.equipment.Count(i => run.attributeRules.Find(i.kind).type == EquipmentType.Ring), Is.EqualTo(3));
+        Assert.That(Inventory.Items(run).Count, Is.EqualTo(9));
+        Assert.That(run.character.equipment.Contains(first), Is.True);
+        PrototypeStore.ValidateRun(run);
+        var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
+        var restored = new PrototypeStore(folder).Continue();
+        Assert.That(restored.character.equipment.Single(i => CharacterAttributes.EquippedSlot(restored, i) == EquipmentSlot.Ring2).id, Is.EqualTo(fourth.id));
+        Assert.That(Inventory.UnequipTo(restored, EquipmentSlot.Ring2, 10), Is.Empty);
+        Assert.That(restored.character.equipment.Count, Is.EqualTo(7)); Assert.That(restored.inventory[10].units.Single().id, Is.EqualTo(fourth.id));
+        PrototypeStore.ValidateRun(restored);
+    }
+    [Test]
+    public void CurrentWeaponsAreSwordShieldAndIndependentOffHandCannotEquip()
+    {
+        var run = MapGenerator.NewRun(12345, AttributeKind.None, false);
+        Assert.That(run.attributeRules.equipment.Where(e => e.slot == EquipmentSlot.MainHand).All(e => e.type == EquipmentType.SwordShield), Is.True);
+        Give(run, ItemKind.WoodShield);
+        Assert.That(Inventory.Equip(run, 0), Is.Not.Empty);
     }
 }

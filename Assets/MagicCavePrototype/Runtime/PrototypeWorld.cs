@@ -138,12 +138,13 @@ namespace MagicCave.Prototype
                 if (empty && !loot.IsContainer) continue;
                 ItemKind kind = loot.unopened || empty ? loot.appearanceKind : loot.units[0].kind;
                 var tint = loot.containerKind == ContainerKind.Legacy && kind == ItemKind.Crystal ? new Color(0.5f, 0.85f, 1) : Color.white;
-                if (empty) tint.a = 0.25f;
+                if (empty && !loot.BlocksMovement) tint.a = 0.25f;
                 var visual = Pixel("Item " + loot.id, worldRoot.transform, artSet.LootSprite(loot), World(loot.x, loot.y),
-                    empty || loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
+                    (empty && !loot.BlocksMovement) || loot.loose ? -400 : SpriteOrder(loot.y) + 1, tint);
                 if (empty)
                 {
-                    // An opened container is scenery: no interaction target, collider or item label.
+                    // Empty permanent containers keep their footprint without remaining interactable.
+                    if (loot.BlocksMovement) visual.gameObject.AddComponent<BoxCollider2D>().size = Vector2.one;
                     objects.Add(new ObjectVisual { root = visual.gameObject, x = loot.x, y = loot.y });
                     continue;
                 }
@@ -211,6 +212,7 @@ namespace MagicCave.Prototype
         void OnDestroy()
         {
             ReleaseInterfaceInput(); wallTiles?.Dispose();
+            if (townTextures.TryGetValue("star disc", out var starTexture) && starTexture != null) Destroy(starTexture);
             if (markerSprite != null) Destroy(markerSprite);
             if (markerTexture != null) Destroy(markerTexture);
             if (interfaceFont != null) Destroy(interfaceFont);

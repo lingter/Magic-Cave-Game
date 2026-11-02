@@ -18,15 +18,16 @@ public class TownProgressionTests
     RunData New() => MapGenerator.NewRun(12345, false);
 
     [Test]
-    public void TalentPurchaseAndResetPersistExactGoldAndRanks()
+    public void TalentActivationAndResetPersistExactPointsAndRanks()
     {
         store.LearnTalent(1); store.LearnTalent(1);
         var loaded = new PrototypeStore(folder);
-        Assert.That(loaded.Warehouse.town.gold, Is.EqualTo(30));
+        Assert.That(loaded.Warehouse.town.gold, Is.EqualTo(120));
         Assert.That(loaded.Warehouse.town.talents[1], Is.EqualTo(2));
+        Assert.That(loaded.Warehouse.town.talentPoints, Is.EqualTo(1));
         loaded.ResetTalents(); loaded = new PrototypeStore(folder);
         Assert.That(loaded.Warehouse.town.gold, Is.EqualTo(120));
-        Assert.That(loaded.Warehouse.town.talents, Is.EqualTo(new[] { 1, 0, 0, 0, 0, 0, 0 }));
+        Assert.That(loaded.Warehouse.town.talents, Is.EqualTo(new[] { 1, 0, 0, 0, 0, 0, 0, 0 }));
     }
     [Test]
     public void LockedTalentAndGuildUpgradeNeverSpendCurrency()
@@ -131,7 +132,7 @@ public class TownProgressionTests
         Assert.That(loaded.Warehouse.committedRuns.Single(), Is.EqualTo("old-run"));
         Assert.That(File.ReadAllText(Path.Combine(folder, "warehouse.json")), Is.EqualTo(json));
         loaded.SellWarehouse(ItemKind.Ore, 1); loaded = new PrototypeStore(folder);
-        Assert.That(loaded.Warehouse.version, Is.EqualTo(3)); Assert.That(TownRules.Used(loaded.Warehouse), Is.EqualTo(205));
+        Assert.That(loaded.Warehouse.version, Is.EqualTo(5)); Assert.That(TownRules.Used(loaded.Warehouse), Is.EqualTo(205));
     }
     [Test]
     public void EveryTownServiceHasAConnectedWalkableEntrance()
@@ -163,5 +164,57 @@ public class TownProgressionTests
         foreach (var stop in new[] { new Vector2Int(7, 5), new Vector2Int(17, 5), new Vector2Int(12, 9), new Vector2Int(12, 13) })
             Assert.That(visited.Contains(stop), Is.True, stop.ToString());
         Assert.That(PrototypeGame.TownWalkable(7, 4, true), Is.False);
+    }
+    [Test]
+    public void WisdomStarPersistsAndAffectsOnlyNextRunSnapshot()
+    {
+        var existing = MapGenerator.NewRun(12345, AttributeKind.None, false);
+        TownRules.Apply(store.Warehouse.town, existing); store.SaveCheckpoint(existing);
+        store.LearnTalent(7);
+        var loaded = new PrototypeStore(folder);
+        Assert.That(loaded.Warehouse.town.talents[7], Is.EqualTo(1));
+        Assert.That(CharacterAttributes.Calculate(loaded.Continue()).wisdom, Is.EqualTo(5));
+        var next = MapGenerator.NewRun(12345, AttributeKind.None, false); TownRules.Apply(loaded.Warehouse.town, next);
+        Assert.That(CharacterAttributes.Calculate(next).wisdom, Is.EqualTo(6));
+        Assert.That(next.character.secondary, Is.EqualTo(AttributeKind.None));
+        loaded.ResetTalents(); Assert.That(loaded.Warehouse.town.gold, Is.EqualTo(120));
+    }
+    [Test]
+    public void SevenNodeTownMigratesWithoutChangingRanksOrCurrency()
+    {
+        var old = Rules.Copy(store.Warehouse); old.version = 3; old.town.talents = new[] { 1, 1, 0, 0, 0, 0, 0 }; old.town.gold = 90;
+        var path = Path.Combine(folder, "warehouse.json"); var json = JsonUtility.ToJson(old); File.WriteAllText(path, json);
+        var loaded = new PrototypeStore(folder);
+        Assert.That(loaded.Warehouse.town.talents, Is.EqualTo(new[] { 1, 1, 0, 0, 0, 0, 0, 0 }));
+        Assert.That(loaded.Warehouse.town.gold, Is.EqualTo(90));
+        Assert.That(File.ReadAllText(path + ".pre-star-talents.bak"), Is.EqualTo(json));
+    }
+    [Test]
+    public void PointsDepleteRetractAndRefundWithoutChangingGold()
+    {
+        store.Warehouse.town.gold = 0;
+        store.LearnTalent(1); store.LearnTalent(1); store.LearnTalent(7);
+        Assert.That(store.Warehouse.town.talentPoints, Is.Zero);
+        Assert.That(store.Warehouse.town.gold, Is.Zero);
+        Assert.Throws<InvalidOperationException>(() => store.LearnTalent(2));
+        store.RetractTalent(7);
+        Assert.That(store.Warehouse.town.talentPoints, Is.EqualTo(1));
+        Assert.That(store.Warehouse.town.talents[7], Is.Zero);
+        store.ResetTalents();
+        var loaded = new PrototypeStore(folder);
+        Assert.That(loaded.Warehouse.town.talentPoints, Is.EqualTo(3)); Assert.That(loaded.Warehouse.town.gold, Is.Zero);
+        Assert.Throws<InvalidOperationException>(() => loaded.RetractTalent(7));
+        Assert.Throws<InvalidOperationException>(() => loaded.RetractTalent(0));
+    }
+    [Test]
+    public void ActiveChildPreventsRetractingRequiredParent()
+    {
+        Assert.Throws<InvalidOperationException>(() => store.LearnTalent(3));
+        store.LearnTalent(2); store.LearnTalent(3);
+        Assert.Throws<InvalidOperationException>(() => store.RetractTalent(2));
+        Assert.That(store.Warehouse.town.talents[2], Is.EqualTo(1));
+        Assert.That(store.Warehouse.town.talentPoints, Is.EqualTo(1));
+        store.RetractTalent(3); store.RetractTalent(2);
+        Assert.That(store.Warehouse.town.talentPoints, Is.EqualTo(3));
     }
 }

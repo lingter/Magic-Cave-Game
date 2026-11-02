@@ -67,7 +67,7 @@ public class PrototypeRulesTests
         }
     }
     [Test]
-    public void GuardMustBeDefeatedEvenAfterWallsAreBrokenAndSurvivesCheckpoint()
+    public void LegacyGuardRelationshipSurvivesCheckpointWithoutBlockingPickup()
     {
         var run = New(); var loot = run.Map.loot.First(l => l.guardEnemyId != 0);
         var guard = run.Map.LivingGuard(loot);
@@ -76,13 +76,11 @@ public class PrototypeRulesTests
             int x = loot.x + d.x, y = loot.y + d.y;
             if (!run.Map.Border(x, y) && run.Map.At(x, y) == Tile.Wall) run.Map.Set(x, y, Tile.Ground);
         }
-        Assert.That(Inventory.Pickup(run, loot), Is.Zero);
         var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
         run = new PrototypeStore(folder).Continue(); loot = run.Map.loot.Single(l => l.id == loot.id);
         Assert.That(run.Map.LivingGuard(loot).id, Is.EqualTo(guard.id));
-        Assert.That(Inventory.Pickup(run, loot), Is.Zero);
-        Growth.FinishVictory(run, run.Map.LivingGuard(loot));
         Assert.That(Inventory.Pickup(run, loot), Is.GreaterThan(0));
+        Assert.That(run.Map.LivingGuard(loot).id, Is.EqualTo(guard.id));
         PrototypeStore.ValidateRun(run);
     }
 

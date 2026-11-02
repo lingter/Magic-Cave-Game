@@ -11,18 +11,74 @@ public sealed class ContainerLootTests
     static GroundLoot Accessible(RunData run, ContainerKind kind)
     {
         var loot = run.Map.loot.First(l => l.containerKind == kind);
-        var guard = run.Map.LivingGuard(loot); if (guard != null) guard.defeated = true;
         return loot;
     }
 
     [Test]
-    public void GuardedContainersCannotOpenOrConsumeRandomness()
+    public void OneRemainingGuardDoesNotBlockSavedContainerPickup()
     {
         var run = New(); var loot = run.Map.loot.First(l => l.guardEnemyId != 0);
-        uint state = run.containerRandom.state; int id = run.nextItemId;
+        Assert.That(loot.secondGuardEnemyId, Is.Not.Zero.And.Not.EqualTo(loot.guardEnemyId));
+        run.Map.enemies.Single(e => e.id == loot.guardEnemyId).defeated = true;
+        var copy = Rules.Copy(run); var saved = copy.Map.loot.Single(l => l.id == loot.id);
+        Assert.That(copy.Map.LivingGuard(saved).id, Is.EqualTo(loot.secondGuardEnemyId));
+        Assert.That(Inventory.Pickup(copy, saved), Is.GreaterThan(0));
+        Assert.That(copy.Map.LivingGuard(saved).id, Is.EqualTo(loot.secondGuardEnemyId));
+        Assert.That(saved.HasContents, Is.False); Assert.That(saved.BlocksMovement, Is.True);
+        Assert.That(copy.Map.CanTraverse(saved.x, saved.y), Is.False);
+        PrototypeStore.ValidateRun(copy);
+    }
+
+    [Test]
+    public void ContainerLayoutsKeepSpacingAndPermanentRoutesAcrossSeeds()
+    {
+        for (int seed = 0; seed < 100; seed++)
+        {
+            var run = New(seed);
+            foreach (var map in run.maps.Take(4))
+            {
+                Assert.That(map.loot.Count(l => l.guardEnemyId != 0 && l.secondGuardEnemyId != 0), Is.EqualTo(8), "Seed " + seed);
+                foreach (var loot in map.loot)
+                {
+                    Assert.That(loot.permanentObstacle, Is.True);
+                    foreach (var other in map.loot.Where(l => l.id != loot.id && l.containerKind == loot.containerKind))
+                        Assert.That(MapGenerator.Manhattan(new Vector2Int(loot.x, loot.y), new Vector2Int(other.x, other.y)),
+                            Is.GreaterThanOrEqualTo(MapGenerator.MinimumSameContainerDistance), "Seed " + seed);
+                    foreach (var guard in map.enemies.Where(e => loot.GuardedBy(e.id)))
+                        Assert.That(MapGenerator.Manhattan(new Vector2Int(loot.x, loot.y), new Vector2Int(guard.x, guard.y)), Is.EqualTo(1));
+                }
+                Assert.That(MapGenerator.ValidateContainerRoutes(map), Is.True, "Seed " + seed);
+                foreach (var loot in map.loot) { loot.unopened = false; loot.opened = true; loot.units.Clear(); }
+                Assert.That(MapGenerator.ValidateContainerRoutes(map), Is.True);
+            }
+        }
+    }
+
+    [Test]
+    public void PermanentContainerAcrossOnlyRouteIsRejected()
+    {
+        var map = new MapData { size = 7, cells = Enumerable.Repeat((int)Tile.Wall, 49).ToArray(), spawnX = 1, spawnY = 3 };
+        for (int x = 1; x < 6; x++) map.Set(x, 3, Tile.Ground);
+        map.Set(5, 4, Tile.Advance);
+        map.loot.Add(new GroundLoot { x = 3, y = 3, permanentObstacle = true, opened = true });
+        Assert.That(MapGenerator.ValidateContainerRoutes(map), Is.False);
+        map.Set(2, 2, Tile.Ground); map.Set(3, 2, Tile.Ground); map.Set(4, 2, Tile.Ground);
+        Assert.That(MapGenerator.ValidateContainerRoutes(map), Is.True);
+    }
+
+    [Test]
+    public void BothLivingGuardsAllowDirectOpenAndPickupWithoutReroll()
+    {
+        var run = New(); var loot = run.Map.loot.First(l => l.guardEnemyId != 0);
+        Assert.That(run.Map.enemies.Count(e => loot.GuardedBy(e.id) && !e.defeated), Is.EqualTo(2));
+        uint state = run.containerRandom.state;
+        Assert.That(ContainerLoot.Open(run, loot), Is.True);
+        Assert.That(run.containerRandom.state, Is.Not.EqualTo(state));
+        state = run.containerRandom.state;
+        Assert.That(Inventory.Pickup(run, loot), Is.GreaterThan(0));
         Assert.That(Inventory.Pickup(run, loot), Is.Zero);
-        Assert.That(loot.unopened && loot.BlocksMovement, Is.True);
-        Assert.That(loot.units, Is.Empty); Assert.That(run.containerRandom.state, Is.EqualTo(state)); Assert.That(run.nextItemId, Is.EqualTo(id));
+        Assert.That(run.containerRandom.state, Is.EqualTo(state));
+        Assert.That(run.Map.enemies.Count(e => loot.GuardedBy(e.id) && !e.defeated), Is.EqualTo(2));
     }
 
     [Test]
@@ -39,12 +95,12 @@ public sealed class ContainerLootTests
         var copy = Rules.Copy(run); loot = copy.Map.loot.Single(l => l.id == loot.id);
         Assert.That(Inventory.Pickup(copy, loot), Is.Zero); Assert.That(copy.containerRandom.state, Is.EqualTo(state));
         copy.inventory[0].units.Clear(); Assert.That(Inventory.Pickup(copy, loot), Is.EqualTo(1));
-        Assert.That(loot.HasContents || loot.BlocksMovement, Is.False); Assert.That(Inventory.Pickup(copy, loot), Is.Zero);
+        Assert.That(loot.HasContents, Is.False); Assert.That(loot.BlocksMovement, Is.True); Assert.That(Inventory.Pickup(copy, loot), Is.Zero);
         Assert.That(run.battleRandom.state, Is.EqualTo(battle)); Assert.That(run.cardRandom.state, Is.EqualTo(cards)); Assert.That(run.mapRandom.state, Is.EqualTo(map));
     }
 
     [Test]
-    public void PartialPickupKeepsOpenedContainerSolidUntilEmpty()
+    public void PartialAndCompletePickupKeepNewContainersSolid()
     {
         var run = New(); var loot = Accessible(run, ContainerKind.Treasure);
         run.containerRules.treasure = new System.Collections.Generic.List<ContainerDrop> { new ContainerDrop(ItemKind.Ore, 1, 3, 3) };
@@ -53,7 +109,20 @@ public sealed class ContainerLootTests
         Assert.That(Inventory.Pickup(run, loot), Is.EqualTo(1)); Assert.That(loot.units.Count, Is.EqualTo(2));
         Assert.That(loot.IsOpened && loot.BlocksMovement, Is.True); uint state = run.containerRandom.state;
         run.inventory[1].units.Clear(); Assert.That(Inventory.Pickup(run, loot), Is.EqualTo(2));
-        Assert.That(loot.BlocksMovement || loot.HasContents, Is.False); Assert.That(run.containerRandom.state, Is.EqualTo(state));
+        Assert.That(loot.HasContents, Is.False); Assert.That(loot.BlocksMovement, Is.True); Assert.That(run.containerRandom.state, Is.EqualTo(state));
+    }
+
+    [Test]
+    public void BossRewardKeepsNewLayoutCollisionAndReturnDoorAccess()
+    {
+        var run = New(); run.mapIndex = 4;
+        run.x = run.Map.spawnX; run.y = run.Map.spawnY;
+        Growth.FinishVictory(run, run.Map.enemies.Single());
+        var reward = run.Map.loot.Single();
+        Assert.That(reward.units.Single().kind, Is.EqualTo(ItemKind.Relic));
+        Assert.That(Inventory.Pickup(run, reward), Is.EqualTo(1));
+        Assert.That(reward.BlocksMovement, Is.True);
+        Assert.That(MapGenerator.ValidateContainerRoutes(run.Map), Is.True);
     }
 
     [Test]
@@ -100,7 +169,8 @@ public sealed class ContainerLootTests
                 PrototypeStore.ValidateRun(run);
             }
         }
-        Assert.That(seen.Count, Is.EqualTo(Rules.ItemNames.Length));
+        Assert.That(seen.Count, Is.EqualTo(Rules.ItemNames.Length - 1));
+        Assert.That(seen.Contains(ItemKind.WoodShield), Is.False, "Independent off-hand shields are retired from new loot.");
     }
 
     [Test]
@@ -126,8 +196,8 @@ public sealed class ContainerLootTests
             Assert.That(art.LootSprite(loot), Is.SameAs(art.openedLoot[(int)kind - 1]));
             Assert.That(art.LootSprite(loot).rect.size, Is.EqualTo(new Vector2(16, 16)));
         }
-        for (int i = (int)ItemKind.IronSword; i <= (int)ItemKind.IronArmor; i++)
-            Assert.That(art.ItemIcon((ItemKind)i), Is.Not.Null);
+        foreach (var kind in Enum.GetValues(typeof(ItemKind)).Cast<ItemKind>().Where(kind => Rules.IsEquipment(kind) && kind != ItemKind.WoodShield))
+            Assert.That(art.ItemIcon(kind), Is.Not.Null);
     }
 
     [Test]

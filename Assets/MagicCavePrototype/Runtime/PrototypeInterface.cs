@@ -19,6 +19,7 @@ namespace MagicCave.Prototype
 
         partial void ReadInterfaceInput()
         {
+            ReadItemDrag();
             if (uiKeyboard != Keyboard.current)
             {
                 if (uiKeyboard != null) uiKeyboard.onTextInput -= SeedCharacter;
@@ -161,7 +162,7 @@ namespace MagicCave.Prototype
                 var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
                 if (loot != null && loot.HasContents) hint = (loot.unopened ? ContainerLoot.Name(loot) + " · 开启后获得随机物品" :
                     Rules.ItemNames[(int)loot.units[0].kind] + " ×" + loot.units.Count + " · " + Rules.RarityName(loot.units[0].kind)) +
-                    (Run.Map.LivingGuard(loot) != null ? " · 需先击败镇守怪" : loot.unopened ? " · 点击 / E开启" : " · 点击 / E拾取");
+                    (loot.unopened ? " · 点击 / E开启" : " · 点击 / E拾取");
             }
             Label(new Rect(26, 671, 750, 38), hint, textStyle, Gold);
             Button(new Rect(805, 669, 140, 36), "角色 [C]", () => { Panel = GamePanel.Character; CancelRoute(); });
@@ -201,8 +202,8 @@ namespace MagicCave.Prototype
             {
                 var stats = CharacterAttributes.Calculate(Run, true);
                 Label(new Rect(108, 341, 1060, 26), "力量 " + stats.strength + "  敏捷 " + stats.agility + "  智慧 " + stats.wisdom +
-                    "    ATK " + stats.attack.ToString("0.##") + "    副属性 " + CharacterAttributes.Name(Run.character.secondary) +
-                    "：最终伤害 +" + ((stats.secondaryMultiplier - 1) * 100).ToString("0.##") + "%", smallStyle, Cyan);
+                    "    ATK " + stats.attack.ToString("0.##") + (Run.character.secondary == AttributeKind.None ? "" : "    旧局副属性 " + CharacterAttributes.Name(Run.character.secondary) +
+                    "：最终伤害 +" + ((stats.secondaryMultiplier - 1) * 100).ToString("0.##") + "%"), smallStyle, Cyan);
             }
             Label(new Rect(538, 165, 205, 92), "能量\n" + Combat.energy + " / " + (3 + (Combat.enemyTurn == 0 ? Run.openingEnergy : 0)), buttonStyle, Cyan);
             Label(new Rect(380, 367, 520, 35), Combat.playerTurn ? "你的回合 · 点击卡牌使用" : "敌人行动中…", buttonStyle, Gold);
@@ -314,34 +315,32 @@ namespace MagicCave.Prototype
         }
         void DrawInventory()
         {
-            Box(new Rect(65, 118, 1150, 525));
-            Label(new Rect(89, 132, 760, 40), "常规背包 " + Inventory.UsedSlots(Run) + "/20格 · 每格最多20件", headingStyle, Gold);
-            for (int i = 0; i < 20; i++)
+            Box(new Rect(60, 100, 1160, 550));
+            Label(new Rect(87, 117, 900, 40), Panel == GamePanel.Character ? "角色与装备" : "背包与装备", headingStyle, Gold);
+            Button(new Rect(1010, 119, 180, 34), "关闭 [Esc]", () => Panel = GamePanel.None);
+            bool previousEnabled = GUI.enabled; GUI.enabled = previousEnabled && !attributeDetails;
+            DrawEquipmentAndBag();
+            if (ValidEquipmentPreview()) DrawEquipmentPreview(CharacterAttributes.Calculate(Run));
+            else if (selectedBagSlot >= 0 && selectedBagSlot < Run.inventory.Count && Run.inventory[selectedBagSlot].units.Count > 0)
             {
-                int slotIndex = i; var slot = Run.inventory[i]; float x = 89 + (i % 5) * 221, y = 183 + (i / 5) * 100;
-                Fill(new Rect(x, y, 208, 91), "slot", new Color(0.09f, 0.14f, 0.21f));
-                if (slot.units.Count == 0) { Label(new Rect(x + 8, y + 23, 190, 35), "空格", smallStyle, new Color(0.34f, 0.43f, 0.52f)); continue; }
-                ItemKind kind = slot.units[0].kind;
-                var icon = artSet.ItemIcon(kind);
-                if (icon != null) GUI.DrawTexture(new Rect(x + 7, y + 5, 26, 26), icon.texture, ScaleMode.ScaleToFit, true);
-                Label(new Rect(x + (icon == null ? 8 : 38), y + 6, icon == null ? 190 : 164, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count, textStyle, Gold);
-                Label(new Rect(x + 8, y + 33, 190, 23), Rules.RarityName(kind), smallStyle);
-                Button(new Rect(x + 8, y + 60, 88, 26), Rules.IsEquipment(kind) ? "装备" : "使用", () =>
-                {
-                    if (Rules.IsEquipment(kind)) { equipmentPreviewSlot = slotIndex; Panel = GamePanel.Character; }
-                    else if (UseInventory(slotIndex)) Notify("已使用" + Rules.ItemNames[(int)kind]);
-                }, ScreenMode == GameScreen.Explore && (Rules.IsEquipment(kind) || Inventory.CanUse(Run, slotIndex)));
-                Button(new Rect(x + 108, y + 60, 88, 26), "丢弃", () => { dropSlot = slotIndex; dropQuantity = 1; });
+                int index = selectedBagSlot; var slot = Run.inventory[index]; var kind = slot.units[0].kind;
+                Label(new Rect(585, 548, 590, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count + " · " + Rules.RarityName(kind), smallStyle, Gold);
+                Button(new Rect(585, 588, 140, 32), "使用一件", () => { if (UseInventory(index)) Notify("已使用" + Rules.ItemNames[(int)kind]); }, ScreenMode == GameScreen.Explore && Inventory.CanUse(Run, index));
+                Button(new Rect(740, 588, 140, 32), "丢弃…", () => { dropSlot = index; dropQuantity = 1; });
             }
             if (dropSlot >= 0 && Run.inventory[dropSlot].units.Count > 0)
             {
                 dropQuantity = Mathf.Clamp(dropQuantity, 1, Run.inventory[dropSlot].units.Count);
-                Label(new Rect(89, 596, 300, 33), "丢弃数量 " + dropQuantity);
-                Button(new Rect(325, 590, 55, 36), "－", () => dropQuantity--, dropQuantity > 1);
-                Button(new Rect(392, 590, 55, 36), "＋", () => dropQuantity++, dropQuantity < Run.inventory[dropSlot].units.Count);
-                Button(new Rect(460, 590, 160, 36), "确认丢弃", () => { Inventory.Drop(Run, dropSlot, dropQuantity); dropSlot = -1; BuildWorld(false); });
+                Box(new Rect(570, 543, 635, 96));
+                Label(new Rect(585, 548, 470, 26), "确认丢弃 " + Rules.ItemNames[(int)Run.inventory[dropSlot].units[0].kind] + " ×" + dropQuantity, smallStyle, Gold);
+                Button(new Rect(585, 588, 54, 32), "－", () => dropQuantity--, dropQuantity > 1);
+                Button(new Rect(650, 588, 54, 32), "＋", () => dropQuantity++, dropQuantity < Run.inventory[dropSlot].units.Count);
+                Button(new Rect(730, 588, 160, 32), "确认丢弃", () => { Inventory.Drop(Run, dropSlot, dropQuantity); dropSlot = -1; BuildWorld(false); });
+                Button(new Rect(905, 588, 140, 32), "取消", () => dropSlot = -1);
             }
-            Button(new Rect(1000, 591, 184, 36), "关闭 [Esc]", () => Panel = GamePanel.None);
+            DrawItemDrag(); GUI.enabled = previousEnabled;
+            Button(new Rect(85, 239, 126, 32), "属性详情", () => { attributeDetails = !attributeDetails; ClearItemDrag(); });
+            if (attributeDetails) DrawAttributeDetails();
         }
         void DrawCardList()
         {

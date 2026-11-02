@@ -1,0 +1,157 @@
+{
+  "date": "2026-11-02",
+  "change": "Remove guard-defeat requirement for opening and picking up containers, including existing saves.",
+  "projectRoot": "E:/UnityProject/Magic Cave Game",
+  "unityVersion": "6000.5.4f1",
+  "transport": "Unity MCP",
+  "editMode": {
+    "job_id": "3e12896b1c0447a58ac0ac971d593217",
+    "status": "succeeded",
+    "mode": "EditMode",
+    "started_unix_ms": 1793597048740,
+    "finished_unix_ms": 1793597058407,
+    "last_update_unix_ms": 1793597058407,
+    "progress": {
+      "completed": 127,
+      "total": 127,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "TownProgressionTests.TalentPurchaseAndResetPersistExactGoldAndRanks",
+      "last_finished_unix_ms": 1793597058337,
+      "stuck_suspected": false,
+      "editor_is_focused": false,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "EditMode",
+      "summary": {
+        "total": 127,
+        "passed": 127,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 5.0269245,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "playModeInitialRunnerError": {
+    "job_id": "8840af32af2247dea095ddc423624f8f",
+    "status": "failed",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793597076823,
+    "finished_unix_ms": 1793597087606,
+    "last_update_unix_ms": 1793597087606,
+    "progress": {
+      "completed": 0,
+      "total": 18,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": null,
+      "last_finished_unix_ms": null,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": "An unexpected error happened while running tests.",
+    "result": null
+  },
+  "playModeFullRun": {
+    "job_id": "3191522e1ff54f20bb64a089bcdb56e5",
+    "status": "failed",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793597156305,
+    "finished_unix_ms": 1793597191687,
+    "last_update_unix_ms": 1793597191687,
+    "progress": {
+      "completed": 18,
+      "total": 18,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+      "last_finished_unix_ms": 1793597191660,
+      "stuck_suspected": false,
+      "editor_is_focused": true,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [
+        {
+          "full_name": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+          "message": "Unhandled log message: '[Error] Failed to store screen shot (E:\\UnityProject\\Magic Cave Game\\Captures\\CharacterAttributes\\battle-dynamic-damage.png)'. Use UnityEngine.TestTools.LogAssert.Expect"
+        }
+      ],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "PlayMode",
+      "summary": {
+        "total": 18,
+        "passed": 17,
+        "failed": 1,
+        "skipped": 0,
+        "durationSeconds": 30.5196189,
+        "resultState": "Failed(Child)"
+      },
+      "results": [
+        {
+          "name": "WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+          "fullName": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+          "state": "Failed",
+          "durationSeconds": 1.7647893,
+          "message": "Unhandled log message: '[Error] Failed to store screen shot (E:\\UnityProject\\Magic Cave Game\\Captures\\CharacterAttributes\\battle-dynamic-damage.png)'. Use UnityEngine.TestTools.LogAssert.Expect",
+          "stackTrace": "UnityEditor.GUIView:ProcessEvent (UnityEngine.EntityId,intptr,bool&)\r\n\r\n",
+          "output": "[MagicCave] Character prototype ready; rules v2.\r\n[MagicCave] Run Seed = -1547056081\r\nFailed to store screen shot (E:\\UnityProject\\Magic Cave Game\\Captures\\CharacterAttributes\\battle-dynamic-damage.png)\r\n"
+        }
+      ]
+    }
+  },
+  "playModeScreenshotRetry": {
+    "job_id": "1c5ed23712bf4e748f12bf8d3042c1a4",
+    "status": "succeeded",
+    "mode": "PlayMode",
+    "started_unix_ms": 1793597210747,
+    "finished_unix_ms": 1793597213101,
+    "last_update_unix_ms": 1793597213101,
+    "progress": {
+      "completed": 1,
+      "total": 1,
+      "current_test_full_name": null,
+      "current_test_started_unix_ms": null,
+      "last_finished_test_full_name": "PrototypePlayTests.WisdomDepartureCharacterEquipmentAndDynamicCardTextWork",
+      "last_finished_unix_ms": 1793597213093,
+      "stuck_suspected": false,
+      "editor_is_focused": false,
+      "run_in_background": true,
+      "blocked_reason": null,
+      "failures_so_far": [],
+      "failures_capped": false
+    },
+    "error": null,
+    "result": {
+      "mode": "PlayMode",
+      "summary": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "durationSeconds": 1.8349429,
+        "resultState": "Passed"
+      },
+      "results": []
+    }
+  },
+  "finalConsoleErrors": 0,
+  "scene": {
+    "path": "Assets/Scenes/WorldMap.unity",
+    "isDirty": false
+  },
+  "playerBuildUpdated": false
+}

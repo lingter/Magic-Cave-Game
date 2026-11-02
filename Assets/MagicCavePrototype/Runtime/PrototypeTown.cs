@@ -33,8 +33,9 @@ namespace MagicCave.Prototype
         static readonly RectInt[] GuildSolids = { new RectInt(17, 4, 1, 1), new RectInt(7, 4, 1, 1), new RectInt(11, 8, 2, 1) };
         static readonly Vector2[] TalentPositions =
         {
-            new Vector2(408, 209), new Vector2(220, 316), new Vector2(548, 316),
-            new Vector2(688, 419), new Vector2(220, 509), new Vector2(502, 509), new Vector2(688, 564)
+            new Vector2(440, 357), new Vector2(255, 245), new Vector2(560, 245),
+            new Vector2(620, 390), new Vector2(105, 310), new Vector2(740, 245),
+            new Vector2(740, 510), new Vector2(255, 500)
         };
 
         public static bool TownWalkable(int x, int y, bool guild = false)
@@ -130,31 +131,24 @@ namespace MagicCave.Prototype
                 int nearby = NearbyTown(); if (nearby >= 0) OpenTownDestination(nearby);
                 return;
             }
-            Vector2 input = Vector2.zero;
-            if (keyboard != null)
-            {
-                input.x = ((keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) ? 1 : 0) - ((keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) ? 1 : 0);
-                input.y = ((keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) ? 1 : 0) - ((keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) ? 1 : 0);
-            }
-            if (input.sqrMagnitude > 0)
+            var input = new Vector2Int(gridDirection.x, -gridDirection.y);
+            if (input != Vector2Int.zero)
             {
                 townRoute.Clear(); townDestination = -1;
-                var delta = input.normalized * (4 * Mathf.Min(Time.deltaTime, .1f));
-                var next = TownPosition + new Vector2(delta.x, 0); if (TownFits(next)) TownPosition = next;
-                next = TownPosition + new Vector2(0, delta.y); if (TownFits(next)) TownPosition = next;
-                townFacing = new Vector2(input.x, -input.y);
-            }
-            else if (townRoute.Count > 0)
-            {
-                var next = Vector2.MoveTowards(TownPosition, townRoute[0], 4 * Mathf.Min(Time.deltaTime, .1f));
-                var delta = next - TownPosition;
-                if (delta.sqrMagnitude > 0) townFacing = new Vector2(delta.x, -delta.y);
-                TownPosition = next;
-                if (Vector2.Distance(next, townRoute[0]) < .001f)
+                if (Time.time >= nextTownStep)
                 {
-                    townRoute.RemoveAt(0);
-                    if (townRoute.Count == 0 && townDestination >= 0) OpenTownDestination(townDestination);
+                    var next = new Vector2Int(Mathf.RoundToInt(TownPosition.x), Mathf.RoundToInt(TownPosition.y)) + input;
+                    if (TownWalkable(next.x, next.y, InGuild)) TownPosition = next;
+                    townFacing = gridDirection; nextTownStep = Time.time + .25f;
                 }
+            }
+            else if (townRoute.Count > 0 && Time.time >= nextTownStep)
+            {
+                var next = townRoute[0]; var delta = (Vector2)next - TownPosition;
+                if (!TownWalkable(next.x, next.y, InGuild)) { townRoute.Clear(); townDestination = -1; return; }
+                if (delta.sqrMagnitude > 0) townFacing = new Vector2(delta.x, -delta.y);
+                TownPosition = next; townRoute.RemoveAt(0); nextTownStep = Time.time + .25f;
+                if (townRoute.Count == 0 && townDestination >= 0) OpenTownDestination(townDestination);
             }
         }
         Texture2D TownTexture(string name)
@@ -283,7 +277,7 @@ namespace MagicCave.Prototype
         {
             Label(new Rect(901, 139, 330, 45), "战士公会", headingStyle, Gold);
             Label(new Rect(901, 201, 330, 38), "当前职业：骑士", headingStyle, Cyan);
-            Label(new Rect(901, 252, 330, 120), "攻守兼备，善用剑与盾。\n起始卡组：5 打击 / 4 防御 / 1 整备。\n天赋强化基础属性，并解锁战斗机制。", textStyle);
+            Label(new Rect(901, 252, 330, 120), "攻守兼备，善用剑盾。\n起始卡组：5 打击 / 4 防御 / 1 整备。\n天赋强化基础属性，并解锁战斗机制。", textStyle);
             Button(new Rect(901, 402, 330, 44), "拜访导师 · 天赋树", () => { CloseTownPage(); VisitTown(1); });
             Button(new Rect(901, 460, 330, 44), "拜访会长 · 公会升级", () => { CloseTownPage(); VisitTown(2); });
             Label(new Rect(901, 520, 330, 40), "本阶段开放战士公会 · 骑士。", smallStyle);
@@ -313,27 +307,80 @@ namespace MagicCave.Prototype
             Button(new Rect(1152, 450, 78, 40), "清空", () => { customSeedText = ""; seedFocused = true; }, customSeed);
             Label(new Rect(901, 511, 330, 57), "存档继续沿用出发时的天赋，\n回城学习不会改写进行中的本局。", smallStyle);
         }
+        Texture2D StarDisc()
+        {
+            if (townTextures.TryGetValue("star disc", out var texture) && texture != null) return texture;
+            texture = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            var pixels = new Color[64 * 64];
+            for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x, y), new Vector2(31.5f, 31.5f));
+                pixels[y * 64 + x] = new Color(1, 1, 1, Mathf.Clamp01(31.5f - distance));
+            }
+            texture.SetPixels(pixels); texture.Apply(); townTextures["star disc"] = texture; return texture;
+        }
+        void Star(Vector2 position, float radius, Color color)
+        {
+            var old = GUI.color; GUI.color = color;
+            GUI.DrawTexture(new Rect(position.x - radius, position.y - radius, radius * 2, radius * 2), StarDisc()); GUI.color = old;
+        }
+        void StarLine(Vector2 from, Vector2 to, Color color)
+        {
+            var old = GUI.matrix;
+            GUI.matrix = old * Matrix4x4.TRS(new Vector3(from.x, from.y, 0), Quaternion.Euler(0, 0, Mathf.Atan2(to.y - from.y, to.x - from.x) * Mathf.Rad2Deg), Vector3.one);
+            Fill(new Rect(0, -.75f, Vector2.Distance(from, to), 1.5f), "star line " + color, color);
+            GUI.matrix = old;
+        }
+        Vector2[] StarConnection(int id)
+        {
+            var start = TalentPositions[TownRules.Talents[id].parent]; var end = TalentPositions[id];
+            switch (id)
+            {
+                case 1: case 2: return new[] { start, new Vector2(440, 245), end };
+                case 3: return new[] { start, new Vector2(650, 245), new Vector2(650, 390), end };
+                case 4: return new[] { start, new Vector2(105, 245), end };
+                case 5: return new[] { start, end };
+                case 6: return new[] { start, new Vector2(780, 390), new Vector2(780, 510), end };
+                case 7: return new[] { start, new Vector2(335, 357), new Vector2(335, 500), end };
+                default: return new[] { start, end };
+            }
+        }
         void DrawTalentTree()
         {
             Box(new Rect(22, 119, 836, 510));
-            Label(new Rect(47, 132, 765, 44), "骑士天赋  /  剑与盾的誓约", headingStyle, Gold);
+            Label(new Rect(47, 132, 765, 44), "骑士星图 · 三属性天赋", headingStyle, Gold);
+            Fill(new Rect(42, 187, 794, 150), "strength sector", new Color(.12f, .065f, .08f, .65f));
+            Fill(new Rect(42, 337, 280, 78), "strength sector", new Color(.12f, .065f, .08f, .65f));
+            Fill(new Rect(516, 348, 320, 231), "agility sector", new Color(.045f, .12f, .115f, .65f));
+            Fill(new Rect(42, 440, 320, 139), "wisdom sector", new Color(.085f, .065f, .16f, .65f));
+            Label(new Rect(57, 187, 270, 30), "力量 · 进攻与体魄", smallStyle, new Color(1f, .55f, .42f));
+            Label(new Rect(536, 349, 280, 30), "敏捷 · 身法与盾术", smallStyle, new Color(.35f, .9f, .7f));
+            Label(new Rect(57, 443, 270, 30), "智慧 · 武器铭文", smallStyle, new Color(.71f, .63f, 1f));
+            for (int i = 0; i < 65; i++)
+                Star(new Vector2(48 + i * 127 % 778, 218 + i * 83 % 347), i % 6 == 0 ? 1.6f : .8f, new Color(.36f, .45f, .61f, .55f));
             var town = Store.Warehouse.town;
-            for (int i = 1; i < TalentPositions.Length; i++)
+            Label(new Rect(600, 139, 225, 32), "剩余天赋点 " + town.talentPoints, textStyle, Cyan);
+            foreach (int i in Enumerable.Range(1, TalentPositions.Length - 1).OrderBy(id => selectedTalent == id ? 1 : 0))
             {
-                var from = TalentPositions[TownRules.Talents[i].parent]; var to = TalentPositions[i];
-                var old = GUI.matrix;
-                GUIUtility.RotateAroundPivot(Mathf.Atan2(to.y - from.y, to.x - from.x) * Mathf.Rad2Deg, from);
-                Fill(new Rect(from.x, from.y - 1, Vector2.Distance(from, to), 3), town.talents[i] > 0 ? "talent active edge" : "talent edge", town.talents[i] > 0 ? Gold : new Color(.23f, .33f, .40f));
-                GUI.matrix = old;
+                var path = StarConnection(i);
+                bool selected = selectedTalent == i;
+                var color = selected ? Cyan : town.talents[i] > 0 ? new Color(.33f, .7f, .52f) : new Color(.19f, .24f, .31f);
+                for (int segment = 1; segment < path.Length; segment++) StarLine(path[segment - 1], path[segment], color);
             }
             for (int i = 0; i < TalentPositions.Length; i++)
             {
                 int id = i; var node = TownRules.Talents[i]; var position = TalentPositions[i];
-                var rect = new Rect(position.x - 74, position.y - 27, 148, 54);
-                if (selectedTalent == i) Fill(new Rect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6), "talent selected", Cyan);
-                Button(rect, node.name + "\n" + town.talents[i] + " / " + node.maximum, () => selectedTalent = id, true, town.talents[i] > 0);
+                bool learned = town.talents[i] > 0;
+                bool unlocked = (node.parent < 0 || town.talents[node.parent] >= node.parentRank) && town.guildLevel >= node.guildLevel && town.reputation >= node.reputation && town.talentPoints >= TownRules.TalentPointCost(i);
+                var color = learned ? new Color(.35f, .9f, .58f) : unlocked ? Ink : new Color(.38f, .43f, .51f);
+                float radius = i >= 4 && i <= 6 ? 14 : 9;
+                if (selectedTalent == i) Star(position, radius + 6, Cyan);
+                Star(position, radius + 2, color); Star(position, radius - 2, new Color(.045f, .065f, .11f)); Star(position, radius - 5, color);
+                Label(new Rect(position.x - 85, position.y + 19, 170, 24), node.name, new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter }, color);
+                Label(new Rect(position.x - 65, position.y + 41, 130, 22), town.talents[i] + " / " + node.maximum, new GUIStyle(smallStyle) { alignment = TextAnchor.MiddleCenter }, color);
+                if (Click(new Rect(position.x - 77, position.y - 21, 154, 85))) Queue(() => selectedTalent = id);
             }
-            Label(new Rect(47, 589, 400, 25), "小节点：基础属性    大节点：战斗机制", smallStyle);
+            Label(new Rect(47, 591, 780, 25), "灰：条件未满足   白：可点亮   绿：已点亮生效   ·   连线表示前置", smallStyle);
         }
         void DrawTalentDetails()
         {
@@ -343,10 +390,13 @@ namespace MagicCave.Prototype
             Label(new Rect(901, 317, 330, 30), "当前等级 " + town.talents[selectedTalent] + " / " + node.maximum, textStyle, Cyan);
             bool maximum = town.talents[selectedTalent] >= node.maximum;
             string requirement = node.parent < 0 ? "基础职业节点" : "前置：" + TownRules.Talents[node.parent].name + " " + node.parentRank + "级";
-            Label(new Rect(901, 361, 330, 88), requirement + "\n公会 Lv." + node.guildLevel + "  /  声望 " + node.reputation + "\n" + (maximum ? "已经点满" : "下一级花费 " + TownRules.TalentGold(town, selectedTalent) + " 金币"), smallStyle);
+            Label(new Rect(901, 355, 330, 82), requirement + "\n公会 Lv." + node.guildLevel + "  /  声望 " + node.reputation + "\n" +
+                (maximum ? "已点满" : "点亮下一级：" + TownRules.TalentPointCost(selectedTalent) + " 天赋点") + "  ·  剩余 " + town.talentPoints + " 点", smallStyle);
             string reason = TownRules.TalentLock(town, selectedTalent);
-            Button(new Rect(901, 458, 330, 44), reason.Length == 0 ? "学习天赋" : reason, () => { Store.LearnTalent(selectedTalent); Notify("天赋已保存，下次出发时生效"); }, reason.Length == 0, true);
-            Button(new Rect(901, 517, 330, 38), "重置天赋 · 全额返还金币", () => { Store.ResetTalents(); Notify("天赋已重置，金币已返还"); }, town.talents.Skip(1).Any(rank => rank > 0));
+            Button(new Rect(901, 451, 330, 41), reason.Length == 0 ? "点亮天赋 · 激活生效" : reason, () => { Store.LearnTalent(selectedTalent); Notify("天赋已点亮；出发时应用激活天赋"); }, reason.Length == 0, true);
+            string retract = TownRules.RetractTalentLock(town, selectedTalent);
+            Button(new Rect(901, 503, 330, 37), retract.Length == 0 ? "回撤一级 · 返还1天赋点" : retract, () => { Store.RetractTalent(selectedTalent); Notify("已回撤，天赋点已返还"); }, retract.Length == 0);
+            Button(new Rect(901, 548, 330, 26), "全部回撤 · 返还天赋点", () => { Store.ResetTalents(); Notify("已回撤全部天赋，点数已返还"); }, town.talents.Skip(1).Any(rank => rank > 0));
         }
         void DrawTownWarehouse()
         {

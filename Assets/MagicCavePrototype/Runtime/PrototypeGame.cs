@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 namespace MagicCave.Prototype
 {
@@ -40,6 +41,19 @@ namespace MagicCave.Prototype
         partial void ReadInterfaceInput();
         partial void ReleaseInterfaceInput();
 
+        void OnEnable() { InputSystem.onEvent += TrackMovementKeys; }
+        void OnDisable() { InputSystem.onEvent -= TrackMovementKeys; heldMovementKeys.Clear(); gridDirection = Vector2Int.zero; }
+        void TrackMovementKeys(InputEventPtr inputEvent, InputDevice device)
+        {
+            var keyboard = device as Keyboard;
+            if (keyboard == null || (!inputEvent.IsA<StateEvent>() && !inputEvent.IsA<DeltaStateEvent>())) return;
+            foreach (var key in movementKeys)
+            {
+                if (!keyboard[key].ReadValueFromEvent(inputEvent, out float value)) continue;
+                if (value < .5f) heldMovementKeys.Remove(key);
+                else if (!heldMovementKeys.Contains(key)) heldMovementKeys.Add(key);
+            }
+        }
         void Start()
         {
             var arguments = Environment.GetCommandLineArgs();
@@ -73,6 +87,7 @@ namespace MagicCave.Prototype
         void Notify(string text) { message = text; messageUntil = Time.unscaledTime + 4f; }
         void Update()
         {
+            ReadGridDirection();
             ReadInterfaceInput();
             UpdateTown();
             if (queued != null)
@@ -129,43 +144,54 @@ namespace MagicCave.Prototype
                     }
                 }
             }
-            Vector2 input = Vector2.zero;
-            if (keyboard != null)
+            if (gridDirection != Vector2Int.zero)
             {
-                input.x = ((keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) ? 1 : 0) - ((keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) ? 1 : 0);
-                input.y = ((keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) ? 1 : 0) - ((keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) ? 1 : 0);
-            }
-            if (input.sqrMagnitude > 0)
-            {
-                CancelRoute(); Move(input.normalized * (3f * Mathf.Min(Time.deltaTime, 0.1f)));
-            }
-            else if (route.Count > 0)
-            {
-                var target = (Vector2)route[0]; var position = new Vector2(Run.x, Run.y);
-                var next = Vector2.MoveTowards(position, target, 3f * Mathf.Min(Time.deltaTime, 0.1f));
-                Move(next - position);
-                if (Vector2.Distance(new Vector2(Run.x, Run.y), target) < 0.01f)
+                CancelRoute();
+                if (Time.time >= nextExploreStep)
                 {
-                    Run.x = target.x; Run.y = target.y; route.RemoveAt(0);
+                    MoveGrid(new Vector2Int(Run.CellX, Run.CellY) + gridDirection);
+                    nextExploreStep = Time.time + 1f / 3f;
+                }
+            }
+            else if (route.Count > 0 && Time.time >= nextExploreStep)
+            {
+                var target = route[0];
+                if (MoveGrid(target))
+                {
+                    route.RemoveAt(0); nextExploreStep = Time.time + 1f / 3f;
                     if (route.Count == 0 && pendingInteraction.kind != TargetKind.None)
                     { var interaction = pendingInteraction; pendingInteraction = default; Interact(interaction); }
                 }
+                else CancelRoute();
             }
         }
-        void Move(Vector2 delta)
+        // Logical and rendered positions both remain on cell centers, including after key release.
+        float nextExploreStep, nextTownStep;
+        Vector2Int gridDirection;
+        readonly List<Key> heldMovementKeys = new List<Key>();
+        static readonly Key[] movementKeys = { Key.W, Key.UpArrow, Key.S, Key.DownArrow, Key.A, Key.LeftArrow, Key.D, Key.RightArrow };
+        void ReadGridDirection()
         {
-            var before = new Vector2(Run.x, Run.y);
-            int oldX = Run.CellX, oldY = Run.CellY;
-            int steps = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.08f));
-            delta /= steps;
-            for (int i = 0; i < steps; i++)
-            {
-                if (Fits(Run.x + delta.x, Run.y)) Run.x += delta.x;
-                if (Fits(Run.x, Run.y + delta.y)) Run.y += delta.y;
-            }
-            if (oldX != Run.CellX || oldY != Run.CellY) { MapGenerator.Reveal(Run); RefreshVisibility(); }
-            var moved = new Vector2(Run.x, Run.y) - before;
-            if (moved.sqrMagnitude > 0.000001f) facing = moved.normalized;
+            var keyboard = Keyboard.current;
+            if (keyboard == null) { heldMovementKeys.Clear(); gridDirection = Vector2Int.zero; return; }
+            heldMovementKeys.RemoveAll(key => !keyboard[key].isPressed);
+            // Input events preserve press order across frames and within a single frame.
+            foreach (var key in movementKeys.Where(key => keyboard[key].isPressed && !heldMovementKeys.Contains(key))) heldMovementKeys.Add(key);
+            var previous = gridDirection;
+            var first = heldMovementKeys.Count == 0 ? Key.None : heldMovementKeys[0];
+            gridDirection = first == Key.W || first == Key.UpArrow ? Vector2Int.up :
+                first == Key.S || first == Key.DownArrow ? Vector2Int.down :
+                first == Key.A || first == Key.LeftArrow ? Vector2Int.left :
+                first == Key.D || first == Key.RightArrow ? Vector2Int.right : Vector2Int.zero;
+            if (previous != gridDirection && previous == Vector2Int.zero) { nextExploreStep = 0; nextTownStep = 0; }
+        }
+        bool MoveGrid(Vector2Int target)
+        {
+            var origin = new Vector2Int(Run.CellX, Run.CellY);
+            if (Math.Abs(target.x - origin.x) + Math.Abs(target.y - origin.y) > 1 || !Run.Map.CanTraverse(target.x, target.y)) return false;
+            Run.x = target.x; Run.y = target.y;
+            if (origin != target) { facing = target - origin; MapGenerator.Reveal(Run); RefreshVisibility(); }
+            return true;
         }
         bool Fits(float x, float y)
         {
@@ -241,8 +267,6 @@ namespace MagicCave.Prototype
                 case TargetKind.Loot:
                     var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
                     if (loot == null || !loot.HasContents) return;
-                    var guard = Run.Map.LivingGuard(loot);
-                    if (guard != null) { Notify("需要先击败镇守怪：" + Rules.EnemyLabel(guard)); return; }
                     ContainerLoot.Open(Run, loot);
                     ItemKind kind = loot.units[0].kind; int count = Inventory.Pickup(Run, loot);
                     Notify(count > 0 ? "拾取 " + Rules.ItemNames[(int)kind] + " ×" + count : "背包已满，物品留在地面"); BuildWorld(false); break;
@@ -261,14 +285,15 @@ namespace MagicCave.Prototype
         }
 
         public void StartNewRun(int seed)
-            => StartNewRun(seed, AttributeKind.Agility);
+            => StartNewRun(seed, AttributeKind.None);
 
         public void StartNewRun(int seed, AttributeKind secondary)
         {
-            var next = MapGenerator.NewRun(seed, secondary);
+            var next = MapGenerator.NewRun(seed, AttributeKind.None);
             TownRules.Apply(Store.Warehouse.town, next); PrototypeStore.ValidateRun(next);
             Store.DiscardCheckpoint(); Run = next; Combat = null; Panel = GamePanel.None;
-            facing = Vector2.down;
+            facing = Vector2.down; nextExploreStep = 0; attributeDetails = false;
+            equipmentPreviewSlot = selectedBagSlot = dropSlot = -1; ClearItemDrag();
             message = ""; messageUntil = 0; hover = default; highlighted = default;
             ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
         }
@@ -276,13 +301,14 @@ namespace MagicCave.Prototype
         {
             if (customSeed && !int.TryParse(customSeedText, out requestedSeed)) { Notify("请输入32位整数种子，例如12345或-100"); return; }
             if (!customSeed) requestedSeed = BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 0);
-            selectedSecondary = AttributeKind.None; departurePreview = null; Panel = GamePanel.NewRun;
+            departurePreview = null; Panel = GamePanel.NewRun;
         }
         public void ContinueRun()
         {
             Panel = GamePanel.None;
             if (Store.Session.pending != null) { Run = Store.Session.pending.run; ScreenMode = GameScreen.Settlement; return; }
-            Run = Store.Continue(); ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
+            Run = Store.Continue(); Run.x = Run.CellX; Run.y = Run.CellY; nextExploreStep = 0;
+            equipmentPreviewSlot = selectedBagSlot = dropSlot = -1; ClearItemDrag(); ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
         }
         void SaveAndLeave()
         {
@@ -293,10 +319,10 @@ namespace MagicCave.Prototype
             CancelRoute(); Combat = new Battle(Run, enemy); processedBattle = false;
             ScreenMode = GameScreen.Battle; Panel = GamePanel.None;
         }
-        public string EquipInventory(int slot)
+        public string EquipInventory(int slot, EquipmentSlot? target = null)
         {
             if (ScreenMode != GameScreen.Explore || Run == null) return "只能在探索时更换装备";
-            return Inventory.Equip(Run, slot);
+            return Inventory.Equip(Run, slot, target);
         }
         public string UnequipSlot(EquipmentSlot slot)
         {

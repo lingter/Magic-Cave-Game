@@ -12,7 +12,6 @@ namespace MagicCave.Prototype
         public static int UsedSlots(RunData run) { return run.inventory.Count(slot => slot.units.Count > 0); }
         public static int Pickup(RunData run, GroundLoot loot)
         {
-            if (run.Map.LivingGuard(loot) != null) return 0;
             ContainerLoot.Open(run, loot);
             if (loot.IsContainer && loot.units.Count > 0) loot.opened = true;
             if (loot.units.Count > 0 && loot.containerKind == ContainerKind.Legacy) loot.appearanceKind = loot.units[0].kind;
@@ -68,24 +67,53 @@ namespace MagicCave.Prototype
             }
             slot.units.RemoveAt(0); return true;
         }
-        public static string Equip(RunData run, int slotIndex)
+        public static string Equip(RunData run, int slotIndex, EquipmentSlot? targetSlot = null)
         {
             if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.inventory[slotIndex].units.Count != 1) return "请选择背包中的装备";
             var slot = run.inventory[slotIndex]; var item = slot.units[0];
             string reason = CharacterAttributes.EquipLock(run, item); if (reason.Length > 0) return reason;
             var definition = run.attributeRules.Find(item.kind);
-            var previous = run.character.equipment.Find(i => run.attributeRules.Find(i.kind).slot == definition.slot);
+            var destination = targetSlot ?? definition.slot;
+            if (!targetSlot.HasValue && definition.type == EquipmentType.Ring)
+                destination = new[] { EquipmentSlot.Ring1, EquipmentSlot.Ring2, EquipmentSlot.Ring3 }
+                    .Where(candidate => !run.character.equipment.Any(i => CharacterAttributes.EquippedSlot(run, i) == candidate)).DefaultIfEmpty(EquipmentSlot.Ring1).First();
+            if (!CharacterAttributes.FitsSlot(definition, destination)) return "请拖到匹配的穿戴槽";
+            var previous = run.character.equipment.Find(i => CharacterAttributes.EquippedSlot(run, i) == destination);
             slot.units.Clear();
-            if (previous != null) { run.character.equipment.Remove(previous); slot.units.Add(previous); }
-            run.character.equipment.Add(item); run.health = Math.Min(run.health, run.MaxHealth); return "";
+            if (previous != null) { run.character.equipment.Remove(previous); previous.equippedSlot = -1; slot.units.Add(previous); }
+            item.equippedSlot = (int)destination; run.character.equipment.Add(item);
+            run.health = Math.Min(run.health, run.MaxHealth); return "";
         }
         public static string Unequip(RunData run, EquipmentSlot equipmentSlot)
         {
             if (!run.UsesAttributes) return "旧版探索没有装备槽";
-            var item = run.character.equipment.Find(i => run.attributeRules.Find(i.kind).slot == equipmentSlot);
+            int target = run.inventory.FindIndex(s => s.units.Count == 0);
+            return target < 0 ? "背包已满，无法卸下" : UnequipTo(run, equipmentSlot, target);
+        }
+        // Transfer whole slots: instance identity and acquisition order stay intact.
+        public static string MoveSlot(RunData run, int source, int target)
+        {
+            if (source < 0 || target < 0 || source >= run.inventory.Count || target >= run.inventory.Count) return "无效的背包格";
+            if (source == target) return "";
+            var units = run.inventory[source].units;
+            run.inventory[source].units = run.inventory[target].units;
+            run.inventory[target].units = units;
+            return "";
+        }
+        public static string UnequipTo(RunData run, EquipmentSlot equipmentSlot, int target)
+        {
+            if (!run.UsesAttributes || target < 0 || target >= run.inventory.Count) return "无效的背包格";
+            var item = run.character.equipment.Find(i => CharacterAttributes.EquippedSlot(run, i) == equipmentSlot);
             if (item == null) return "槽位为空";
-            var free = run.inventory.Find(s => s.units.Count == 0); if (free == null) return "背包已满，无法卸下";
-            run.character.equipment.Remove(item); free.units.Add(item); run.health = Math.Min(run.health, run.MaxHealth); return "";
+            var destination = run.inventory[target];
+            if (destination.units.Count > 0)
+            {
+                if (destination.units.Count != 1 || CharacterAttributes.EquipLock(run, destination.units[0]).Length > 0 ||
+                    !CharacterAttributes.FitsSlot(run.attributeRules.Find(destination.units[0].kind), equipmentSlot)) return "请选择空格或同槽位装备";
+                return Equip(run, target, equipmentSlot);
+            }
+            run.character.equipment.Remove(item); item.equippedSlot = -1; destination.units.Add(item);
+            run.health = Math.Min(run.health, run.MaxHealth); return "";
         }
         public static GroundLoot Drop(RunData run, int slotIndex, int quantity)
         {
@@ -130,7 +158,9 @@ namespace MagicCave.Prototype
                 run.bossDefeated = true;
                 run.Map.Set(6, 10, Tile.Return);
                 run.Map.revealed[run.Map.Index(6, 10)] = true;
-                MapGenerator.AddLoot(run, run.Map, new Vector2Int(6, 9), ItemKind.Relic, 1);
+                var reward = MapGenerator.AddLoot(run, run.Map, new Vector2Int(6, 9), ItemKind.Relic, 1);
+                // Continue the layout's collision rule, including for a boss reached after loading an old save.
+                reward.permanentObstacle = run.maps.Any(m => m.loot.Any(l => l.permanentObstacle));
                 // The return door may appear on or overlap the pre-battle player footprint.
                 MapGenerator.EnsureSafePlayerPosition(run);
             }

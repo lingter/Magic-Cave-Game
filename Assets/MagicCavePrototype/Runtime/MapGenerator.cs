@@ -10,13 +10,13 @@ namespace MagicCave.Prototype
         public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
 
         public static RunData NewRun(int seed, bool logSeed = true)
-            => CreateRun(seed, AttributeKind.None, logSeed);
+            => CreateRun(seed, AttributeKind.None, logSeed, false);
 
         public static RunData NewRun(int seed, AttributeKind secondary, bool logSeed = true)
-            => CreateRun(seed, secondary, logSeed);
+            => CreateRun(seed, secondary, logSeed, true);
 
         // The original overload retains the legacy rules for old-save regression fixtures.
-        static RunData CreateRun(int seed, AttributeKind secondary, bool logSeed)
+        static RunData CreateRun(int seed, AttributeKind secondary, bool logSeed, bool attributes)
         {
             if (logSeed) Debug.Log("[MagicCave] Run Seed = " + seed);
             var run = new RunData
@@ -26,7 +26,7 @@ namespace MagicCave.Prototype
                 battleRandom = new RandomStream(RandomStream.Derive(seed, 0x42415402)),
                 cardRandom = new RandomStream(RandomStream.Derive(seed, 0x43415203))
             };
-            if (secondary != AttributeKind.None)
+            if (attributes)
             {
                 CharacterAttributes.Initialize(run, secondary);
                 run.containerVersion = 1; run.containerRules = ContainerLootRules.Defaults(); run.containerRules.Validate();
@@ -241,6 +241,7 @@ namespace MagicCave.Prototype
 
         static bool PlaceObjects(RunData run, MapData map)
         {
+            if (run.containerVersion == 1) return PlaceContainerLayout(run, map);
             var free = new List<Vector2Int>(); var corners = new List<Vector2Int>();
             for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
             {
@@ -334,6 +335,98 @@ namespace MagicCave.Prototype
                 map.spawnX = p.x; map.spawnY = p.y; return true;
             }
             return false;
+        }
+
+        // Trial spacing, measured between container cells (including diagonally close pairs).
+        public const int MinimumSameContainerDistance = 3;
+
+        static bool PlaceContainerLayout(RunData run, MapData map)
+        {
+            var free = new List<Vector2Int>();
+            for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
+                if (map.Walkable(x, y)) free.Add(new Vector2Int(x, y));
+            run.mapRandom.Shuffle(free);
+            var kinds = Enumerable.Repeat(ItemKind.IronSword, run.containerRules.equipmentCount)
+                .Concat(Enumerable.Repeat(ItemKind.Relic, run.containerRules.treasureCount))
+                .Concat(Enumerable.Repeat(ItemKind.Potion, run.containerRules.suppliesCount)).ToList();
+            run.mapRandom.Shuffle(kinds);
+            kinds = kinds.OrderByDescending(k => PileRarity(run, k, map.number)).ToList();
+            var occupied = new HashSet<Vector2Int>();
+            for (int i = 0; i < kinds.Count; i++)
+            {
+                bool guarded = i < 8;
+                bool placed = false;
+                foreach (var p in free)
+                {
+                    if (occupied.Contains(p) || IsLootCorner(map, p) != guarded || IsCorridor(map, p) ||
+                        map.loot.Any(l => l.containerKind == PileContainer(kinds[i]) &&
+                            Manhattan(p, new Vector2Int(l.x, l.y)) < MinimumSameContainerDistance)) continue;
+                    var guards = Directions.Select(d => p + d)
+                        .Where(q => map.Walkable(q.x, q.y) && !occupied.Contains(q)).ToList();
+                    if (guarded && guards.Count < 2) continue;
+                    var loot = AddPile(run, map, p, kinds[i]);
+                    loot.permanentObstacle = true;
+                    occupied.Add(p);
+                    if (guarded)
+                    {
+                        run.mapRandom.Shuffle(guards);
+                        var first = AddEnemy(run, map, guards[0], EnemyRole.ItemGuard);
+                        var second = AddEnemy(run, map, guards[1], EnemyRole.ItemGuard);
+                        first.level = second.level = PileRarity(run, kinds[i], map.number) + 1;
+                        loot.guardEnemyId = first.id; loot.secondGuardEnemyId = second.id;
+                        occupied.Add(guards[0]); occupied.Add(guards[1]);
+                    }
+                    placed = true; break;
+                }
+                if (!placed) return false;
+            }
+            var corridor = free.Where(p => !occupied.Contains(p) && IsCorridor(map, p)).ToList();
+            if (corridor.Count == 0) return false;
+            AddEnemy(run, map, corridor[0], EnemyRole.CorridorGuard); occupied.Add(corridor[0]);
+            foreach (var p in free)
+            {
+                if (map.enemies.Count == 19) break;
+                if (occupied.Contains(p) || IsCorridor(map, p)) continue;
+                AddEnemy(run, map, p, EnemyRole.Roaming); occupied.Add(p);
+            }
+            if (map.enemies.Count != 19) return false;
+            foreach (var p in free)
+            {
+                if (occupied.Contains(p) || IsCorridor(map, p) ||
+                    map.enemies.Any(e => Manhattan(p, new Vector2Int(e.x, e.y)) < 3)) continue;
+                map.spawnX = p.x; map.spawnY = p.y;
+                // Containers never disappear. Reject layouts which need opening one to create a route.
+                return ValidateContainerRoutes(map);
+            }
+            return false;
+        }
+
+        public static bool ValidateContainerRoutes(MapData map)
+        {
+            var obstacles = new HashSet<Vector2Int>(map.loot.Where(l => l.BlocksMovement)
+                .Select(l => new Vector2Int(l.x, l.y)));
+            var origin = new Vector2Int(map.spawnX, map.spawnY);
+            if (!map.Walkable(origin.x, origin.y) || obstacles.Contains(origin)) return false;
+            var reached = new HashSet<Vector2Int> { origin };
+            var queue = new Queue<Vector2Int>(); queue.Enqueue(origin);
+            while (queue.Count > 0)
+            {
+                var point = queue.Dequeue();
+                foreach (var d in Directions)
+                {
+                    var next = point + d;
+                    // Living enemies can be defeated one at a time; containers cannot be cleared.
+                    if (map.Walkable(next.x, next.y) && !obstacles.Contains(next) && reached.Add(next)) queue.Enqueue(next);
+                }
+            }
+            for (int y = 0; y < map.size; y++) for (int x = 0; x < map.size; x++)
+            {
+                var p = new Vector2Int(x, y);
+                if (map.Walkable(x, y) && !obstacles.Contains(p) && !reached.Contains(p)) return false;
+                if ((map.At(x, y) == Tile.Advance || map.At(x, y) == Tile.Return) &&
+                    !Directions.Any(d => reached.Contains(p + d))) return false;
+            }
+            return map.loot.All(l => Directions.Any(d => reached.Contains(new Vector2Int(l.x, l.y) + d)));
         }
 
         public static ItemKind DrawWeapon(RunData run, bool commonOnly = false)

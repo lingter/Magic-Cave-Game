@@ -6,8 +6,8 @@ using System.Linq;
 namespace MagicCave.Prototype
 {
     public enum AttributeKind { None = -1, Strength, Agility, Wisdom }
-    public enum EquipmentSlot { MainHand, OffHand, Armor }
-    public enum EquipmentType { Sword, Shield, LightArmor, HeavyArmor }
+    public enum EquipmentSlot { MainHand, OffHand, Armor, Head, Hands, Feet, Ring1, Ring2, Ring3 }
+    public enum EquipmentType { Sword, Shield, LightArmor, HeavyArmor, SwordShield, Ring }
     public enum DefenseScalingSource { MainAttribute, ActualAttack }
 
     [Serializable]
@@ -25,7 +25,7 @@ namespace MagicCave.Prototype
         public AttributeKind primary = AttributeKind.Strength;
         public int health = 60, strength = 10, agility = 5, wisdom = 5;
         public int healthPerLevel = 4, primaryEveryLevels = 2, secondaryEveryLevels = 3;
-        public EquipmentType[] allowedTypes = { EquipmentType.Sword, EquipmentType.Shield, EquipmentType.LightArmor, EquipmentType.HeavyArmor };
+        public EquipmentType[] allowedTypes = { EquipmentType.Sword, EquipmentType.Shield, EquipmentType.LightArmor, EquipmentType.HeavyArmor, EquipmentType.SwordShield, EquipmentType.Ring };
     }
 
     [Serializable]
@@ -72,12 +72,18 @@ namespace MagicCave.Prototype
                 new EquipmentDefinition { id = "wood-shield", kind = ItemKind.WoodShield, slot = EquipmentSlot.OffHand, type = EquipmentType.Shield, agility = 1 },
                 new EquipmentDefinition { id = "leather", kind = ItemKind.LeatherArmor, slot = EquipmentSlot.Armor, type = EquipmentType.LightArmor, health = 6 },
                 new EquipmentDefinition { id = "insight", kind = ItemKind.InsightArmor, slot = EquipmentSlot.Armor, type = EquipmentType.LightArmor, health = 4, wisdom = 1 },
-                new EquipmentDefinition { id = "iron-armor", kind = ItemKind.IronArmor, slot = EquipmentSlot.Armor, type = EquipmentType.HeavyArmor, defense = 1 }
+                new EquipmentDefinition { id = "iron-armor", kind = ItemKind.IronArmor, slot = EquipmentSlot.Armor, type = EquipmentType.HeavyArmor, defense = 1 },
+                // Trial values for testing the eight independent slots.
+                new EquipmentDefinition { id = "iron-sword-shield", kind = ItemKind.SwordShield, slot = EquipmentSlot.MainHand, type = EquipmentType.SwordShield, ownerCharacterId = "knight", baseAttack = 2, strengthScaling = 6000, defense = 1 },
+                new EquipmentDefinition { id = "leather-helm", kind = ItemKind.LeatherHelm, slot = EquipmentSlot.Head, type = EquipmentType.LightArmor, health = 2 },
+                new EquipmentDefinition { id = "leather-gloves", kind = ItemKind.LeatherGloves, slot = EquipmentSlot.Hands, type = EquipmentType.LightArmor, strength = 1 },
+                new EquipmentDefinition { id = "leather-boots", kind = ItemKind.LeatherBoots, slot = EquipmentSlot.Feet, type = EquipmentType.LightArmor, agility = 1 },
+                new EquipmentDefinition { id = "copper-ring", kind = ItemKind.CopperRing, slot = EquipmentSlot.Ring1, type = EquipmentType.Ring, wisdom = 1 }
             }
         };
         static EquipmentDefinition Sword(string id, ItemKind kind, int attack, int str, int agi = 0, int wis = 0) =>
             new EquipmentDefinition { id = id, kind = kind, ownerCharacterId = "knight", slot = EquipmentSlot.MainHand,
-                type = EquipmentType.Sword, baseAttack = attack, strengthScaling = str, agilityScaling = agi, wisdomScaling = wis };
+                type = EquipmentType.SwordShield, baseAttack = attack, strengthScaling = str, agilityScaling = agi, wisdomScaling = wis };
     }
 
     [Serializable]
@@ -92,8 +98,9 @@ namespace MagicCave.Prototype
     public sealed class CharacterState
     {
         public string templateId;
+        public int equipmentLayoutVersion;
         public AttributeKind secondary = AttributeKind.None;
-        public int talentStrength, talentAgility, talentHealth;
+        public int talentStrength, talentAgility, talentHealth, talentWisdom;
         public List<ItemUnit> equipment = new List<ItemUnit>();
         public List<AttributeModifier> modifiers = new List<AttributeModifier>();
     }
@@ -127,10 +134,10 @@ namespace MagicCave.Prototype
             UpgradeSecondaryRules(snapshot);
             UpgradeDefenseRules(snapshot);
             ValidateRules(snapshot);
-            if (secondary < AttributeKind.Strength || secondary > AttributeKind.Wisdom || secondary == snapshot.template.primary)
+            if (secondary != AttributeKind.None && (secondary < AttributeKind.Strength || secondary > AttributeKind.Wisdom || secondary == snapshot.template.primary))
                 throw new InvalidOperationException("请从主属性以外的两项属性中选择副属性。");
             run.attributeVersion = 1; run.attributeRules = snapshot;
-            run.character = new CharacterState { templateId = snapshot.template.id, secondary = secondary };
+            run.character = new CharacterState { templateId = snapshot.template.id, secondary = secondary, equipmentLayoutVersion = secondary == AttributeKind.None ? 1 : 0 };
             run.lootRandom = new RandomStream(RandomStream.Derive(run.seed, 0x4c4f4f04));
             run.health = run.MaxHealth;
         }
@@ -142,7 +149,7 @@ namespace MagicCave.Prototype
             {
                 strength = template.strength + state.talentStrength,
                 agility = template.agility + state.talentAgility,
-                wisdom = template.wisdom,
+                wisdom = template.wisdom + state.talentWisdom,
                 maxHealth = template.health + state.talentHealth + (run.level - 1) * template.healthPerLevel,
                 weapon = rules.Weapon(template.baseWeaponId)
             };
@@ -160,7 +167,7 @@ namespace MagicCave.Prototype
             stats.strength = Math.Max(0, stats.strength); stats.agility = Math.Max(0, stats.agility); stats.wisdom = Math.Max(0, stats.wisdom);
             stats.maxHealth = Math.Max(1, stats.maxHealth); stats.defense = Math.Max(0, stats.defense);
             stats.attack = Math.Max(0m, stats.weapon.Attack(stats.strength, stats.agility, stats.wisdom));
-            stats.secondaryMultiplier = 1m + stats.Value(state.secondary) * (decimal)SecondaryRate(rules) / 10000m;
+            stats.secondaryMultiplier = state.secondary == AttributeKind.None ? 1m : 1m + stats.Value(state.secondary) * (decimal)SecondaryRate(rules) / 10000m;
             return stats;
         }
         public static int SecondaryRate(AttributeRules rules) => rules.version == 1 && rules.secondaryPerPoint == 1000 ?
@@ -185,10 +192,15 @@ namespace MagicCave.Prototype
             else if (attribute == AttributeKind.Agility) stats.agility += amount;
             else if (attribute == AttributeKind.Wisdom) stats.wisdom += amount;
         }
+        public static bool IsRingSlot(EquipmentSlot slot) => slot >= EquipmentSlot.Ring1 && slot <= EquipmentSlot.Ring3;
+        public static EquipmentSlot EquippedSlot(RunData run, ItemUnit item) => item.equippedSlot >= 0 ? (EquipmentSlot)item.equippedSlot : run.attributeRules.Find(item.kind).slot;
+        public static bool FitsSlot(EquipmentDefinition definition, EquipmentSlot target) => definition != null &&
+            (definition.slot == target || definition.type == EquipmentType.Ring && IsRingSlot(target));
         public static string EquipLock(RunData run, ItemUnit item)
         {
             if (!run.UsesAttributes || item == null || !Rules.IsEquipment(item.kind)) return "此物品不能装备";
             var definition = run.attributeRules.Find(item.kind);
+            if (run.character.equipmentLayoutVersion == 1 && definition != null && definition.slot == EquipmentSlot.OffHand) return "剑盾作为一件武器装备；此局没有独立副手槽";
             if (definition == null || !run.attributeRules.template.allowedTypes.Contains(definition.type)) return "角色不允许此装备类型";
             if (definition.slot == EquipmentSlot.MainHand && definition.ownerCharacterId != run.character.templateId) return "武器绑定其他角色模板";
             return "";
@@ -219,21 +231,22 @@ namespace MagicCave.Prototype
             var ids = new HashSet<string>(); var kinds = new HashSet<ItemKind>();
             foreach (var e in rules.equipment)
                 if (e == null || string.IsNullOrEmpty(e.id) || !ids.Add(e.id) || !kinds.Add(e.kind) ||
-                    ((int)e.kind != -1 && !Rules.IsEquipment(e.kind)) || (int)e.slot < 0 || (int)e.slot > 2 ||
-                    (int)e.type < 0 || (int)e.type > 3 || e.baseAttack < 0 || e.baseAttack > 10000 ||
+                    ((int)e.kind != -1 && !Rules.IsEquipment(e.kind)) || (int)e.slot < 0 || (int)e.slot > 8 ||
+                    (int)e.type < 0 || (int)e.type > 5 || e.baseAttack < 0 || e.baseAttack > 10000 ||
                     e.strengthScaling < 0 || e.strengthScaling > 100000 || e.agilityScaling < 0 || e.agilityScaling > 100000 ||
                     e.wisdomScaling < 0 || e.wisdomScaling > 100000 || e.strength < 0 || e.strength > 1000 ||
                     e.agility < 0 || e.agility > 1000 || e.wisdom < 0 || e.wisdom > 1000 || e.health < 0 || e.health > 10000 || e.defense < 0 || e.defense > 1000 ||
                     e.slot != EquipmentSlot.MainHand && (e.baseAttack != 0 || e.strengthScaling != 0 || e.agilityScaling != 0 || e.wisdomScaling != 0) ||
-                    e.slot == EquipmentSlot.MainHand && (string.IsNullOrEmpty(e.ownerCharacterId) || e.type != EquipmentType.Sword) ||
+                    e.slot == EquipmentSlot.MainHand && (string.IsNullOrEmpty(e.ownerCharacterId) || e.type != EquipmentType.Sword && e.type != EquipmentType.SwordShield) ||
                     e.slot == EquipmentSlot.OffHand && e.type != EquipmentType.Shield ||
-                    e.slot == EquipmentSlot.Armor && e.type != EquipmentType.LightArmor && e.type != EquipmentType.HeavyArmor)
+                    (e.slot == EquipmentSlot.Armor || e.slot == EquipmentSlot.Head || e.slot == EquipmentSlot.Hands || e.slot == EquipmentSlot.Feet) && e.type != EquipmentType.LightArmor && e.type != EquipmentType.HeavyArmor ||
+                    IsRingSlot(e.slot) && e.type != EquipmentType.Ring)
                     throw new InvalidOperationException("装备模板配置无效。");
             var baseWeapon = rules.Weapon(rules.template.baseWeaponId);
             if (baseWeapon == null || baseWeapon.ownerCharacterId != rules.template.id || !rules.template.allowedTypes.Contains(baseWeapon.type))
                 throw new InvalidOperationException("缺少本角色的基础武器模板。");
             if (rules.Find(ItemKind.IronSword)?.ownerCharacterId != rules.template.id)
-                throw new InvalidOperationException("缺少本角色的保底铁剑模板。");
+                throw new InvalidOperationException("缺少本角色的保底剑盾模板。");
         }
     }
 

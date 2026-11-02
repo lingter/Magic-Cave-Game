@@ -58,7 +58,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 6054f81865fb04243ab7f3f3fe684251, type: 3}
   - {fileID: 21300000, guid: ee7fc86fbbd736644887686011d8b1d5, type: 3}
   - {fileID: 21300000, guid: 5c6bcb989ec935442a292d3074f32d9d, type: 3}
-  - {fileID: 21300000, guid: b4a24597c9f50164d9ac757a622232fe, type: 3}
+  - {fileID: 0}
   - {fileID: 21300000, guid: a023c4c572400b646ab1dd9b9f0be0ef, type: 3}
   - {fileID: 21300000, guid: 8139671dba989074abef012798a9372b, type: 3}
   - {fileID: 21300000, guid: e26bece3cbecd914e881d631a9ab6c74, type: 3}
@@ -66,4 +66,9 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  - {fileID: 21300000, guid: 0f301888806423748814c9abe1c1e53a, type: 3}
+  - {fileID: 21300000, guid: 2cee6f358cdcb6a4f8ebe7c3e4634c69, type: 3}
+  - {fileID: 21300000, guid: a9f8da3f9a5ebbb448ec013c936d73dc, type: 3}
+  - {fileID: 21300000, guid: d94125944897ca549928e0c1346b4294, type: 3}
+  - {fileID: 21300000, guid: 8ff092a5ca5596347bbfc48eda77085b, type: 3}
   spriteMaterial: {fileID: 2100000, guid: 7915ceb4fae27264e8cf6386e89aad17, type: 2}

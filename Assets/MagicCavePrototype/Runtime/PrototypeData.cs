@@ -7,7 +7,7 @@ namespace MagicCave.Prototype
     public enum Tile { Ground, Wall, Advance, Return }
     // Existing values are save identifiers. Append new kinds; never reorder them.
     public enum ItemKind { Ore, Crystal, Relic, Potion, IronSword, SwiftSword, InscribedSword, RefinedSword,
-        WoodShield, LeatherArmor, InsightArmor, IronArmor, StrengthEssence, AgilityEssence, WisdomEssence, AssaultPotion }
+        WoodShield, LeatherArmor, InsightArmor, IronArmor, StrengthEssence, AgilityEssence, WisdomEssence, AssaultPotion, SwordShield, LeatherHelm, LeatherGloves, LeatherBoots, CopperRing }
     public enum EnemyKind { Bat, Beetle, Boss }
     public enum EnemyRole { Roaming, ItemGuard, CorridorGuard }
     public enum ContainerKind { Legacy, Equipment, Treasure, Supplies }
@@ -58,6 +58,7 @@ namespace MagicCave.Prototype
         public ItemKind kind;
         public long acquiredTicks;
         public int acquisitionOrder;
+        public int equippedSlot = -1; // Actual ring position; old saves fall back to the definition slot.
     }
     [Serializable]
     public sealed class InventorySlot { public List<ItemUnit> units = new List<ItemUnit>(); }
@@ -66,6 +67,10 @@ namespace MagicCave.Prototype
     {
         public int id, x, y;
         public int guardEnemyId;
+        public int secondGuardEnemyId;
+        // New layouts remain connected with containers as permanent obstacles. Old saves keep their behavior.
+        public bool permanentObstacle;
+        public bool GuardedBy(int enemyId) => enemyId != 0 && (guardEnemyId == enemyId || secondGuardEnemyId == enemyId);
         public bool loose;
         // Missing fields in existing saves keep their already generated contents.
         public ContainerKind containerKind;
@@ -76,7 +81,7 @@ namespace MagicCave.Prototype
         public bool IsContainer => !loose;
         public bool HasContents => unopened || units.Count > 0;
         public bool IsOpened => IsContainer && (opened || !HasContents);
-        public bool BlocksMovement => IsContainer && HasContents;
+        public bool BlocksMovement => IsContainer && (permanentObstacle || HasContents);
     }
     [Serializable]
     public sealed class EnemyData
@@ -100,8 +105,8 @@ namespace MagicCave.Prototype
         public List<GroundLoot> loot = new List<GroundLoot>();
         public EnemyData LivingGuard(GroundLoot item)
         {
-            if (item.loose || item.guardEnemyId == 0) return null;
-            return enemies.Find(e => e.id == item.guardEnemyId && !e.defeated);
+            if (item.loose) return null;
+            return enemies.Find(e => item.GuardedBy(e.id) && !e.defeated);
         }
         public bool Inside(int x, int y) { return x >= 0 && y >= 0 && x < size && y < size; }
         public bool Border(int x, int y) { return x == 0 || y == 0 || x == size - 1 || y == size - 1; }
@@ -179,8 +184,8 @@ namespace MagicCave.Prototype
     [Serializable]
     public sealed class WarehouseData
     {
-        public int version = 3;
-        public long[] counts = new long[16];
+        public int version = 5;
+        public long[] counts = new long[Rules.ItemNames.Length];
         public List<StoredEquipment> equipment = new List<StoredEquipment>();
         public List<string> committedRuns = new List<string>();
         public long baseCapacity = 100;
@@ -189,8 +194,8 @@ namespace MagicCave.Prototype
 
     public static class Rules
     {
-        public static readonly string[] ItemNames = { "碎矿石", "晶簇", "古代遗物", "治疗药剂", "铁剑", "迅捷剑", "铭文剑", "精制长剑",
-            "木盾", "皮甲", "启迪皮甲", "铁甲", "力量精华", "敏捷精华", "智慧精华", "强攻药剂" };
+        public static readonly string[] ItemNames = { "碎矿石", "晶簇", "古代遗物", "治疗药剂", "铁制剑盾", "迅捷剑盾", "铭文剑盾", "精制剑盾",
+            "木盾", "皮甲", "启迪皮甲", "铁甲", "力量精华", "敏捷精华", "智慧精华", "强攻药剂", "制式剑盾", "皮盔", "皮护手", "皮靴", "铜戒指" };
         public static readonly string[] EnemyNames = { "洞穴蝠", "岩甲虫", "岩洞守卫" };
         public static readonly int[] EnemyHealth = { 18, 30, 80 };
         public static int Health(EnemyData enemy) { return EnemyHealth[(int)enemy.kind] + 4 * (enemy.Level - 1); }
@@ -198,7 +203,7 @@ namespace MagicCave.Prototype
         public static readonly string[] CardNames = { "打击", "防御", "整备", "重击", "连击", "盾击", "固守", "迅击", "战意", "稳守" };
         public static readonly int[] Costs = { 1, 1, 1, 2, 1, 1, 2, 1, 1, 1 };
         public static readonly string[] Effects = { "造成6点伤害", "获得5点格挡", "抽2张牌", "造成15点伤害", "两次4点伤害", "造成当前格挡等量伤害\n不消耗格挡", "获得12点格挡", "造成5点伤害，抽1张", "本回合每段攻击+2\n可叠加", "获得4点格挡，抽1张" };
-        public static bool IsEquipment(ItemKind kind) => kind >= ItemKind.IronSword && kind <= ItemKind.IronArmor;
+        public static bool IsEquipment(ItemKind kind) => kind >= ItemKind.IronSword && kind <= ItemKind.IronArmor || kind >= ItemKind.SwordShield && kind <= ItemKind.CopperRing;
         public static int StackLimit(ItemKind kind) => IsEquipment(kind) ? 1 : 20;
         public static int ArtIndex(ItemKind kind) => kind <= ItemKind.Potion ? (int)kind : IsEquipment(kind) ? 0 : 3;
         public static int Rarity(ItemKind kind) { return kind == ItemKind.Relic ? 2 : kind == ItemKind.Crystal ||

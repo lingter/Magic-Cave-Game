@@ -25,7 +25,8 @@ namespace MagicCave.Prototype
                 new ContainerDrop(ItemKind.SwiftSword, 1), new ContainerDrop(ItemKind.InscribedSword, 1) },
             equipment = new List<ContainerDrop> { new ContainerDrop(ItemKind.IronSword, 9),
                 new ContainerDrop(ItemKind.SwiftSword, 9), new ContainerDrop(ItemKind.InscribedSword, 9),
-                new ContainerDrop(ItemKind.RefinedSword, 3), new ContainerDrop(ItemKind.WoodShield, 6),
+                new ContainerDrop(ItemKind.RefinedSword, 3), new ContainerDrop(ItemKind.SwordShield, 6), new ContainerDrop(ItemKind.LeatherHelm, 3),
+                new ContainerDrop(ItemKind.LeatherGloves, 3), new ContainerDrop(ItemKind.LeatherBoots, 3), new ContainerDrop(ItemKind.CopperRing, 3),
                 new ContainerDrop(ItemKind.LeatherArmor, 6), new ContainerDrop(ItemKind.InsightArmor, 6), new ContainerDrop(ItemKind.IronArmor, 2) },
             treasure = new List<ContainerDrop> { new ContainerDrop(ItemKind.Ore, 60, 2, 4),
                 new ContainerDrop(ItemKind.Crystal, 30, 1, 2), new ContainerDrop(ItemKind.Relic, 10) },
@@ -72,7 +73,7 @@ namespace MagicCave.Prototype
 
         public static bool Open(RunData run, GroundLoot loot)
         {
-            if (!loot.unopened || loot.loose || run.Map.LivingGuard(loot) != null) return false;
+            if (!loot.unopened || loot.loose) return false;
             if (run.containerVersion != 1 || run.containerRandom == null || run.containerRandom.state == 0)
                 throw new InvalidOperationException("容器随机进度无效。");
             run.containerRules.Validate();

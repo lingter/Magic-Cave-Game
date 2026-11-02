@@ -66,6 +66,12 @@ namespace MagicCave.Prototype.Editor
             art.itemIcons = new Sprite[Rules.ItemNames.Length];
             var equipmentIcons = new[] { "Sword_Iron", "Sword_Swift", "Sword_Inscribed", "Sword_Refined", "Shield_Wood", "Armor_Leather", "Armor_Insight", "Armor_Iron" };
             for (int i = 0; i < equipmentIcons.Length; i++) art.itemIcons[(int)ItemKind.IronSword + i] = Sprite("Item_" + equipmentIcons[i]);
+            art.itemIcons[(int)ItemKind.SwordShield] = Sprite("Item_SwordShield");
+            art.itemIcons[(int)ItemKind.WoodShield] = null;
+            art.itemIcons[(int)ItemKind.LeatherHelm] = Sprite("Item_Helmet");
+            art.itemIcons[(int)ItemKind.LeatherGloves] = Sprite("Item_Gloves");
+            art.itemIcons[(int)ItemKind.LeatherBoots] = Sprite("Item_Boots");
+            art.itemIcons[(int)ItemKind.CopperRing] = Sprite("Item_Ring");
             art.spriteMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/ArtValidation/SpriteUnlit.mat");
             if (art.spriteMaterial == null)
             {

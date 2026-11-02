@@ -108,7 +108,7 @@ public class PrototypePlayTests
         Assert.That(Vector2.Distance(game.TownPosition, new Vector2(17, 5)), Is.LessThan(.02f));
         yield return Click(1060, 478);
         Assert.That(game.Store.Warehouse.town.talents[1], Is.EqualTo(1));
-        Assert.That(game.Store.Warehouse.town.gold, Is.EqualTo(90));
+        Assert.That(game.Store.Warehouse.town.gold, Is.EqualTo(120));
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "knight-talents.png")); yield return null; yield return null;
         driver.keyState = new KeyboardState(Key.Escape); yield return null;
         driver.keyState = new KeyboardState(); yield return null;
@@ -151,10 +151,10 @@ public class PrototypePlayTests
         var character = typeof(PrototypeGame).GetMethod("SeedCharacter", BindingFlags.Instance | BindingFlags.NonPublic);
         foreach (char value in "-2026") character.Invoke(game, new object[] { value });
         yield return Click(1050, 292); Assert.That(game.Panel, Is.EqualTo(GamePanel.NewRun));
-        yield return Click(430, 320); yield return Click(840, 582);
+        yield return Click(840, 547);
         Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Explore)); Assert.That(game.Run.seed, Is.EqualTo(-2026));
         yield return Click(1010, 687); Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
-        yield return Click(1080, 609); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
+        yield return Click(1090, 136); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
         game.BeginBattle(game.Run.Map.enemies[0]); yield return null;
         var card = game.Combat.hand.FindIndex(c => Rules.Costs[(int)c] <= game.Combat.energy);
         float width = Mathf.Min(170, 1120f / game.Combat.hand.Count - 10);
@@ -166,33 +166,32 @@ public class PrototypePlayTests
         Assert.That(game.Combat.playerTurn, Is.True); Assert.That(game.Combat.enemyTurn, Is.EqualTo(1));
     }
     [UnityTest]
-    public IEnumerator WisdomDepartureCharacterEquipmentAndDynamicCardTextWork()
+    public IEnumerator DepartureWithoutSecondaryEquipmentAndDynamicCardTextWork()
     {
-        string captures = Path.GetFullPath("Captures/CharacterAttributes"); Directory.CreateDirectory(captures);
+        string captures = Path.GetFullPath("Captures/InventoryStars"); Directory.CreateDirectory(captures);
         typeof(PrototypeGame).GetMethod("RequestNewRun", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
         yield return null; yield return null;
         Assert.That(game.Panel, Is.EqualTo(GamePanel.NewRun));
-        yield return Click(830, 583); Assert.That(game.Run, Is.Null, "Departure requires an explicit secondary choice.");
-        yield return Click(825, 320);
+        Assert.That(game.Run, Is.Null);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "departure-wisdom.png")); yield return null; yield return null;
-        yield return Click(830, 583);
-        Assert.That(game.Run.character.secondary, Is.EqualTo(AttributeKind.Wisdom));
+        yield return Click(830, 547);
+        Assert.That(game.Run.character.secondary, Is.EqualTo(AttributeKind.None));
         Assert.That(game.Run.UsesAttributes, Is.True);
         var run = game.Run;
         run.inventory[0].units.Add(new ItemUnit { id = run.nextItemId++, kind = ItemKind.InscribedSword, acquiredTicks = 100, acquisitionOrder = run.nextAcquisitionOrder++ });
         run.inventory[1].units.Add(new ItemUnit { id = run.nextItemId++, kind = ItemKind.WisdomEssence, acquiredTicks = 100, acquisitionOrder = run.nextAcquisitionOrder++ });
         driver.keyState = new KeyboardState(Key.B); yield return null; yield return null;
         driver.keyState = new KeyboardState(); yield return null;
-        yield return Click(141, 256);
-        Assert.That(game.Panel, Is.EqualTo(GamePanel.Character));
+        yield return Click(630, 225);
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "equipment-comparison.png")); yield return null; yield return null;
-        yield return Click(1090, 598);
+        yield return Click(1090, 618);
         Assert.That(run.character.equipment.Single().kind, Is.EqualTo(ItemKind.InscribedSword));
         yield return Click(1090, 136);
         driver.keyState = new KeyboardState(Key.B); yield return null; yield return null;
         driver.keyState = new KeyboardState(); yield return null;
-        yield return Click(362, 256); Assert.That(CharacterAttributes.Calculate(run).wisdom, Is.EqualTo(6));
-        yield return Click(1080, 609);
+        yield return Click(755, 225); yield return Click(650, 604); Assert.That(CharacterAttributes.Calculate(run).wisdom, Is.EqualTo(6));
+        yield return Click(1090, 136);
         driver.keyState = new KeyboardState(Key.C); yield return null; yield return null;
         driver.keyState = new KeyboardState(); yield return null;
         Assert.That(game.Panel, Is.EqualTo(GamePanel.Character));
@@ -204,12 +203,12 @@ public class PrototypePlayTests
         game.BeginBattle(new EnemyData { kind = EnemyKind.Boss }); yield return null;
         game.Combat.hand.Clear(); game.Combat.hand.Add(CardKind.Heavy);
         double damage = CombatNumbers.Damage(run, CardKind.Heavy);
-        Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成14点物理伤害"));
-        Assert.That(damage, Is.EqualTo(14));
+        Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成13点物理伤害"));
+        Assert.That(damage, Is.EqualTo(13));
         game.Combat.spirit = 2;
-        Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成16点物理伤害"));
+        Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成15点物理伤害"));
         game.Combat.enemyBlock = 5;
-        Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成16点物理伤害"));
+        Assert.That(game.CardDescription(run, CardKind.Heavy, true), Is.EqualTo("造成15点物理伤害"));
         Assert.That(game.CardDescription(run, CardKind.Defend, true), Is.EqualTo("获得10点格挡"));
         var defense = run.attributeRules.DefenseCard(CardKind.Defend);
         defense.source = DefenseScalingSource.ActualAttack; defense.multiplier = 10000;
@@ -220,7 +219,7 @@ public class PrototypePlayTests
         Assert.That(game.EquipInventory(0), Does.Contain("探索")); Assert.That(game.UseInventory(1), Is.False);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "battle-dynamic-damage.png")); yield return null; yield return null;
         game.Store.SaveCheckpoint(run); game.ContinueRun(); yield return null;
-        Assert.That(game.Run.character.secondary, Is.EqualTo(AttributeKind.Wisdom));
+        Assert.That(game.Run.character.secondary, Is.EqualTo(AttributeKind.None));
         Assert.That(game.Run.character.equipment.Single().kind, Is.EqualTo(ItemKind.InscribedSword));
     }
 
@@ -404,6 +403,11 @@ public class PrototypePlayTests
         driver.keyState = new KeyboardState(key); yield return new WaitForSeconds(0.1f);
         driver.keyState = new KeyboardState(); yield return null;
         Assert.That(Vector2.Distance(position, new Vector2(game.Run.x, game.Run.y)), Is.GreaterThan(0.1f));
+        // One grid step moves outside door range; step back before testing interaction.
+        Key back = direction.x > 0 ? Key.A : direction.x < 0 ? Key.D : direction.y > 0 ? Key.S : Key.W;
+        driver.keyState = new KeyboardState(back); yield return new WaitForSeconds(.1f);
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(position));
         driver.mouseState = new MouseState();
         yield return OpenNearbyReturnDoor(); Assert.That(game.Panel, Is.EqualTo(GamePanel.Return));
         yield return Click(640, 290); Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Home));
@@ -440,7 +444,7 @@ public class PrototypePlayTests
         Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Battle)); Assert.That(game.Run.CellY, Is.EqualTo(8));
     }
     [UnityTest]
-    public IEnumerator ThreeContainerKindsReplaceArtOnOpeningAndKeepExistingEmptyBehavior()
+    public IEnumerator ThreeContainerKindsKeepSolidOpenedArtAfterEmptying()
     {
         game.StartNewRun(12345); game.Run.mapIndex = 4;
         string captures = Path.GetFullPath("Captures/ContainerLoot"); Directory.CreateDirectory(captures);
@@ -448,7 +452,7 @@ public class PrototypePlayTests
         game.Run.x = 6; game.Run.y = 5;
         for (int i = 0; i < 3; i++)
             map.loot.Add(new GroundLoot { id = game.Run.nextEntityId++, x = 3 + i * 3, y = 6,
-                containerKind = (ContainerKind)(i + 1), unopened = true });
+                containerKind = (ContainerKind)(i + 1), unopened = true, permanentObstacle = true });
         for (int i = 0; i < 20; i++) game.Run.inventory[i].units.Add(new ItemUnit { id = game.Run.nextItemId++, kind = ItemKind.IronSword });
         typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
         yield return null;
@@ -471,8 +475,8 @@ public class PrototypePlayTests
             game.Run.x = loot.x; InteractWithLoot(loot); yield return null;
             var visual = game.GetComponentsInChildren<SpriteRenderer>().Single(r => r.name == "Item " + loot.id);
             Assert.That(visual.sprite, Is.SameAs(game.artSet.openedLoot[(int)loot.containerKind - 1]));
-            Assert.That(visual.color.a, Is.EqualTo(0.25f)); Assert.That(visual.GetComponent<Collider2D>(), Is.Null);
-            Assert.That(visual.GetComponent<PrototypeTarget>(), Is.Null); Assert.That(map.CanTraverse(loot.x, loot.y), Is.True);
+            Assert.That(visual.color.a, Is.EqualTo(1f)); Assert.That(visual.GetComponent<Collider2D>(), Is.Not.Null);
+            Assert.That(visual.GetComponent<PrototypeTarget>(), Is.Null); Assert.That(map.CanTraverse(loot.x, loot.y), Is.False);
         }
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "three-containers-empty.png")); yield return null; yield return null;
         yield return Click(1010, 687);
@@ -481,13 +485,13 @@ public class PrototypePlayTests
     }
 
     [UnityTest]
-    public IEnumerator DiscoveredLootAndLabelRemainVisibleAfterLeavingViewUntilPickup()
+    public IEnumerator DiscoveredLootRemainsVisibleAndCanBeOpenedWithALivingGuard()
     {
         game.StartNewRun(12345); var map = game.Run.Map; var loot = map.loot[0];
-        var guard = map.LivingGuard(loot);
-        if (guard != null) Growth.FinishVictory(game.Run, guard);
+        var defeatedGuard = map.enemies.Single(e => e.id == loot.guardEnemyId);
+        defeatedGuard.defeated = true;
         Array.Clear(map.revealed, 0, map.revealed.Length);
-        game.Run.x = loot.x; game.Run.y = loot.y; MapGenerator.Reveal(game.Run);
+        game.Run.x = defeatedGuard.x; game.Run.y = defeatedGuard.y; MapGenerator.Reveal(game.Run);
         typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true }); yield return null;
         var target = game.GetComponentsInChildren<PrototypeTarget>(true).Single(t => t.kind == TargetKind.Loot && t.id == loot.id);
         var undiscovered = map.loot.First(l => !map.Known(l.x, l.y));
@@ -499,15 +503,16 @@ public class PrototypePlayTests
         float half = (map.size - 1) / 2f;
         var label = game.GetComponentsInChildren<TextMesh>(true).Single(t => t.transform.parent.name == "Item label" && Vector3.Distance(t.transform.parent.localPosition, new Vector3(loot.x - half, loot.y - half, 0)) < 0.01f);
         Assert.That(label.gameObject.activeInHierarchy, Is.True);
-        game.Run.x = loot.x; game.Run.y = loot.y; MapGenerator.Reveal(game.Run);
+        game.Run.x = defeatedGuard.x; game.Run.y = defeatedGuard.y; MapGenerator.Reveal(game.Run);
         InteractWithLoot(loot); yield return null;
+        Assert.That(map.LivingGuard(loot), Is.Not.Null);
         Assert.That(loot.units.Count, Is.Zero); Assert.That(Inventory.Items(game.Run).Count, Is.GreaterThan(0));
         Assert.That(game.GetComponentsInChildren<PrototypeTarget>(true).Any(t => t.kind == TargetKind.Loot && t.id == loot.id && t.gameObject.activeInHierarchy), Is.False);
         var remnant = game.GetComponentsInChildren<SpriteRenderer>(true).Single(r => r.name == "Item " + loot.id && r.gameObject.activeInHierarchy);
-        Assert.That(remnant.color.a, Is.EqualTo(0.25f));
-        Assert.That(remnant.GetComponent<Collider2D>(), Is.Null);
+        Assert.That(remnant.color.a, Is.EqualTo(1f));
+        Assert.That(remnant.GetComponent<Collider2D>(), Is.Not.Null);
         Assert.That(remnant.sprite, Is.EqualTo(game.artSet.openedLoot[ContainerLoot.OpenArtIndex(loot)]));
-        Assert.That(map.CanTraverse(loot.x, loot.y), Is.True);
+        Assert.That(map.CanTraverse(loot.x, loot.y), Is.False);
     }
 
     [UnityTest]
@@ -785,5 +790,108 @@ public class PrototypePlayTests
         game.StartNewRun(12345); yield return null; yield return null;
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "pixel-exploration.png"));
         yield return null; yield return null;
+    }
+    Vector2 GuiPoint(float x, float y)
+    {
+        float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
+        return new Vector2((Screen.width - 1280 * scale) / 2 + x * scale, Screen.height - ((Screen.height - 720 * scale) / 2 + y * scale));
+    }
+    IEnumerator DragItem(float fromX, float fromY, float toX, float toY)
+    {
+        driver.mouseState = new MouseState { position = GuiPoint(fromX, fromY), buttons = 1 }; yield return null; yield return null;
+        driver.mouseState = new MouseState { position = GuiPoint(toX, toY), buttons = 1 }; yield return null; yield return null;
+        driver.mouseState = new MouseState { position = GuiPoint(toX, toY) }; yield return null; yield return null; yield return null;
+    }
+    [UnityTest]
+    public IEnumerator InventoryDragEquipsUnequipsMovesAndCancels()
+    {
+        game.StartNewRun(12345); yield return null;
+        var run = game.Run;
+        var item = new ItemUnit { id = run.nextItemId++, kind = ItemKind.IronSword, acquiredTicks = 100, acquisitionOrder = run.nextAcquisitionOrder++ };
+        run.inventory[0].units.Add(item);
+        driver.keyState = new KeyboardState(Key.B); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        yield return DragItem(630, 225, 135, 335);
+        Assert.That(run.character.equipment.Single(), Is.SameAs(item)); Assert.That(run.inventory[0].units, Is.Empty);
+        yield return DragItem(135, 335, 755, 225);
+        Assert.That(run.character.equipment, Is.Empty); Assert.That(run.inventory[1].units.Single(), Is.SameAs(item));
+        yield return DragItem(755, 225, 875, 225);
+        Assert.That(run.inventory[1].units, Is.Empty); Assert.That(run.inventory[2].units.Single(), Is.SameAs(item));
+        yield return DragItem(875, 225, 35, 690);
+        Assert.That(run.inventory[2].units.Single(), Is.SameAs(item));
+        PrototypeStore.ValidateRun(run);
+        string captures = Path.GetFullPath("Captures/InventoryStars"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "inventory-grid.png")); yield return null; yield return null;
+    }
+    [UnityTest]
+    public IEnumerator GridMovementUsesFirstHeldKeyAndNeverMovesDiagonally()
+    {
+        game.StartNewRun(12345); game.Run.mapIndex = 4; game.Run.x = 6; game.Run.y = 5;
+        yield return null;
+        driver.keyState = new KeyboardState(Key.D); yield return null; yield return null;
+        driver.keyState = new KeyboardState(Key.D, Key.W); yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.y, Is.EqualTo(5)); Assert.That(game.Run.x, Is.GreaterThan(6));
+        Assert.That(game.Run.x, Is.EqualTo(Mathf.Round(game.Run.x)));
+        float x = game.Run.x;
+        driver.keyState = new KeyboardState(Key.W); yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.x, Is.EqualTo(x)); Assert.That(game.Run.y, Is.GreaterThan(5));
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
+        var stopped = new Vector2(game.Run.x, game.Run.y); yield return new WaitForSeconds(.4f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(stopped));
+        // Two events in one input update must retain actual event order, rather than WASD priority.
+        game.Run.x = 6; game.Run.y = 5;
+        InputSystem.QueueStateEvent(driver.keyboard, new KeyboardState(Key.D));
+        InputSystem.QueueStateEvent(driver.keyboard, new KeyboardState(Key.D, Key.W));
+        InputSystem.Update(); driver.keyState = new KeyboardState(Key.D, Key.W);
+        yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.y, Is.EqualTo(5)); Assert.That(game.Run.x, Is.GreaterThan(6));
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
+        game.Run.x = 6; game.Run.y = 5; game.Run.Map.Set(7, 5, Tile.Wall);
+        driver.keyState = new KeyboardState(Key.D); yield return null; yield return null;
+        driver.keyState = new KeyboardState(Key.D, Key.W); yield return new WaitForSeconds(.4f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(new Vector2(6, 5)), "A blocked first direction cannot slide along a later key.");
+    }
+    [UnityTest]
+    public IEnumerator ThreeRegionStarMapCanPurchaseWisdomAndPersist()
+    {
+        game.VisitTown(1); float deadline = Time.time + 15;
+        while (game.TownPage != TownPage.Mentor && Time.time < deadline) yield return null;
+        Assert.That(game.TownPage, Is.EqualTo(TownPage.Mentor));
+        yield return Click(255, 500); yield return Click(1060, 470);
+        Assert.That(game.Store.Warehouse.town.talents[7], Is.EqualTo(1));
+        Assert.That(new PrototypeStore(folder).Warehouse.town.talents[7], Is.EqualTo(1));
+        Assert.That(game.Store.Warehouse.town.talentPoints, Is.EqualTo(2));
+        yield return Click(1060, 520);
+        Assert.That(game.Store.Warehouse.town.talents[7], Is.Zero);
+        Assert.That(game.Store.Warehouse.town.talentPoints, Is.EqualTo(3));
+        yield return Click(1060, 470);
+        string captures = Path.GetFullPath("Captures/InventoryStars"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "three-attribute-stars.png")); yield return null; yield return null;
+    }
+    [UnityTest]
+    public IEnumerator PaperDollSupportsEightDragTargetsAndThreeIndependentRings()
+    {
+        game.StartNewRun(12345); yield return null;
+        var run = game.Run;
+        var kinds = new[] { ItemKind.SwordShield, ItemKind.LeatherHelm, ItemKind.LeatherArmor, ItemKind.LeatherGloves, ItemKind.LeatherBoots,
+            ItemKind.CopperRing, ItemKind.CopperRing, ItemKind.CopperRing, ItemKind.CopperRing };
+        for (int i = 0; i < kinds.Length; i++) run.inventory[i].units.Add(new ItemUnit { id = run.nextItemId++, kind = kinds[i], acquiredTicks = 100, acquisitionOrder = run.nextAcquisitionOrder++ });
+        driver.keyState = new KeyboardState(Key.B); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        var targets = new[] { new Vector2(135, 330), new Vector2(305, 245), new Vector2(475, 330), new Vector2(135, 445), new Vector2(475, 445),
+            new Vector2(135, 550), new Vector2(305, 550), new Vector2(475, 550) };
+        for (int i = 0; i < 8; i++) yield return DragItem(630 + i % 5 * 123, 225 + i / 5 * 88, targets[i].x, targets[i].y);
+        Assert.That(run.character.equipment.Count, Is.EqualTo(8));
+        Assert.That(run.character.equipment.Count(i => run.attributeRules.Find(i.kind).type == EquipmentType.Ring), Is.EqualTo(3));
+        yield return DragItem(999, 313, 305, 245); // A ring cannot replace a helmet.
+        Assert.That(run.character.equipment.Count, Is.EqualTo(8)); Assert.That(run.inventory[8].units.Count, Is.EqualTo(1));
+        PrototypeStore.ValidateRun(run);
+        typeof(PrototypeGame).GetMethod("Notify", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { "" });
+        yield return Click(145, 255);
+        Assert.That((bool)typeof(PrototypeGame).GetField("attributeDetails", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(game), Is.True);
+        yield return Click(490, 233);
+        Assert.That((bool)typeof(PrototypeGame).GetField("attributeDetails", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(game), Is.False);
+        string captures = Path.GetFullPath("Captures/InventoryStars"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "eight-slot-equipment.png")); yield return null; yield return null;
     }
 }
