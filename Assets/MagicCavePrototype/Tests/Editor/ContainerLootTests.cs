@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using MagicCave.Prototype;
@@ -7,6 +7,45 @@ using UnityEngine;
 
 public sealed class ContainerLootTests
 {
+    [Test]
+    public void ExcavatedFloorsKeepEndpointsGuardsRoutesAndSaveSnapshotAcrossSeeds()
+    {
+        for (int seed = 0; seed < 100; seed++)
+        {
+            var run = MapGenerator.NewRun(seed, AttributeKind.None, false);
+            Assert.That(run.maps.Count, Is.EqualTo(8));
+            foreach (var map in run.maps.Skip(4).Take(3))
+            {
+                string context = "Seed " + seed + " floor " + map.number;
+                Assert.That(map.dugTerrain, Is.True, context);
+                Assert.That(MapGenerator.ValidateTerrain(map, out _, out _), Is.True, context);
+                Assert.That(map.loot.Count, Is.EqualTo(10), context);
+                Assert.That(map.loot.All(l => MapGenerator.IsRoadEnd(map, new Vector2Int(l.x, l.y))), Is.True, context);
+                Assert.That(map.loot.Count(l => l.combatApproach), Is.EqualTo(8), context);
+                Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.True, context);
+                Assert.That(map.loot.All(l => l.guardEnemyId == 0 && l.secondGuardEnemyId == 0), Is.True, context);
+                Assert.That(map.enemies.All(e => e.Level == map.number), Is.True, context);
+                foreach (var loot in map.loot)
+                {
+                    foreach (var other in map.loot.Where(l => l.id != loot.id && l.containerKind == loot.containerKind))
+                        Assert.That(MapGenerator.Manhattan(new Vector2Int(loot.x, loot.y), new Vector2Int(other.x, other.y)),
+                            Is.GreaterThanOrEqualTo(MapGenerator.MinimumSameContainerDistance), context);
+                    foreach (var guard in map.enemies.Where(e => loot.GuardedBy(e.id)))
+                        Assert.That(MapGenerator.Manhattan(new Vector2Int(loot.x, loot.y), new Vector2Int(guard.x, guard.y)), Is.InRange(1, 4), context);
+                    loot.unopened = false; loot.opened = true; loot.units.Clear();
+                }
+                Assert.That(MapGenerator.ValidateContainerRoutes(map), Is.True, context);
+            }
+            Assert.That(run.maps.Last().enemies.Single().kind, Is.EqualTo(EnemyKind.Boss));
+            Assert.That(run.maps.Last().enemies.Single().Level, Is.EqualTo(8));
+            run.mapIndex = 6; run.x = run.Map.spawnX; run.y = run.Map.spawnY;
+            var copy = Rules.Copy(run); PrototypeStore.ValidateRun(copy);
+            Assert.That(copy.Map.cells, Is.EqualTo(run.Map.cells));
+            Assert.That(copy.terrainVersion, Is.EqualTo(1));
+            Assert.That(MapGenerator.Visible(copy, 0, 0), Is.False);
+        }
+    }
+
     RunData New(int seed = 12345) => MapGenerator.NewRun(seed, AttributeKind.Agility, false);
     static GroundLoot Accessible(RunData run, ContainerKind kind)
     {
@@ -14,10 +53,62 @@ public sealed class ContainerLootTests
         return loot;
     }
 
+    // Explicit old-save fixture: new generation never writes enemy/container links.
+    static GroundLoot LegacyLinkedContainer(RunData run)
+    {
+        var loot = run.Map.loot.First(l => l.combatApproach);
+        var guards = run.Map.enemies.Where(e => e.role == EnemyRole.ItemGuard &&
+            MapGenerator.Manhattan(new Vector2Int(e.x, e.y), new Vector2Int(loot.x, loot.y)) == 1).ToArray();
+        loot.guardEnemyId = guards[0].id; loot.secondGuardEnemyId = guards[1].id;
+        return loot;
+    }
+
+    [Test]
+    public void GuardLayoutRejectsOpenApproachAndAllowsDiggingBypass()
+    {
+        var map = new MapData { size = 9, cells = Enumerable.Repeat((int)Tile.Wall, 81).ToArray(), spawnX = 1, spawnY = 3 };
+        for (int x = 1; x <= 6; x++) map.Set(x, 3, Tile.Ground);
+        var loot = new GroundLoot { x = 6, y = 3, permanentObstacle = true, combatApproach = true };
+        map.loot.Add(loot);
+        var guard = new EnemyData { x = 5, y = 3, role = EnemyRole.ItemGuard };
+        map.enemies.Add(guard);
+        Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.True, "One blocking guard is enough.");
+        map.Set(4, 2, Tile.Ground); map.Set(5, 2, Tile.Ground); map.Set(6, 2, Tile.Ground);
+        Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.False, "A second accessible interaction side bypasses the guard.");
+        map.enemies.Add(new EnemyData { x = 6, y = 2, role = EnemyRole.ItemGuard });
+        Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.True);
+        guard.defeated = true;
+        Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.False, "Defeating a blocker opens a route without any lock.");
+    }
+
+    [Test]
+    public void GeneratedApproachesRequireCombatAndBecomeReachableAfterVictory()
+    {
+        for (int seed = 0; seed < 100; seed++)
+        {
+            var run = MapGenerator.NewRun(seed, AttributeKind.None, false);
+            foreach (var map in run.maps.Take(7))
+            {
+                Array.Fill(map.revealed, true);
+                var start = new Vector2Int(map.spawnX, map.spawnY);
+                var guards = map.enemies.Where(e => e.role == EnemyRole.ItemGuard).ToArray();
+                foreach (var enemy in map.enemies.Where(e => e.role != EnemyRole.ItemGuard)) enemy.defeated = true;
+                foreach (var loot in map.loot.Where(l => l.combatApproach))
+                {
+                    var target = new Vector2Int(loot.x, loot.y);
+                    Assert.That(MapGenerator.Path(map, start, target, true), Is.Null, "Seed " + seed + " floor " + map.number);
+                    foreach (var guard in guards) guard.defeated = true;
+                    Assert.That(MapGenerator.Path(map, start, target, true), Is.Not.Null);
+                    foreach (var guard in guards) guard.defeated = false;
+                }
+            }
+        }
+    }
+
     [Test]
     public void OneRemainingGuardDoesNotBlockSavedContainerPickup()
     {
-        var run = New(); var loot = run.Map.loot.First(l => l.guardEnemyId != 0);
+        var run = New(); var loot = LegacyLinkedContainer(run);
         Assert.That(loot.secondGuardEnemyId, Is.Not.Zero.And.Not.EqualTo(loot.guardEnemyId));
         run.Map.enemies.Single(e => e.id == loot.guardEnemyId).defeated = true;
         var copy = Rules.Copy(run); var saved = copy.Map.loot.Single(l => l.id == loot.id);
@@ -37,7 +128,9 @@ public sealed class ContainerLootTests
             var run = New(seed);
             foreach (var map in run.maps.Take(4))
             {
-                Assert.That(map.loot.Count(l => l.guardEnemyId != 0 && l.secondGuardEnemyId != 0), Is.EqualTo(8), "Seed " + seed);
+                Assert.That(map.loot.Count(l => l.combatApproach), Is.EqualTo(8), "Seed " + seed);
+                Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.True, "Seed " + seed);
+                Assert.That(map.loot.All(l => l.guardEnemyId == 0 && l.secondGuardEnemyId == 0), Is.True);
                 foreach (var loot in map.loot)
                 {
                     Assert.That(loot.permanentObstacle, Is.True);
@@ -69,7 +162,7 @@ public sealed class ContainerLootTests
     [Test]
     public void BothLivingGuardsAllowDirectOpenAndPickupWithoutReroll()
     {
-        var run = New(); var loot = run.Map.loot.First(l => l.guardEnemyId != 0);
+        var run = New(); var loot = LegacyLinkedContainer(run);
         Assert.That(run.Map.enemies.Count(e => loot.GuardedBy(e.id) && !e.defeated), Is.EqualTo(2));
         uint state = run.containerRandom.state;
         Assert.That(ContainerLoot.Open(run, loot), Is.True);

@@ -9,7 +9,7 @@ using UnityEngine.InputSystem.LowLevel;
 namespace MagicCave.Prototype
 {
     public enum GameScreen { Home, Explore, Battle, Rewards, Settlement, Result, Warehouse }
-    public enum GamePanel { None, Inventory, Deck, Draw, Discard, Pause, Return, NewRun, Leave, Character }
+    public enum GamePanel { None, Inventory, Deck, Draw, Discard, Pause, Return, NewRun, Leave, Character, Merchant }
 
     public sealed partial class PrototypeGame : MonoBehaviour
     {
@@ -100,7 +100,7 @@ namespace MagicCave.Prototype
             { Panel = GamePanel.None; departurePreview = null; return; }
             if (!townEscapeHandled && keyboard != null && keyboard.escapeKey.wasPressedThisFrame && Run != null && ScreenMode != GameScreen.Result)
             {
-                if (Panel == GamePanel.Inventory || Panel == GamePanel.Deck || Panel == GamePanel.Draw || Panel == GamePanel.Discard || Panel == GamePanel.Character) Panel = GamePanel.None;
+                if (Panel == GamePanel.Inventory || Panel == GamePanel.Deck || Panel == GamePanel.Draw || Panel == GamePanel.Discard || Panel == GamePanel.Character || Panel == GamePanel.Merchant) Panel = GamePanel.None;
                 else if (Panel == GamePanel.Pause) Panel = GamePanel.None;
                 else if (Panel == GamePanel.None) { Panel = GamePanel.Pause; CancelRoute(); }
             }
@@ -132,7 +132,7 @@ namespace MagicCave.Prototype
                 {
                     CancelRoute();
                     if (hover.kind == TargetKind.Ground) Navigate(hover, false);
-                    else if (hover.kind == TargetKind.Enemy || hover.kind == TargetKind.Loot || hover.kind == TargetKind.Door) Navigate(hover, true);
+                    else if (hover.kind == TargetKind.Enemy || hover.kind == TargetKind.Loot || hover.kind == TargetKind.Door || hover.kind == TargetKind.Merchant) Navigate(hover, true);
                 }
                 else if (mouse.rightButton.wasPressedThisFrame)
                 {
@@ -144,29 +144,56 @@ namespace MagicCave.Prototype
                     }
                 }
             }
-            if (gridDirection != Vector2Int.zero)
+            if (gridDirection != Vector2Int.zero) CancelRoute();
+            AdvanceExploreMovement(3f * Mathf.Min(Time.deltaTime, .1f));
+        }
+        // Saves and collision targets stay on grid centers; presentation traverses each segment at constant speed.
+        Vector2 exploreVisualPosition, exploreMotionTarget;
+        RunData exploreVisualRun;
+        MapData exploreVisualMap;
+        void ResetExploreMotion()
+        {
+            exploreVisualRun = Run; exploreVisualMap = Run == null ? null : Run.Map;
+            exploreVisualPosition = exploreMotionTarget = Run == null ? Vector2.zero : new Vector2(Run.x, Run.y);
+        }
+        void EnsureExploreMotion()
+        {
+            if (Run != exploreVisualRun || Run != null && (Run.Map != exploreVisualMap || new Vector2(Run.x, Run.y) != exploreMotionTarget)) ResetExploreMotion();
+        }
+        bool ExploreAtGridCenter
+        {
+            get { EnsureExploreMotion(); return exploreVisualPosition == exploreMotionTarget; }
+        }
+        void AdvanceExploreMovement(float distance)
+        {
+            EnsureExploreMotion();
+            while (distance > .000001f)
             {
-                CancelRoute();
-                if (Time.time >= nextExploreStep)
+                float remaining = Vector2.Distance(exploreVisualPosition, exploreMotionTarget);
+                if (remaining > 0)
                 {
-                    MoveGrid(new Vector2Int(Run.CellX, Run.CellY) + gridDirection);
-                    nextExploreStep = Time.time + 1f / 3f;
+                    float travel = Mathf.Min(distance, remaining);
+                    exploreVisualPosition = Vector2.MoveTowards(exploreVisualPosition, exploreMotionTarget, travel);
+                    distance -= travel;
+                    if (exploreVisualPosition != exploreMotionTarget) return;
                 }
-            }
-            else if (route.Count > 0 && Time.time >= nextExploreStep)
-            {
-                var target = route[0];
-                if (MoveGrid(target))
+                if (route.Count == 0 && pendingInteraction.kind != TargetKind.None)
                 {
-                    route.RemoveAt(0); nextExploreStep = Time.time + 1f / 3f;
-                    if (route.Count == 0 && pendingInteraction.kind != TargetKind.None)
-                    { var interaction = pendingInteraction; pendingInteraction = default; Interact(interaction); }
+                    var interaction = pendingInteraction; pendingInteraction = default; Interact(interaction); return;
                 }
-                else CancelRoute();
+                if (gridDirection != Vector2Int.zero)
+                {
+                    if (!MoveGrid(new Vector2Int(Run.CellX, Run.CellY) + gridDirection)) return;
+                }
+                else if (route.Count > 0)
+                {
+                    var target = route[0]; route.RemoveAt(0);
+                    if (!MoveGrid(target)) { CancelRoute(); return; }
+                }
+                else return;
+                // Unused travel carries into the next segment, avoiding a frame of slowdown at every cell.
             }
         }
-        // Logical and rendered positions both remain on cell centers, including after key release.
-        float nextExploreStep, nextTownStep;
         Vector2Int gridDirection;
         readonly List<Key> heldMovementKeys = new List<Key>();
         static readonly Key[] movementKeys = { Key.W, Key.UpArrow, Key.S, Key.DownArrow, Key.A, Key.LeftArrow, Key.D, Key.RightArrow };
@@ -177,27 +204,27 @@ namespace MagicCave.Prototype
             heldMovementKeys.RemoveAll(key => !keyboard[key].isPressed);
             // Input events preserve press order across frames and within a single frame.
             foreach (var key in movementKeys.Where(key => keyboard[key].isPressed && !heldMovementKeys.Contains(key))) heldMovementKeys.Add(key);
-            var previous = gridDirection;
             var first = heldMovementKeys.Count == 0 ? Key.None : heldMovementKeys[0];
             gridDirection = first == Key.W || first == Key.UpArrow ? Vector2Int.up :
                 first == Key.S || first == Key.DownArrow ? Vector2Int.down :
                 first == Key.A || first == Key.LeftArrow ? Vector2Int.left :
                 first == Key.D || first == Key.RightArrow ? Vector2Int.right : Vector2Int.zero;
-            if (previous != gridDirection && previous == Vector2Int.zero) { nextExploreStep = 0; nextTownStep = 0; }
         }
         bool MoveGrid(Vector2Int target)
         {
             var origin = new Vector2Int(Run.CellX, Run.CellY);
             if (Math.Abs(target.x - origin.x) + Math.Abs(target.y - origin.y) > 1 || !Run.Map.CanTraverse(target.x, target.y)) return false;
-            Run.x = target.x; Run.y = target.y;
-            if (origin != target) { facing = target - origin; MapGenerator.Reveal(Run); RefreshVisibility(); }
+            Run.x = target.x; Run.y = target.y; exploreMotionTarget = target;
+            if (origin != target)
+            {
+                facing = target - origin;
+                bool wasLit = TorchLight.IsLit(Run); TorchLight.Step(Run);
+                MapGenerator.Reveal(Run); RefreshVisibility();
+                if (wasLit && !TorchLight.IsLit(Run)) Notify("火把耐久耗尽，已熄灭");
+            }
             return true;
         }
-        bool Fits(float x, float y)
-        {
-            return Run.Map.CanStand(x, y);
-        }
-        bool InRange(Target target) { return Math.Abs(Run.CellX - target.x) + Math.Abs(Run.CellY - target.y) <= 1; }
+        bool InRange(Target target) { return ExploreAtGridCenter && Math.Abs(Run.CellX - target.x) + Math.Abs(Run.CellY - target.y) <= 1; }
         void CancelRoute() { route.Clear(); pendingInteraction = default; }
         void Navigate(Target target, bool interact)
         {
@@ -215,6 +242,8 @@ namespace MagicCave.Prototype
             float half = (Run.Map.size - 1) * 0.5f;
             int x = Mathf.FloorToInt(world.x + half + 0.5f), y = Mathf.FloorToInt(world.y + half + 0.5f);
             if (!Run.Map.Known(x, y)) return default;
+            if (Run.Map.hasMerchant && Run.Map.merchantX == x && Run.Map.merchantY == y)
+                return new Target { kind = TargetKind.Merchant, x = x, y = y };
             foreach (var enemy in Run.Map.enemies)
                 if (!enemy.defeated && enemy.x == x && enemy.y == y) return new Target { kind = TargetKind.Enemy, x = x, y = y, id = enemy.id };
             foreach (var loot in Run.Map.loot)
@@ -225,8 +254,10 @@ namespace MagicCave.Prototype
         Target NearbyTarget()
         {
             if (hover.kind == TargetKind.Wall && InRange(hover)) return default;
-            if ((hover.kind == TargetKind.Enemy || hover.kind == TargetKind.Loot || hover.kind == TargetKind.Door) && InRange(hover)) return hover;
+            if ((hover.kind == TargetKind.Enemy || hover.kind == TargetKind.Loot || hover.kind == TargetKind.Door || hover.kind == TargetKind.Merchant) && InRange(hover)) return hover;
             var options = new List<Target>();
+            if (Run.Map.hasMerchant && Run.Map.Known(Run.Map.merchantX, Run.Map.merchantY))
+                options.Add(new Target { kind = TargetKind.Merchant, x = Run.Map.merchantX, y = Run.Map.merchantY });
             foreach (var enemy in Run.Map.enemies)
                 if (!enemy.defeated && Run.Map.Known(enemy.x, enemy.y)) options.Add(new Target { kind = TargetKind.Enemy, id = enemy.id, x = enemy.x, y = enemy.y });
             foreach (var loot in Run.Map.loot)
@@ -261,6 +292,9 @@ namespace MagicCave.Prototype
             CancelRoute();
             switch (target.kind)
             {
+                case TargetKind.Merchant:
+                    if (ToothMerchant.InRange(Run)) Panel = GamePanel.Merchant;
+                    break;
                 case TargetKind.Wall:
                     if (Run.Map.At(target.x, target.y) != Tile.Wall || Run.Map.Border(target.x, target.y)) return;
                     Run.Map.Set(target.x, target.y, Tile.Ground); MapGenerator.Reveal(Run); BuildWorld(false); Notify("墙体已破坏"); break;
@@ -275,7 +309,7 @@ namespace MagicCave.Prototype
                     if (enemy != null && !enemy.defeated) BeginBattle(enemy); break;
                 case TargetKind.Door:
                     if (Run.Map.At(target.x, target.y) == Tile.Return) Panel = GamePanel.Return;
-                    else if (Run.Map.At(target.x, target.y) == Tile.Advance && Run.mapIndex < 4)
+                    else if (Run.Map.At(target.x, target.y) == Tile.Advance && Run.mapIndex < Run.maps.Count - 1)
                     {
                         Run.mapIndex++; Run.x = Run.Map.spawnX; Run.y = Run.Map.spawnY;
                         MapGenerator.Reveal(Run); BuildWorld(true); Notify("进入地图 " + (Run.mapIndex + 1));
@@ -292,7 +326,7 @@ namespace MagicCave.Prototype
             var next = MapGenerator.NewRun(seed, AttributeKind.None);
             TownRules.Apply(Store.Warehouse.town, next); PrototypeStore.ValidateRun(next);
             Store.DiscardCheckpoint(); Run = next; Combat = null; Panel = GamePanel.None;
-            facing = Vector2.down; nextExploreStep = 0; attributeDetails = false;
+            facing = Vector2.down; attributeDetails = false;
             equipmentPreviewSlot = selectedBagSlot = dropSlot = -1; ClearItemDrag();
             message = ""; messageUntil = 0; hover = default; highlighted = default;
             ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
@@ -307,7 +341,7 @@ namespace MagicCave.Prototype
         {
             Panel = GamePanel.None;
             if (Store.Session.pending != null) { Run = Store.Session.pending.run; ScreenMode = GameScreen.Settlement; return; }
-            Run = Store.Continue(); Run.x = Run.CellX; Run.y = Run.CellY; nextExploreStep = 0;
+            Run = Store.Continue(); Run.x = Run.CellX; Run.y = Run.CellY;
             equipmentPreviewSlot = selectedBagSlot = dropSlot = -1; ClearItemDrag(); ScreenMode = GameScreen.Explore; CancelRoute(); BuildWorld(true);
         }
         void SaveAndLeave()
@@ -331,7 +365,13 @@ namespace MagicCave.Prototype
         }
         public bool UseInventory(int slot)
         {
-            return ScreenMode == GameScreen.Explore && Run != null && Inventory.Use(Run, slot);
+            if (ScreenMode != GameScreen.Explore || Run == null || !Inventory.Use(Run, slot)) return false;
+            RefreshVisibility(); return true;
+        }
+        public bool ExtinguishTorch()
+        {
+            if (ScreenMode != GameScreen.Explore || Run == null || !TorchLight.Extinguish(Run)) return false;
+            RefreshVisibility(); Notify("火把已熄灭，不能再次点燃"); return true;
         }
         void PlayCard(int index)
         {
@@ -346,7 +386,9 @@ namespace MagicCave.Prototype
             {
                 Run.totalExperience += 5; BeginSettlement(true); return;
             }
+            int gainedTeeth = ToothMerchant.VictoryTeeth(Combat.enemy);
             Growth.FinishVictory(Run, Combat.enemy); Combat = null; NextReward();
+            Notify("战斗胜利 · 牙齿 +" + gainedTeeth + " · 余额 " + Run.teeth);
         }
         void NextReward()
         {

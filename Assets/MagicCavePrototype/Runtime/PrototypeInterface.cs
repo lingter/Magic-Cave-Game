@@ -134,11 +134,12 @@ namespace MagicCave.Prototype
         {
             if (Run == null) return;
             Box(new Rect(0, 0, 1280, 89));
-            Label(new Rect(25, 8, 260, 32), "地图 " + (Run.mapIndex + 1) + " / 5", headingStyle, Gold);
+            Label(new Rect(25, 8, 260, 32), "地图 " + (Run.mapIndex + 1) + " / " + Run.maps.Count, headingStyle, Gold);
             Label(new Rect(26, 39, 260, 21), "Seed: " + Run.seed, smallStyle, Cyan);
             Bar(new Rect(295, 19, 260, 32), Run.health / (float)Run.MaxHealth, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / " + Run.MaxHealth);
             Label(new Rect(586, 19, 250, 42), "等级 " + Run.level + "   经验 " + Run.experience + "/" + Rules.RequiredExperience(Run.level));
-            Label(new Rect(865, 20, 180, 38), "背包 " + Inventory.UsedSlots(Run) + " / 20");
+            Label(new Rect(865, 5, 235, 27), "牙齿 " + Run.teeth, textStyle, Gold);
+            Label(new Rect(865, 33, 180, 26), "背包 " + Inventory.UsedSlots(Run) + " / 20", smallStyle);
             Button(new Rect(1110, 17, 140, 41), "暂停 [Esc]", () => { Panel = GamePanel.Pause; CancelRoute(); });
             Label(new Rect(26, 61, 1220, 23), "WASD/方向键移动  左键寻路/交互  右键破墙  E交互  B背包  C角色  Tab卡组", smallStyle);
             Box(new Rect(0, 657, 1280, 63));
@@ -146,11 +147,10 @@ namespace MagicCave.Prototype
             var target = hover.kind != TargetKind.None ? hover : highlighted;
             if (target.kind == TargetKind.Wall)
             {
-                bool clue = MapGenerator.IsDoorHintWall(Run.Map, target.x, target.y);
-                hint = clue ? "门的线索 · " : "";
-                hint += Run.Map.Border(target.x, target.y) ? "边界墙 · 不可破坏" : "内部墙 · 右键接近并破坏";
+                hint = Run.Map.Border(target.x, target.y) ? "边界墙 · 不可破坏" : "内部墙 · 右键接近并破坏";
             }
             if (target.kind == TargetKind.Door) hint = Run.Map.At(target.x, target.y) == Tile.Advance ? "前进门 · 点击或E进入下一张" : "返回门 · 点击或E选择存档 / 结束游戏";
+            if (target.kind == TargetKind.Merchant) hint = "集齿者 · 用牙齿购买消耗品 · 点击 / E交易";
             if (target.kind == TargetKind.Enemy)
             {
                 var enemy = Run.Map.enemies.FirstOrDefault(e => e.id == target.id);
@@ -164,7 +164,8 @@ namespace MagicCave.Prototype
                     Rules.ItemNames[(int)loot.units[0].kind] + " ×" + loot.units.Count + " · " + Rules.RarityName(loot.units[0].kind)) +
                     (loot.unopened ? " · 点击 / E开启" : " · 点击 / E拾取");
             }
-            Label(new Rect(26, 671, 750, 38), hint, textStyle, Gold);
+            Label(new Rect(26, 671, 530, 38), hint, textStyle, Gold);
+            Button(new Rect(565, 669, 225, 36), TorchLight.IsLit(Run) ? "火把 " + Run.torchStepsRemaining + "步 · 熄灭" : "火把未点亮", () => ExtinguishTorch(), TorchLight.IsLit(Run));
             Button(new Rect(805, 669, 140, 36), "角色 [C]", () => { Panel = GamePanel.Character; CancelRoute(); });
             Button(new Rect(960, 669, 135, 36), "背包 [B]", () => { Panel = GamePanel.Inventory; CancelRoute(); });
             Button(new Rect(1110, 669, 140, 36), "卡组 [Tab]", () => { Panel = GamePanel.Deck; CancelRoute(); });
@@ -271,7 +272,7 @@ namespace MagicCave.Prototype
             string result = lastSettlement.failure ? "探索失败" : lastSettlement.run.bossDefeated ? "本局胜利" : "主动离开";
             Label(new Rect(360, 80, 650, 65), result, titleStyle, Gold);
             Box(new Rect(300, 179, 680, 380));
-            Label(new Rect(330, 207, 620, 88), "到达地图 " + (lastSettlement.run.mapIndex + 1) + " / 5    最终等级 " + lastSettlement.run.level + "\n本局获得经验 " + lastSettlement.run.totalExperience + "    带出物品 " + lastCarried.Count + " 件");
+            Label(new Rect(330, 207, 620, 88), "到达地图 " + (lastSettlement.run.mapIndex + 1) + " / " + lastSettlement.run.maps.Count + "    最终等级 " + lastSettlement.run.level + "\n本局获得经验 " + lastSettlement.run.totalExperience + "    带出物品 " + lastCarried.Count + " 件");
             Label(new Rect(330, 285, 620, 30), "金币 +" + TownRules.SettlementGold(lastSettlement) + "    声望 +" + TownRules.SettlementReputation(lastSettlement), smallStyle, Cyan);
             var groups = lastCarried.GroupBy(i => i.kind).OrderBy(g => g.Key).ToArray();
             int row = 0, pages = Math.Max(1, (groups.Length + 5) / 6); resultPage = Math.Min(resultPage, pages - 1);
@@ -288,6 +289,7 @@ namespace MagicCave.Prototype
             if (Panel == GamePanel.NewRun) { DrawDeparture(); return; }
             if (Panel == GamePanel.Character) { DrawCharacter(); return; }
             if (Panel == GamePanel.Inventory) { DrawInventory(); return; }
+            if (Panel == GamePanel.Merchant) { DrawMerchant(); return; }
             if (Panel == GamePanel.Deck || Panel == GamePanel.Draw || Panel == GamePanel.Discard) { DrawCardList(); return; }
             Box(new Rect(340, 155, 600, 420));
             switch (Panel)
@@ -313,6 +315,33 @@ namespace MagicCave.Prototype
                     break;
             }
         }
+        void DrawMerchant()
+        {
+            Box(new Rect(200, 140, 880, 430));
+            Label(new Rect(230, 160, 480, 43), "集齿者 · 消耗品", headingStyle, Gold);
+            Label(new Rect(740, 169, 300, 32), "牙齿余额 " + Run.teeth, textStyle, Gold);
+            Label(new Rect(230, 210, 820, 30), "每次购买一件，放入背包 · 牙齿仅供本局使用", smallStyle);
+            for (int i = 0; i < ToothMerchant.Goods.Length; i++)
+            {
+                var kind = ToothMerchant.Goods[i]; float y = 265 + i * 72;
+                string effect = kind == ItemKind.Potion ? "探索使用，恢复20生命" : kind == ItemKind.Torch ?
+                    "探索照明，耐久20步" : "探索使用，力量+2，持续2场战斗";
+                Label(new Rect(235, y, 185, 32), Rules.ItemNames[(int)kind], textStyle, Cyan);
+                Label(new Rect(425, y + 3, 380, 35), effect, smallStyle);
+                string reason = ToothMerchant.PurchaseLock(Run, kind);
+                Button(new Rect(820, y - 4, 220, 45), reason.Length == 0 ? ToothMerchant.Price(kind) + "颗牙齿 · 购买" :
+                    ToothMerchant.Price(kind) + "颗 · " + reason, () => BuyFromMerchant(kind), reason.Length == 0, true);
+            }
+            Label(new Rect(235, 491, 490, 30), "背包 " + Inventory.UsedSlots(Run) + "/20 · 同类消耗品可堆叠", smallStyle);
+            Button(new Rect(820, 506, 220, 42), "离开 [Esc]", () => Panel = GamePanel.None);
+        }
+        public string BuyFromMerchant(ItemKind kind)
+        {
+            if (ScreenMode != GameScreen.Explore || Panel != GamePanel.Merchant || !ExploreAtGridCenter) return "请先与集齿者交易";
+            string reason = ToothMerchant.Buy(Run, kind);
+            Notify(reason.Length == 0 ? "购得 " + Rules.ItemNames[(int)kind] + " · 牙齿 -" + ToothMerchant.Price(kind) : reason);
+            return reason;
+        }
         void DrawInventory()
         {
             Box(new Rect(60, 100, 1160, 550));
@@ -324,8 +353,9 @@ namespace MagicCave.Prototype
             else if (selectedBagSlot >= 0 && selectedBagSlot < Run.inventory.Count && Run.inventory[selectedBagSlot].units.Count > 0)
             {
                 int index = selectedBagSlot; var slot = Run.inventory[index]; var kind = slot.units[0].kind;
-                Label(new Rect(585, 548, 590, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count + " · " + Rules.RarityName(kind), smallStyle, Gold);
-                Button(new Rect(585, 588, 140, 32), "使用一件", () => { if (UseInventory(index)) Notify("已使用" + Rules.ItemNames[(int)kind]); }, ScreenMode == GameScreen.Explore && Inventory.CanUse(Run, index));
+                Label(new Rect(585, 548, 590, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count + " · " +
+                    (kind == ItemKind.Torch ? "耐久20步 · 熄灭后无法再点燃" : Rules.RarityName(kind)), smallStyle, Gold);
+                Button(new Rect(585, 588, 140, 32), kind == ItemKind.Torch ? "点燃一根" : "使用一件", () => { if (UseInventory(index)) Notify(kind == ItemKind.Torch ? "火把已点燃 · 照明距离<3 · 耐久20步" : "已使用" + Rules.ItemNames[(int)kind]); }, ScreenMode == GameScreen.Explore && Inventory.CanUse(Run, index));
                 Button(new Rect(740, 588, 140, 32), "丢弃…", () => { dropSlot = index; dropQuantity = 1; });
             }
             if (dropSlot >= 0 && Run.inventory[dropSlot].units.Count > 0)

@@ -36,6 +36,7 @@ MonoBehaviour:
   playerSide: {fileID: 21300000, guid: db5d24b283c447143aa102f3b0da9ea2, type: 3}
   square: {fileID: 21300000, guid: 88a7f13e64745394096655fb4072acde, type: 3}
   stairs: {fileID: 21300000, guid: 7754d25eed59dc74e9dd1962849b08b1, type: 3}
+  merchant: {fileID: 21300000, guid: 1f8b6885d72bc9644b60e642201faee8, type: 3}
   enemies:
   - {fileID: 21300000, guid: 7e1054607adcb2b4981fd0c47196649f, type: 3}
   - {fileID: 21300000, guid: 2cd45813b73d20543bc24c3794e2314d, type: 3}
@@ -50,9 +51,9 @@ MonoBehaviour:
   - {fileID: 21300000, guid: c960462427ec77f498ba91c199da0450, type: 3}
   - {fileID: 21300000, guid: 2faf09e3dd7b4d04b800085516276e6a, type: 3}
   itemIcons:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 21300000, guid: 51898a90a51fb844a80c5fb85401e653, type: 3}
+  - {fileID: 21300000, guid: d013462eb87ca7046bfb51def8d4d8bf, type: 3}
+  - {fileID: 21300000, guid: 1e4d5ab66df6e8e4db76b0a994e7d661, type: 3}
   - {fileID: 0}
   - {fileID: 21300000, guid: 43c89d9aa733b8a48b70a11283c83001, type: 3}
   - {fileID: 21300000, guid: 6054f81865fb04243ab7f3f3fe684251, type: 3}

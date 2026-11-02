@@ -26,7 +26,7 @@ namespace MagicCave.Prototype
         Texture2D markerTexture;
         Sprite markerSprite;
         static readonly Color FogColor = new Color(0.018f, 0.025f, 0.04f);
-        static readonly Color DoorHintColor = new Color(1, 0.77f, 0.25f);
+        static readonly Color ReturnDoorColor = new Color(1, 0.77f, 0.25f);
 
         public static int PixelScale => Mathf.Max(1, Mathf.FloorToInt(Screen.height / 180f));
         public static int SpriteOrder(float y) => 10000 - Mathf.RoundToInt(y * 100);
@@ -117,7 +117,7 @@ namespace MagicCave.Prototype
                 else if (tile == Tile.Advance || tile == Tile.Return)
                 {
                     var door = Pixel(tile == Tile.Advance ? "前进门" : "返回门", worldRoot.transform, artSet.stairs,
-                        World(x, y), -500, tile == Tile.Return ? DoorHintColor : new Color(0.55f, 1, 0.85f));
+                        World(x, y), -500, tile == Tile.Return ? ReturnDoorColor : new Color(0.55f, 1, 0.85f));
                     TargetTag(door.gameObject, TargetKind.Door, x, y);
                     WorldLabel(door.transform, door.name, 0.65f); visual.feature = door.gameObject;
                 }
@@ -160,6 +160,15 @@ namespace MagicCave.Prototype
                 objects.Add(new ObjectVisual { root = visual.gameObject, x = loot.x, y = loot.y });
                 objects.Add(new ObjectVisual { root = labelRoot, x = loot.x, y = loot.y });
             }
+            if (Run.Map.hasMerchant)
+            {
+                int x = Run.Map.merchantX, y = Run.Map.merchantY;
+                var merchant = Pixel("集齿者", worldRoot.transform, artSet.merchant ?? artSet.playerDown, World(x, y), SpriteOrder(y) + 1);
+                TargetTag(merchant.gameObject, TargetKind.Merchant, x, y);
+                WorldLabel(merchant.transform, "集齿者", 0.8f);
+                objects.Add(new ObjectVisual { root = merchant.gameObject, x = x, y = y });
+            }
+            if (snap) ResetExploreMotion(); else EnsureExploreMotion();
             actorVisual = Pixel("玩家", worldRoot.transform, artSet.playerDown, World(Run.x, Run.y), SpriteOrder(Run.y) + 2);
             actor = actorVisual.transform;
             actor.gameObject.AddComponent<BoxCollider2D>().size = Vector2.one * MapData.PlayerCollisionSize;
@@ -183,7 +192,7 @@ namespace MagicCave.Prototype
                     // Exploration can change a decorative corner into a fuller
                     // junction without rebuilding the terrain or discovering it.
                     if (showWall) visual.wall.sprite = wallTiles.Get(Run.Map, visual.x, visual.y);
-                    visual.wall.color = MapGenerator.IsDoorHintWall(Run.Map, visual.x, visual.y) ? DoorHintColor : Color.white;
+                    visual.wall.color = Color.white;
                 }
                 if (visual.wallCollider != null) visual.wallCollider.enabled = known;
                 if (visual.feature != null) visual.feature.SetActive(known || showWall);
@@ -197,12 +206,13 @@ namespace MagicCave.Prototype
             if (worldRoot != null && worldRoot.activeSelf != exploring) worldRoot.SetActive(exploring);
             if (!exploring || gameCamera == null || actor == null) return;
             ConfigurePixelCamera(gameCamera);
-            actor.position = PixelPosition(World(Run.x, Run.y));
-            actorVisual.sortingOrder = SpriteOrder(Run.y) + 2;
+            EnsureExploreMotion();
+            actor.position = PixelPosition(World(exploreVisualPosition.x, exploreVisualPosition.y));
+            actorVisual.sortingOrder = SpriteOrder(exploreVisualPosition.y) + 2;
             bool horizontal = Mathf.Abs(facing.x) > Mathf.Abs(facing.y);
             actorVisual.sprite = horizontal ? artSet.playerSide : facing.y > 0 ? artSet.playerUp : artSet.playerDown;
             actorVisual.flipX = horizontal && facing.x < 0;
-            cameraFocus = Vector3.SmoothDamp(cameraFocus, World(Run.x, Run.y), ref cameraVelocity, 0.1f);
+            cameraFocus = Vector3.SmoothDamp(cameraFocus, World(exploreVisualPosition.x, exploreVisualPosition.y), ref cameraVelocity, 0.1f);
             gameCamera.transform.SetPositionAndRotation(PixelPosition(cameraFocus) + Vector3.back * 10, Quaternion.identity);
             var mark = hover.kind != TargetKind.None ? hover : highlighted;
             hoverMarker.gameObject.SetActive(Panel == GamePanel.None && mark.kind != TargetKind.None);

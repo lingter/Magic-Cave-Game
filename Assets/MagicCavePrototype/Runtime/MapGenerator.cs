@@ -28,6 +28,7 @@ namespace MagicCave.Prototype
             };
             if (attributes)
             {
+                run.terrainVersion = secondary == AttributeKind.None ? 1 : 0;
                 CharacterAttributes.Initialize(run, secondary);
                 run.containerVersion = 1; run.containerRules = ContainerLootRules.Defaults(); run.containerRules.Validate();
                 run.containerRandom = new RandomStream(RandomStream.Derive(seed, 0x434f4e04));
@@ -36,12 +37,16 @@ namespace MagicCave.Prototype
             for (int i = 0; i < 4; i++) run.deck.Add(CardKind.Defend);
             run.deck.Add(CardKind.Prepare);
             for (int i = 0; i < 20; i++) run.inventory.Add(new InventorySlot());
-            for (int number = 1; number <= 4; number++) run.maps.Add(Generate(run, number));
-            var boss = EmptyMap(5, 13);
+            var merchantFloors = attributes ? ToothMerchant.PlanFloors(seed, run.terrainVersion == 1 ? 8 : 5) : null;
+            for (int number = 1; number <= 4; number++) run.maps.Add(Generate(run, number, merchantFloors != null && merchantFloors[number - 1]));
+            if (run.terrainVersion == 1)
+                for (int number = 5; number <= 7; number++) run.maps.Add(Generate(run, number, merchantFloors[number - 1]));
+            var boss = EmptyMap(run.maps.Count + 1, 13);
             for (int y = 1; y < 12; y++) for (int x = 1; x < 12; x++) boss.Set(x, y, Tile.Ground);
             for (int i = 0; i < boss.revealed.Length; i++) boss.revealed[i] = true;
             boss.spawnX = 6; boss.spawnY = 2;
-            boss.enemies.Add(new EnemyData { id = run.nextEntityId++, x = 6, y = 9, kind = EnemyKind.Boss });
+            boss.enemies.Add(new EnemyData { id = run.nextEntityId++, x = 6, y = 9, kind = EnemyKind.Boss,
+                level = run.containerVersion == 1 ? boss.number : 1 });
             run.maps.Add(boss);
             run.x = run.Map.spawnX; run.y = run.Map.spawnY;
             Reveal(run);
@@ -55,29 +60,34 @@ namespace MagicCave.Prototype
             return map;
         }
 
-        static MapData Generate(RunData run, int number)
+        static MapData Generate(RunData run, int number, bool merchant)
         {
             var random = run.mapRandom;
             for (int attempt = 0; attempt < 100; attempt++)
             {
-                var map = EmptyMap(number, 25);
-                var centers = new Vector2Int[9];
-                for (int row = 0; row < 3; row++) for (int col = 0; col < 3; col++)
+                var map = EmptyMap(number, number >= 5 ? 31 : 25);
+                map.dugTerrain = number >= 5;
+                if (map.dugTerrain) Excavate(map, random);
+                else
                 {
-                    int x = 4 + col * 8 + random.Range(-1, 2), y = 4 + row * 8 + random.Range(-1, 2);
-                    centers[row * 3 + col] = new Vector2Int(x, y);
-                    int width = random.Range(3, 6), height = random.Range(3, 6);
-                    for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++)
-                        map.Set(x - width / 2 + dx, y - height / 2 + dy, Tile.Ground);
-                }
-                for (int row = 0; row < 3; row++) for (int col = 0; col < 3; col++)
-                {
-                    var start = centers[row * 3 + col];
-                    if (col < 2) Corridor(map, start, centers[row * 3 + col + 1], random.Range(0, 2) == 0);
-                    if (row < 2) Corridor(map, start, centers[(row + 1) * 3 + col], random.Range(0, 2) == 0);
+                    var centers = new Vector2Int[9];
+                    for (int row = 0; row < 3; row++) for (int col = 0; col < 3; col++)
+                    {
+                        int x = 4 + col * 8 + random.Range(-1, 2), y = 4 + row * 8 + random.Range(-1, 2);
+                        centers[row * 3 + col] = new Vector2Int(x, y);
+                        int width = random.Range(3, 6), height = random.Range(3, 6);
+                        for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++)
+                            map.Set(x - width / 2 + dx, y - height / 2 + dy, Tile.Ground);
+                    }
+                    for (int row = 0; row < 3; row++) for (int col = 0; col < 3; col++)
+                    {
+                        var start = centers[row * 3 + col];
+                        if (col < 2) Corridor(map, start, centers[row * 3 + col + 1], random.Range(0, 2) == 0);
+                        if (row < 2) Corridor(map, start, centers[(row + 1) * 3 + col], random.Range(0, 2) == 0);
+                    }
                 }
                 if (!ValidateTerrain(map, out _, out _)) continue;
-                var candidates = OpenDoorCandidates(map);
+                var candidates = map.dugTerrain ? ExcavatedDoorCandidates(map) : OpenDoorCandidates(map);
                 random.Shuffle(candidates);
                 if (candidates.Count == 0) continue;
                 var advance = candidates[0];
@@ -88,7 +98,7 @@ namespace MagicCave.Prototype
                 if (!ValidateTerrain(map, out _, out _)) continue;
                 int entityId = run.nextEntityId, itemId = run.nextItemId;
                 uint lootState = run.UsesAttributes ? run.lootRandom.state : 0;
-                if (!PlaceObjects(run, map))
+                if (!PlaceObjects(run, map) || merchant && !ToothMerchant.Place(run, map))
                 {
                     run.nextEntityId = entityId; run.nextItemId = itemId;
                     if (run.UsesAttributes) run.lootRandom.state = lootState;
@@ -98,6 +108,43 @@ namespace MagicCave.Prototype
             }
             throw new InvalidOperationException("地图" + number + "在100次尝试后仍未通过验收。Seed=" + run.seed);
         }
+
+        // Grow connected passages through solid rock. Local widening makes irregular pockets,
+        // while untouched rock and the surviving branches retain narrow routes and dead ends.
+        static void Excavate(MapData map, RandomStream random)
+        {
+            var frontier = new List<Vector2Int> { new Vector2Int(map.size / 2, map.size / 2) };
+            int carved = 0;
+            while (frontier.Count > 0 && carved < 300)
+            {
+                int index = random.Range(0, frontier.Count);
+                var p = frontier[index]; frontier.RemoveAt(index);
+                if (p.x < 2 || p.y < 2 || p.x >= map.size - 2 || p.y >= map.size - 2 || map.Walkable(p.x, p.y)) continue;
+                int neighbors = Directions.Count(d => map.Walkable(p.x + d.x, p.y + d.y));
+                if (carved > 0 && neighbors != 1) continue;
+                map.Set(p.x, p.y, Tile.Ground); carved++;
+                foreach (var d in Directions) frontier.Add(p + d);
+            }
+            var pockets = new List<Vector2Int>();
+            for (int y = 3; y < map.size - 3; y++) for (int x = 3; x < map.size - 3; x++)
+                if (map.Walkable(x, y) && !IsRoadEnd(map, new Vector2Int(x, y))) pockets.Add(new Vector2Int(x, y));
+            random.Shuffle(pockets);
+            foreach (var p in pockets.Take(18 + (map.number - 5) * 6))
+                foreach (var d in Directions)
+                    if (random.Range(0, 100) < 65) map.Set(p.x + d.x, p.y + d.y, Tile.Ground);
+        }
+
+        static List<Vector2Int> ExcavatedDoorCandidates(MapData map)
+        {
+            var result = new List<Vector2Int>();
+            for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
+                if (map.At(x, y) == Tile.Wall && Directions.Any(d => map.Walkable(x + d.x, y + d.y)))
+                    result.Add(new Vector2Int(x, y));
+            return result;
+        }
+
+        public static bool IsRoadEnd(MapData map, Vector2Int p) => map.Walkable(p.x, p.y) &&
+            Directions.Count(d => map.Walkable(p.x + d.x, p.y + d.y)) == 1;
 
         static void Corridor(MapData map, Vector2Int start, Vector2Int end, bool horizontalFirst)
         {
@@ -169,7 +216,7 @@ namespace MagicCave.Prototype
                 }
                 if (thick) thickGroups++;
             }
-            return wallGroups >= 4 && thickGroups >= 2;
+            return map.dugTerrain || wallGroups >= 4 && thickGroups >= 2;
         }
 
         public static List<Vector2Int> DoorCandidates(MapData map)
@@ -235,7 +282,8 @@ namespace MagicCave.Prototype
         static EnemyData AddEnemy(RunData run, MapData map, Vector2Int p, EnemyRole role)
         {
             var enemy = new EnemyData { id = run.nextEntityId++, x = p.x, y = p.y,
-                kind = (EnemyKind)run.mapRandom.Range(0, 2), role = role };
+                kind = (EnemyKind)run.mapRandom.Range(0, 2), role = role,
+                level = run.containerVersion == 1 ? map.number : 1 };
             map.enemies.Add(enemy); return enemy;
         }
 
@@ -346,6 +394,7 @@ namespace MagicCave.Prototype
             for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
                 if (map.Walkable(x, y)) free.Add(new Vector2Int(x, y));
             run.mapRandom.Shuffle(free);
+            if (map.dugTerrain) free = free.OrderByDescending(p => IsRoadEnd(map, p)).ToList();
             var kinds = Enumerable.Repeat(ItemKind.IronSword, run.containerRules.equipmentCount)
                 .Concat(Enumerable.Repeat(ItemKind.Relic, run.containerRules.treasureCount))
                 .Concat(Enumerable.Repeat(ItemKind.Potion, run.containerRules.suppliesCount)).ToList();
@@ -358,23 +407,26 @@ namespace MagicCave.Prototype
                 bool placed = false;
                 foreach (var p in free)
                 {
-                    if (occupied.Contains(p) || IsLootCorner(map, p) != guarded || IsCorridor(map, p) ||
+                    if (occupied.Contains(p) || (map.dugTerrain ? !IsRoadEnd(map, p) : IsLootCorner(map, p) != guarded) || IsCorridor(map, p) ||
                         map.loot.Any(l => l.containerKind == PileContainer(kinds[i]) &&
                             Manhattan(p, new Vector2Int(l.x, l.y)) < MinimumSameContainerDistance)) continue;
                     var guards = Directions.Select(d => p + d)
                         .Where(q => map.Walkable(q.x, q.y) && !occupied.Contains(q)).ToList();
-                    if (guarded && guards.Count < 2) continue;
+                    // Cover every original interaction approach, rather than placing a fixed
+                    // number of nearby enemies which may leave a route around them.
+                    if (guarded && (guards.Count == 0 || Directions.Any(d =>
+                        map.Walkable(p.x + d.x, p.y + d.y) && occupied.Contains(p + d)))) continue;
                     var loot = AddPile(run, map, p, kinds[i]);
                     loot.permanentObstacle = true;
+                    loot.combatApproach = guarded;
                     occupied.Add(p);
                     if (guarded)
                     {
-                        run.mapRandom.Shuffle(guards);
-                        var first = AddEnemy(run, map, guards[0], EnemyRole.ItemGuard);
-                        var second = AddEnemy(run, map, guards[1], EnemyRole.ItemGuard);
-                        first.level = second.level = PileRarity(run, kinds[i], map.number) + 1;
-                        loot.guardEnemyId = first.id; loot.secondGuardEnemyId = second.id;
-                        occupied.Add(guards[0]); occupied.Add(guards[1]);
+                        foreach (var cell in guards)
+                        {
+                            AddEnemy(run, map, cell, EnemyRole.ItemGuard);
+                            occupied.Add(cell);
+                        }
                     }
                     placed = true; break;
                 }
@@ -383,20 +435,22 @@ namespace MagicCave.Prototype
             var corridor = free.Where(p => !occupied.Contains(p) && IsCorridor(map, p)).ToList();
             if (corridor.Count == 0) return false;
             AddEnemy(run, map, corridor[0], EnemyRole.CorridorGuard); occupied.Add(corridor[0]);
+            int roaming = 0;
             foreach (var p in free)
             {
-                if (map.enemies.Count == 19) break;
+                if (roaming == 2) break;
                 if (occupied.Contains(p) || IsCorridor(map, p)) continue;
                 AddEnemy(run, map, p, EnemyRole.Roaming); occupied.Add(p);
+                roaming++;
             }
-            if (map.enemies.Count != 19) return false;
+            if (roaming != 2) return false;
             foreach (var p in free)
             {
                 if (occupied.Contains(p) || IsCorridor(map, p) ||
                     map.enemies.Any(e => Manhattan(p, new Vector2Int(e.x, e.y)) < 3)) continue;
                 map.spawnX = p.x; map.spawnY = p.y;
                 // Containers never disappear. Reject layouts which need opening one to create a route.
-                return ValidateContainerRoutes(map);
+                return ValidateContainerRoutes(map) && ValidateCombatApproaches(map);
             }
             return false;
         }
@@ -405,6 +459,7 @@ namespace MagicCave.Prototype
         {
             var obstacles = new HashSet<Vector2Int>(map.loot.Where(l => l.BlocksMovement)
                 .Select(l => new Vector2Int(l.x, l.y)));
+            if (map.hasMerchant) obstacles.Add(new Vector2Int(map.merchantX, map.merchantY));
             var origin = new Vector2Int(map.spawnX, map.spawnY);
             if (!map.Walkable(origin.x, origin.y) || obstacles.Contains(origin)) return false;
             var reached = new HashSet<Vector2Int> { origin };
@@ -426,7 +481,35 @@ namespace MagicCave.Prototype
                 if ((map.At(x, y) == Tile.Advance || map.At(x, y) == Tile.Return) &&
                     !Directions.Any(d => reached.Contains(p + d))) return false;
             }
-            return map.loot.All(l => Directions.Any(d => reached.Contains(new Vector2Int(l.x, l.y) + d)));
+            return map.loot.All(l => Directions.Any(d => reached.Contains(new Vector2Int(l.x, l.y) + d))) &&
+                (!map.hasMerchant || Directions.Any(d => reached.Contains(new Vector2Int(map.merchantX, map.merchantY) + d)));
+        }
+
+        // Validate only generated terrain. Digging a new approach is an allowed bypass.
+        // Check with item guards blocking and other enemies removed, so an unrelated
+        // corridor/roaming enemy cannot accidentally make an unguarded layout pass.
+        public static bool ValidateCombatApproaches(MapData map)
+        {
+            var blocked = new HashSet<Vector2Int>(map.loot.Where(l => l.BlocksMovement)
+                .Select(l => new Vector2Int(l.x, l.y)));
+            blocked.UnionWith(map.enemies.Where(e => e.role == EnemyRole.ItemGuard && !e.defeated)
+                .Select(e => new Vector2Int(e.x, e.y)));
+            if (map.hasMerchant) blocked.Add(new Vector2Int(map.merchantX, map.merchantY));
+            var origin = new Vector2Int(map.spawnX, map.spawnY);
+            if (!map.Walkable(origin.x, origin.y) || blocked.Contains(origin)) return false;
+            var reached = new HashSet<Vector2Int> { origin };
+            var queue = new Queue<Vector2Int>(); queue.Enqueue(origin);
+            while (queue.Count > 0)
+            {
+                var p = queue.Dequeue();
+                foreach (var d in Directions)
+                {
+                    var next = p + d;
+                    if (map.Walkable(next.x, next.y) && !blocked.Contains(next) && reached.Add(next)) queue.Enqueue(next);
+                }
+            }
+            return map.loot.Where(l => l.combatApproach).All(l =>
+                !Directions.Any(d => reached.Contains(new Vector2Int(l.x, l.y) + d)));
         }
 
         public static ItemKind DrawWeapon(RunData run, bool commonOnly = false)
@@ -476,17 +559,11 @@ namespace MagicCave.Prototype
         }
         public static bool Visible(RunData run, int x, int y)
         {
-            return run.mapIndex == 4 || Math.Abs(run.CellX - x) + Math.Abs(run.CellY - y) <= 1;
+            return run.mapIndex == run.maps.Count - 1 || InSightRange(run.CellX, run.CellY, x, y, TorchLight.IsLit(run));
         }
-        public static bool IsDoorHintWall(MapData map, int x, int y)
+        public static bool InSightRange(int originX, int originY, int x, int y, bool torchLit)
         {
-            if (!map.Known(x, y) || map.At(x, y) != Tile.Wall) return false;
-            foreach (var direction in Directions)
-            {
-                Tile neighbor = map.At(x + direction.x, y + direction.y);
-                if (neighbor == Tile.Advance || neighbor == Tile.Return) return true;
-            }
-            return false;
+            return Math.Abs(originX - x) + Math.Abs(originY - y) < (torchLit ? 3 : 2);
         }
         public static bool EnsureSafePlayerPosition(RunData run)
         {
@@ -510,12 +587,14 @@ namespace MagicCave.Prototype
         }
         public static void Reveal(RunData run)
         {
-            foreach (var direction in Directions)
+            int radius = TorchLight.IsLit(run) ? 2 : 1;
+            for (int dx = -radius; dx <= radius; dx++)
+            for (int dy = -radius; dy <= radius; dy++)
             {
-                int x = run.CellX + direction.x, y = run.CellY + direction.y;
-                if (run.Map.Inside(x, y)) run.Map.revealed[run.Map.Index(x, y)] = true;
+                int x = run.CellX + dx, y = run.CellY + dy;
+                if (run.Map.Inside(x, y) && InSightRange(run.CellX, run.CellY, x, y, TorchLight.IsLit(run)))
+                    run.Map.revealed[run.Map.Index(x, y)] = true;
             }
-            if (run.Map.Inside(run.CellX, run.CellY)) run.Map.revealed[run.Map.Index(run.CellX, run.CellY)] = true;
         }
 
         public static List<Vector2Int> Path(MapData map, Vector2Int start, Vector2Int target, bool adjacent)

@@ -1,0 +1,107 @@
+{
+  "date": "2026-11-02",
+  "project": "E:/UnityProject/Magic Cave Game",
+  "transport": "Unity MCP",
+  "editMode": {
+    "result": {
+      "success": true,
+      "message": "Test job status retrieved.",
+      "error": null,
+      "data": {
+        "job_id": "e40d9593489345448b50d9e804d62a15",
+        "status": "succeeded",
+        "mode": "EditMode",
+        "started_unix_ms": 1793623411988,
+        "finished_unix_ms": 1793623422904,
+        "last_update_unix_ms": 1793623422904,
+        "progress": {
+          "completed": 137,
+          "total": 137,
+          "current_test_full_name": null,
+          "current_test_started_unix_ms": null,
+          "last_finished_test_full_name": "TownProgressionTests.WisdomStarPersistsAndAffectsOnlyNextRunSnapshot",
+          "last_finished_unix_ms": 1793623422825,
+          "stuck_suspected": false,
+          "editor_is_focused": false,
+          "run_in_background": true,
+          "focus_nudge_attempts": null,
+          "focus_nudge_limit": null,
+          "focus_nudge_status": null,
+          "blocked_reason": null,
+          "failures_so_far": [],
+          "failures_capped": false
+        },
+        "error": null,
+        "result": null
+      },
+      "hint": null
+    }
+  },
+  "playMode": {
+    "result": {
+      "success": true,
+      "message": "Test job status retrieved.",
+      "error": null,
+      "data": {
+        "job_id": "72e3b255aa6f46f1a7bc976cc6c63423",
+        "status": "succeeded",
+        "mode": "PlayMode",
+        "started_unix_ms": 1793623649065,
+        "finished_unix_ms": 1793623702685,
+        "last_update_unix_ms": 1793623702685,
+        "progress": {
+          "completed": 25,
+          "total": 25,
+          "current_test_full_name": null,
+          "current_test_started_unix_ms": null,
+          "last_finished_test_full_name": "PrototypePlayTests.WallStopsMovementRightClickBreaksAndLeftClickWalksThrough",
+          "last_finished_unix_ms": 1793623702652,
+          "stuck_suspected": false,
+          "editor_is_focused": false,
+          "run_in_background": true,
+          "focus_nudge_attempts": null,
+          "focus_nudge_limit": null,
+          "focus_nudge_status": null,
+          "blocked_reason": null,
+          "failures_so_far": [],
+          "failures_capped": false
+        },
+        "error": null,
+        "result": {
+          "mode": "PlayMode",
+          "summary": {
+            "total": 25,
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0,
+            "durationSeconds": 48.0553147,
+            "resultState": "Passed"
+          },
+          "results": []
+        }
+      },
+      "hint": null
+    }
+  },
+  "firstPlayModeRun": {
+    "jobId": "6b85310bdc2643b580dd6eee3682b795",
+    "passed": 24,
+    "failed": 1,
+    "failure": "DiscoveredRoomCompletesAllFourCornersWithoutDiscoveringHiddenContents: obsolete yellow door-adjacent wall assertion; updated to existing unmarked wall behavior, then reran all 25 tests."
+  },
+  "generation": {
+    "seeds": 100,
+    "newMaps": 300
+  },
+  "screenshots": [
+    "floor-5.png",
+    "floor-6.png",
+    "floor-7.png"
+  ],
+  "finalScene": {
+    "path": "Assets/Scenes/WorldMap.unity",
+    "isDirty": false
+  },
+  "consoleErrors": 0,
+  "buildPerformed": false
+}

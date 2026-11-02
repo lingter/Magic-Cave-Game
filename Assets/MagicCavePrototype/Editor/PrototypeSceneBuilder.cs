@@ -60,10 +60,14 @@ namespace MagicCave.Prototype.Editor
             for (int i = 0; i < 14; i++) art.walls[i] = Sprite("scene_wall_" + (i + 1));
             art.playerDown = Sprite("Player_Down"); art.playerUp = Sprite("Player_Up"); art.playerSide = Sprite("Player_LeftAndRight");
             art.square = Sprite("Whitebox"); art.stairs = Sprite("Downstair");
+            art.merchant = Sprite("Merchant_Merchant");
             art.enemies = new[] { Sprite("Enemy_2"), Sprite("Enemy_6"), Sprite("Enemy_9") };
             art.loot = new[] { Sprite("Chest_EquipmentChest"), Sprite("Chest_EquipmentChest"), Sprite("Chest_TreasureChest"), Sprite("Chest_ConsumablesBag") };
             art.openedLoot = new[] { Sprite("Chest_Open_Equipment"), Sprite("Chest_Open_Treasure"), Sprite("Chest_Open_Supplies") };
             art.itemIcons = new Sprite[Rules.ItemNames.Length];
+            art.itemIcons[(int)ItemKind.Ore] = Sprite("Item_Ore");
+            art.itemIcons[(int)ItemKind.Crystal] = Sprite("Item_Crystal");
+            art.itemIcons[(int)ItemKind.Relic] = Sprite("Item_Relic");
             var equipmentIcons = new[] { "Sword_Iron", "Sword_Swift", "Sword_Inscribed", "Sword_Refined", "Shield_Wood", "Armor_Leather", "Armor_Insight", "Armor_Iron" };
             for (int i = 0; i < equipmentIcons.Length; i++) art.itemIcons[(int)ItemKind.IronSword + i] = Sprite("Item_" + equipmentIcons[i]);
             art.itemIcons[(int)ItemKind.SwordShield] = Sprite("Item_SwordShield");

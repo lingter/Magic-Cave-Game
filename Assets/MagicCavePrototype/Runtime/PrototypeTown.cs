@@ -13,7 +13,7 @@ namespace MagicCave.Prototype
         public TownPage TownPage { get; private set; }
         public bool InGuild { get; private set; }
         public Vector2 TownPosition { get; private set; } = new Vector2(12, 11);
-        public bool TownWalking => townRoute.Count > 0;
+        public bool TownWalking => townRoute.Count > 0 || townDestination >= 0;
         readonly List<Vector2Int> townRoute = new List<Vector2Int>();
         readonly Dictionary<string, Texture2D> townTextures = new Dictionary<string, Texture2D>();
         int townDestination = -1, selectedTalent = 1;
@@ -108,6 +108,8 @@ namespace MagicCave.Prototype
         }
         int NearbyTown()
         {
+            EnsureTownMotion();
+            if (townVisualPosition != townMotionTarget) return -1;
             int closest = -1; float distance = 1.35f;
             for (int i = 0; i < TownStops.Length; i++)
             {
@@ -131,24 +133,39 @@ namespace MagicCave.Prototype
                 int nearby = NearbyTown(); if (nearby >= 0) OpenTownDestination(nearby);
                 return;
             }
-            var input = new Vector2Int(gridDirection.x, -gridDirection.y);
-            if (input != Vector2Int.zero)
+            if (gridDirection != Vector2Int.zero) { townRoute.Clear(); townDestination = -1; }
+            AdvanceTownMovement(4f * Mathf.Min(Time.deltaTime, .1f));
+        }
+        Vector2 townVisualPosition = new Vector2(12, 11), townMotionTarget = new Vector2(12, 11);
+        bool townVisualInGuild;
+        void EnsureTownMotion()
+        {
+            if (townMotionTarget != TownPosition || townVisualInGuild != InGuild)
+            { townVisualPosition = townMotionTarget = TownPosition; townVisualInGuild = InGuild; }
+        }
+        Vector2 TownDisplayPosition { get { EnsureTownMotion(); return townVisualPosition; } }
+        void AdvanceTownMovement(float distance)
+        {
+            EnsureTownMotion();
+            while (distance > .000001f)
             {
-                townRoute.Clear(); townDestination = -1;
-                if (Time.time >= nextTownStep)
+                float remaining = Vector2.Distance(townVisualPosition, townMotionTarget);
+                if (remaining > 0)
                 {
-                    var next = new Vector2Int(Mathf.RoundToInt(TownPosition.x), Mathf.RoundToInt(TownPosition.y)) + input;
-                    if (TownWalkable(next.x, next.y, InGuild)) TownPosition = next;
-                    townFacing = gridDirection; nextTownStep = Time.time + .25f;
+                    float travel = Mathf.Min(distance, remaining);
+                    townVisualPosition = Vector2.MoveTowards(townVisualPosition, townMotionTarget, travel); distance -= travel;
+                    if (townVisualPosition != townMotionTarget) return;
                 }
-            }
-            else if (townRoute.Count > 0 && Time.time >= nextTownStep)
-            {
-                var next = townRoute[0]; var delta = (Vector2)next - TownPosition;
+                if (townRoute.Count == 0 && townDestination >= 0) { OpenTownDestination(townDestination); return; }
+                var input = new Vector2Int(gridDirection.x, -gridDirection.y);
+                Vector2Int next;
+                if (input != Vector2Int.zero) next = Vector2Int.RoundToInt(TownPosition) + input;
+                else if (townRoute.Count > 0) { next = townRoute[0]; townRoute.RemoveAt(0); }
+                else return;
                 if (!TownWalkable(next.x, next.y, InGuild)) { townRoute.Clear(); townDestination = -1; return; }
+                var delta = (Vector2)next - TownPosition;
                 if (delta.sqrMagnitude > 0) townFacing = new Vector2(delta.x, -delta.y);
-                TownPosition = next; townRoute.RemoveAt(0); nextTownStep = Time.time + .25f;
-                if (townRoute.Count == 0 && townDestination >= 0) OpenTownDestination(townDestination);
+                TownPosition = townMotionTarget = next;
             }
         }
         Texture2D TownTexture(string name)
@@ -233,10 +250,10 @@ namespace MagicCave.Prototype
                     var old = GUI.color; GUI.color = Color.white;
                     Rect uv = new Rect(sprite.rect.x / sprite.texture.width, sprite.rect.y / sprite.texture.height, sprite.rect.width / sprite.texture.width, sprite.rect.height / sprite.texture.height);
                     if (horizontal && townFacing.x < 0) { uv.x += uv.width; uv.width = -uv.width; }
-                    GUI.DrawTextureWithTexCoords(TownCell(TownPosition.x, TownPosition.y), sprite.texture, uv); GUI.color = old;
+                    GUI.DrawTextureWithTexCoords(TownCell(TownDisplayPosition.x, TownDisplayPosition.y), sprite.texture, uv); GUI.color = old;
                 }
             }
-            var position = TownCell(TownPosition.x, TownPosition.y);
+            var position = TownCell(TownDisplayPosition.x, TownDisplayPosition.y);
             Fill(new Rect(position.center.x - 12, position.yMax + 1, 24, 3), "town player mark", Gold);
             int nearby = NearbyTown();
             if (nearby >= 0) Label(new Rect(30, 601, 810, 25), "[E] " + NearbyTownAction(nearby), buttonStyle, Gold);
@@ -296,7 +313,7 @@ namespace MagicCave.Prototype
         {
             var pending = Store.Session.pending != null;
             Label(new Rect(901, 139, 330, 44), "洞窟传送门", headingStyle, Gold);
-            Label(new Rect(901, 192, 330, 59), "5 张地图 · 本局成长独立\n新局应用当前骑士天赋。", smallStyle);
+            Label(new Rect(901, 192, 330, 59), "8 张地图 · 含3层新地貌\n新局应用当前骑士天赋。", smallStyle);
             Button(new Rect(901, 269, 330, 48), "开始新局", RequestNewRun, !pending, true);
             Button(new Rect(901, 332, 330, 48), pending ? "继续未完成结算" : "继续存档", ContinueRun, pending || Store.Session.checkpoint != null);
             Button(new Rect(901, 398, 330, 38), customSeed ? "☑ 自定义种子" : "□ 随机种子", () => { customSeed = !customSeed; seedFocused = customSeed; });
@@ -420,7 +437,7 @@ namespace MagicCave.Prototype
             if (warehousePage > 0)
             {
                 Button(new Rect(883, 181, 145, 31), "上一页", () => warehousePage--);
-                Button(new Rect(1045, 181, 162, 31), "下一页", () => warehousePage++, warehousePage < 2);
+                Button(new Rect(1045, 181, 162, 31), "下一页", () => warehousePage++, warehousePage < (Rules.ItemNames.Length - 4 + 5) / 6);
                 int first = 4 + (warehousePage - 1) * 6;
                 for (int i = first; i < Math.Min(first + 6, Rules.ItemNames.Length); i++)
                 {

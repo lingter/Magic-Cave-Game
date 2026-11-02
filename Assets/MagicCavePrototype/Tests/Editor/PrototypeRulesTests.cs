@@ -125,6 +125,84 @@ public class PrototypeRulesTests
         run.health = 51; Assert.That(Inventory.Heal(run, 0), Is.True); Assert.That(run.health, Is.EqualTo(60));
         Assert.That(run.inventory[0].units.Count, Is.EqualTo(1));
     }
+    [Test]
+    public void TorchRangeIsStrictManhattanRadiusThree()
+    {
+        int lit = 0, unlit = 0;
+        for (int x = -3; x <= 3; x++)
+        for (int y = -3; y <= 3; y++)
+        {
+            bool visible = MapGenerator.InSightRange(5, 7, 5 + x, 7 + y, true);
+            Assert.That(visible, Is.EqualTo(Math.Abs(x) + Math.Abs(y) < 3), "offset " + x + "," + y);
+            if (visible) lit++;
+            if (MapGenerator.InSightRange(5, 7, 5 + x, 7 + y, false)) unlit++;
+        }
+        Assert.That(lit, Is.EqualTo(13));
+        Assert.That(unlit, Is.EqualTo(5));
+    }
+    [Test]
+    public void TorchConsumesOneItemAndExpiresExactlyAtTwentySteps()
+    {
+        var run = New();
+        var loot = MapGenerator.AddLoot(run, run.Map, new Vector2Int(run.CellX, run.CellY), ItemKind.Torch, 2);
+        Inventory.Pickup(run, loot);
+        Assert.That(Inventory.Use(run, 0), Is.True);
+        Assert.That(run.inventory[0].units.Count, Is.EqualTo(1));
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(20));
+        Assert.That(Inventory.Use(run, 0), Is.False, "Cannot replace a burning torch.");
+        for (int i = 0; i < 19; i++) TorchLight.Step(run);
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(1));
+        Assert.That(TorchLight.IsLit(run), Is.True);
+        TorchLight.Step(run); TorchLight.Step(run);
+        Assert.That(run.torchStepsRemaining, Is.Zero);
+        Assert.That(Inventory.Use(run, 0), Is.True, "A separate unused torch can be lit.");
+        Assert.That(TorchLight.Extinguish(run), Is.True);
+        Assert.That(TorchLight.Extinguish(run), Is.False);
+        Assert.That(Inventory.Use(run, 0), Is.False, "Extinguished torches cannot be lit again.");
+        Assert.That(run.inventory[0].units, Is.Empty);
+    }
+    [Test]
+    public void TorchRevealsDiamondAndKeepsDiscoveryAfterExtinguishing()
+    {
+        var run = New(); run.x = 5; run.y = 5;
+        Array.Clear(run.Map.revealed, 0, run.Map.revealed.Length);
+        run.torchStepsRemaining = 20; MapGenerator.Reveal(run);
+        Assert.That(run.Map.revealed.Count(value => value), Is.EqualTo(13));
+        Assert.That(MapGenerator.Visible(run, 6, 6), Is.True);
+        Assert.That(MapGenerator.Visible(run, 7, 6), Is.False);
+        TorchLight.Extinguish(run); MapGenerator.Reveal(run);
+        Assert.That(MapGenerator.Visible(run, 6, 6), Is.False);
+        Assert.That(run.Map.Known(6, 6), Is.True);
+        run.x = 0; run.y = 0; run.torchStepsRemaining = 20;
+        Assert.DoesNotThrow(() => MapGenerator.Reveal(run));
+    }
+    [Test]
+    public void TorchDurabilityAndExtinguishingSurviveCheckpoint()
+    {
+        var run = New(); run.torchStepsRemaining = 13;
+        var store = new PrototypeStore(folder); store.SaveCheckpoint(run);
+        var restored = new PrototypeStore(folder).Continue();
+        Assert.That(restored.torchStepsRemaining, Is.EqualTo(13));
+        TorchLight.Extinguish(restored); store.SaveCheckpoint(restored);
+        Assert.That(new PrototypeStore(folder).Continue().torchStepsRemaining, Is.Zero);
+        restored.torchStepsRemaining = 21;
+        Assert.Throws<InvalidDataException>(() => PrototypeStore.ValidateRun(restored));
+        Assert.That(New().torchStepsRemaining, Is.Zero);
+        var defaults = ContainerLootRules.Defaults(); defaults.Validate();
+        Assert.That(defaults.supplies.Any(drop => drop.kind == ItemKind.Torch), Is.True);
+    }
+    [Test]
+    public void WarehouseBeforeTorchesKeepsCountsAndAddsEmptyTorchEntry()
+    {
+        var store = new PrototypeStore(folder); var old = Rules.Copy(store.Warehouse);
+        Array.Resize(ref old.counts, (int)ItemKind.Torch); old.counts[0] = 7;
+        File.WriteAllText(Path.Combine(folder, "warehouse.json"), JsonUtility.ToJson(old));
+        var loaded = new PrototypeStore(folder);
+        Assert.That(loaded.Warehouse.counts.Length, Is.EqualTo(Rules.ItemNames.Length));
+        Assert.That(loaded.Warehouse.counts[0], Is.EqualTo(7));
+        Assert.That(loaded.Warehouse.counts[(int)ItemKind.Torch], Is.Zero);
+        Assert.That(File.Exists(Path.Combine(folder, "warehouse.json.pre-torches.bak")), Is.True);
+    }
     Battle ControlledBattle(params CardKind[] hand)
     {
         var run = New(); var battle = new Battle(run, new EnemyData { kind = EnemyKind.Boss });

@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-02",
+  "project": "E:/UnityProject/Magic Cave Game",
+  "transport": "Unity MCP",
+  "editMode": {
+    "jobId": "43563171b03f418ea64118b757c1426c",
+    "passed": 139,
+    "failed": 0,
+    "skipped": 0
+  },
+  "playMode": {
+    "jobId": "11d1bb62a4bc4bf8b354c075a48b3a5e",
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "routeCoverage": {
+    "seeds": 100,
+    "explorationMaps": 700,
+    "checks": [
+      "Item guards alone block all original ground approaches to guarded containers",
+      "After guards are defeated ordinary pathfinding reaches an interaction cell",
+      "New containers have no guard enemy ID links",
+      "One-guard dead end accepted; exposed interaction side rejected",
+      "Legacy links do not lock opening or pickup",
+      "Remaining adjacent living monster does not lock actual gameplay interaction"
+    ]
+  },
+  "consoleErrors": 0,
+  "finalScene": "Assets/Scenes/WorldMap.unity",
+  "sceneDirty": false,
+  "buildPerformed": false
+}

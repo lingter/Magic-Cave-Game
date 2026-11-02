@@ -31,7 +31,7 @@ namespace MagicCave.Prototype
             treasure = new List<ContainerDrop> { new ContainerDrop(ItemKind.Ore, 60, 2, 4),
                 new ContainerDrop(ItemKind.Crystal, 30, 1, 2), new ContainerDrop(ItemKind.Relic, 10) },
             supplies = new List<ContainerDrop> { new ContainerDrop(ItemKind.Potion, 6), new ContainerDrop(ItemKind.StrengthEssence, 1),
-                new ContainerDrop(ItemKind.AgilityEssence, 1), new ContainerDrop(ItemKind.WisdomEssence, 1), new ContainerDrop(ItemKind.AssaultPotion, 1) }
+                new ContainerDrop(ItemKind.AgilityEssence, 1), new ContainerDrop(ItemKind.WisdomEssence, 1), new ContainerDrop(ItemKind.AssaultPotion, 1), new ContainerDrop(ItemKind.Torch, 2) }
         };
         public List<ContainerDrop> Pool(ContainerKind kind, int floor) => kind == ContainerKind.Equipment ?
             (floor == 1 ? firstEquipment : equipment) : kind == ContainerKind.Treasure ? treasure :
@@ -57,7 +57,7 @@ namespace MagicCave.Prototype
     {
         public static bool Matches(ContainerKind container, ItemKind item) => container == ContainerKind.Equipment ? Rules.IsEquipment(item) :
             container == ContainerKind.Treasure ? item >= ItemKind.Ore && item <= ItemKind.Relic :
-            container == ContainerKind.Supplies && (item == ItemKind.Potion || item >= ItemKind.StrengthEssence && item <= ItemKind.AssaultPotion);
+            container == ContainerKind.Supplies && (item == ItemKind.Potion || item == ItemKind.Torch || item >= ItemKind.StrengthEssence && item <= ItemKind.AssaultPotion);
 
         public static int GuardRarity(RunData run, GroundLoot loot, int floor) => loot.containerKind == ContainerKind.Legacy ?
             (loot.units.Count > 0 ? Rules.Rarity(loot.units[0].kind) : Rules.Rarity(loot.appearanceKind)) :

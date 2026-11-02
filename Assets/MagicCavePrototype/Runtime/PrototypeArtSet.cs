@@ -9,6 +9,7 @@ namespace MagicCave.Prototype
         public Sprite[] floors = new Sprite[3];
         public Sprite[] walls = new Sprite[14];
         public Sprite playerDown, playerUp, playerSide, square, stairs;
+        public Sprite merchant;
         // Array order follows the existing save-compatible EnemyKind / ItemKind enum values.
         public Sprite[] enemies = new Sprite[3];
         public Sprite[] loot = new Sprite[4];

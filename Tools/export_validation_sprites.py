@@ -60,12 +60,27 @@ def export_container_art(root, destination):
         equipment.crop((x, y, x + 16, y + 16)).save(destination / f'Item_{name}.png')
 
 
+def export_treasure_art(root, destination):
+    """Stage the three currently used treasure icons outside Assets for MCP import."""
+    destination.mkdir(parents=True, exist_ok=True)
+    atlas = read_sprite(root / 'Assets/ART Assets/Treasure/Treasure.aseprite')
+    for name, column, row in (('Ore', 0, 0), ('Crystal', 0, 1), ('Relic', 2, 2)):
+        x, y = 16 + column * 16, 16 + row * 16
+        atlas.crop((x, y, x + 16, y + 16)).save(destination / f'Item_{name}.png')
+
+
 if __name__ == '__main__':
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument('--container-art-destination', type=Path,
                         help='Stage container and equipment PNGs in an external directory for Unity MCP import.')
+    parser.add_argument('--treasure-art-destination', type=Path,
+                        help='Stage treasure PNGs in an external directory for Unity MCP import.')
     args = parser.parse_args()
+    if args.treasure_art_destination:
+        export_treasure_art(root, args.treasure_art_destination)
+        print(f'Staged treasure art in {args.treasure_art_destination}')
+        raise SystemExit(0)
     if args.container_art_destination:
         export_container_art(root, args.container_art_destination)
         print(f'Staged container/equipment art in {args.container_art_destination}')

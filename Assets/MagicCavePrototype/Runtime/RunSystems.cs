@@ -5,6 +5,21 @@ using UnityEngine;
 
 namespace MagicCave.Prototype
 {
+    public static class TorchLight
+    {
+        public const int Durability = 20;
+        public static bool IsLit(RunData run) => run.torchStepsRemaining > 0;
+        public static bool Extinguish(RunData run)
+        {
+            if (!IsLit(run)) return false;
+            run.torchStepsRemaining = 0; return true;
+        }
+        // Called only for successful grid movement, never for collision, interaction or time passing.
+        public static void Step(RunData run)
+        {
+            if (IsLit(run)) run.torchStepsRemaining--;
+        }
+    }
     public static class Inventory
     {
         public static List<ItemUnit> Items(RunData run) { return run.inventory.SelectMany(slot => slot.units)
@@ -42,6 +57,7 @@ namespace MagicCave.Prototype
         {
             if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.health <= 0 || run.inventory[slotIndex].units.Count == 0) return false;
             var kind = run.inventory[slotIndex].units[0].kind;
+            if (kind == ItemKind.Torch) return !TorchLight.IsLit(run);
             if (kind == ItemKind.Potion) return run.health < run.MaxHealth;
             if (!run.UsesAttributes || kind < ItemKind.StrengthEssence || kind > ItemKind.AssaultPotion) return false;
             return kind != ItemKind.AssaultPotion || !run.character.modifiers.Any(m => m.source == "assault-potion" && m.remainingBattles == 2);
@@ -50,6 +66,11 @@ namespace MagicCave.Prototype
         {
             if (!CanUse(run, slotIndex)) return false;
             var slot = run.inventory[slotIndex]; var kind = slot.units[0].kind;
+            if (kind == ItemKind.Torch)
+            {
+                slot.units.RemoveAt(0); run.torchStepsRemaining = TorchLight.Durability;
+                MapGenerator.Reveal(run); return true;
+            }
             if (kind == ItemKind.Potion) return Heal(run, slotIndex);
             if (kind == ItemKind.AssaultPotion)
             {
@@ -150,6 +171,7 @@ namespace MagicCave.Prototype
         {
             if (enemy.defeated) return;
             enemy.defeated = true;
+            run.teeth = (int)Math.Min(int.MaxValue, (long)run.teeth + ToothMerchant.VictoryTeeth(enemy));
             run.health = CharacterAttributes.Quantize(Math.Min(run.MaxHealth, run.health + run.victoryHealing));
             CharacterAttributes.FinishBattle(run);
             Award(run, enemy.kind == EnemyKind.Boss ? 30 : 10);

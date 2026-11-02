@@ -26,6 +26,13 @@ namespace MagicCave.Prototype
             Run.inventory[equipmentPreviewSlot].units.Count == 1 && Rules.IsEquipment(Run.inventory[equipmentPreviewSlot].units[0].kind);
         void ItemSprite(Rect rect, ItemKind kind)
         {
+            if (kind == ItemKind.Torch)
+            {
+                Fill(new Rect(rect.x + rect.width * .4f, rect.y + rect.height * .4f, rect.width * .2f, rect.height * .55f), "torch handle", new Color(.45f, .25f, .12f));
+                Fill(new Rect(rect.x + rect.width * .25f, rect.y + rect.height * .1f, rect.width * .5f, rect.height * .4f), "torch flame", new Color(1f, .45f, .12f));
+                Fill(new Rect(rect.x + rect.width * .4f, rect.y + rect.height * .2f, rect.width * .2f, rect.height * .3f), "torch core", new Color(1f, .85f, .3f));
+                return;
+            }
             var icon = artSet == null ? null : artSet.ItemIcon(kind);
             if (icon == null) { Label(rect, Rules.IsEquipment(kind) ? "装" : "物", buttonStyle, Gold); return; }
             // Draw only this sprite's region when several item icons share an atlas.

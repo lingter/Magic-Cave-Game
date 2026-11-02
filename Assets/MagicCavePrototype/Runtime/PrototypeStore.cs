@@ -32,7 +32,9 @@ namespace MagicCave.Prototype
             if (Session.pending != null) MapGenerator.EnsureSafePlayerPosition(Session.pending.run);
             ValidateSession(Session);
             if ((Warehouse.version < 1 || Warehouse.version > 5) || Warehouse.counts == null ||
-                (Warehouse.counts.Length != (Warehouse.version < 3 ? 4 : Rules.ItemNames.Length) && !(Warehouse.version >= 3 && Warehouse.version <= 4 && Warehouse.counts.Length == 16)) ||
+                (Warehouse.counts.Length != (Warehouse.version < 3 ? 4 : Rules.ItemNames.Length) &&
+                !(Warehouse.version >= 3 && Warehouse.version <= 4 && Warehouse.counts.Length == 16) &&
+                !(Warehouse.version >= 3 && Warehouse.counts.Length == (int)ItemKind.Torch)) ||
                 Warehouse.counts.Any(c => c < 0) || Warehouse.committedRuns == null)
                 throw new InvalidDataException("仓库数据格式无效。原文件已保留。");
             if (Warehouse.equipment == null) Warehouse.equipment = new List<StoredEquipment>();
@@ -68,6 +70,12 @@ namespace MagicCave.Prototype
             {
                 if (File.Exists(WarehousePath) && !File.Exists(WarehousePath + ".pre-eight-slots.bak")) File.Copy(WarehousePath, WarehousePath + ".pre-eight-slots.bak");
                 Array.Resize(ref Warehouse.counts, Rules.ItemNames.Length); Warehouse.version = 5;
+            }
+            if (Warehouse.counts.Length < Rules.ItemNames.Length)
+            {
+                if (File.Exists(WarehousePath) && !File.Exists(WarehousePath + ".pre-torches.bak"))
+                    File.Copy(WarehousePath, WarehousePath + ".pre-torches.bak");
+                Array.Resize(ref Warehouse.counts, Rules.ItemNames.Length);
             }
             ValidateTown(Warehouse);
         }
@@ -302,6 +310,9 @@ namespace MagicCave.Prototype
         public static void ValidateRun(RunData run, bool allowLegacyPosition = false)
         {
             if (run == null) throw new InvalidDataException("玩家数据不存在。");
+            if (run.teeth < 0) throw new InvalidDataException("牙齿余额无效。");
+            if (run.torchStepsRemaining < 0 || run.torchStepsRemaining > TorchLight.Durability)
+                throw new InvalidDataException("火把耐久无效。");
             if (run.containerVersion < 0 || run.containerVersion > 1) throw new InvalidDataException("容器规则版本不支持。");
             if (run.containerVersion == 1)
             {
@@ -312,8 +323,9 @@ namespace MagicCave.Prototype
             }
             if (run.attributeVersion != 0 && run.attributeVersion != 1) throw new InvalidDataException("角色规则版本不支持。");
             if (run.UsesAttributes) ValidateCharacter(run);
-            if (run == null || string.IsNullOrEmpty(run.id) || run.maps == null || run.maps.Count != 5 ||
-                run.mapIndex < 0 || run.mapIndex >= 5 || run.health < 0 || run.health > run.MaxHealth ||
+            if (run == null || string.IsNullOrEmpty(run.id) || run.maps == null || run.terrainVersion < 0 || run.terrainVersion > 1 ||
+                run.maps.Count != (run.terrainVersion == 1 ? 8 : 5) ||
+                run.mapIndex < 0 || run.mapIndex >= run.maps.Count || run.health < 0 || run.health > run.MaxHealth ||
                 double.IsNaN(run.health) || double.IsInfinity(run.health) || CharacterAttributes.Quantize(run.health) != run.health ||
                 (!run.UsesAttributes && (run.MaxHealth < 60 || run.MaxHealth > 75)) || run.attackBonus < 0 || run.attackBonus > 3 ||
                 run.defenseBonus < 0 || run.defenseBonus > 3 || run.openingEnergy < 0 || run.openingEnergy > 1 ||
@@ -337,7 +349,7 @@ namespace MagicCave.Prototype
             if (run.UsesAttributes) foreach (var item in run.character.equipment) ValidateItem(item, ids);
             for (int index = 0; index < run.maps.Count; index++)
             {
-                var map = run.maps[index]; int expected = index == 4 ? 13 : 25;
+                var map = run.maps[index]; int expected = index == run.maps.Count - 1 ? 13 : index >= 4 ? 31 : 25;
                 if (map == null || map.size != expected || map.number != index + 1 ||
                     map.cells == null || map.cells.Length != expected * expected ||
                     map.revealed == null || map.revealed.Length != map.cells.Length ||
@@ -346,9 +358,14 @@ namespace MagicCave.Prototype
                 for (int y = 0; y < expected; y++) for (int x = 0; x < expected; x++)
                     if (map.cells[map.Index(x, y)] < 0 || map.cells[map.Index(x, y)] > 3 || (map.Border(x, y) && map.At(x, y) != Tile.Wall))
                         throw new InvalidDataException("地图地块或边界无效。");
+                if (map.hasMerchant && (!map.Walkable(map.merchantX, map.merchantY) ||
+                    map.merchantX == map.spawnX && map.merchantY == map.spawnY ||
+                    map.enemies.Any(e => Math.Abs(e.x - map.merchantX) <= 1 && Math.Abs(e.y - map.merchantY) <= 1) ||
+                    map.loot.Any(l => !l.loose && l.x == map.merchantX && l.y == map.merchantY)))
+                    throw new InvalidDataException("集齿者位置无效。");
                 foreach (var enemy in map.enemies)
                     if (enemy == null || (int)enemy.kind < 0 || (int)enemy.kind > 2 || !map.Walkable(enemy.x, enemy.y) ||
-                        enemy.level < 0 || enemy.level > 3 || enemy.physicalDefense < 0 || enemy.physicalDefense > 1000 || (int)enemy.role < 0 || (int)enemy.role > 2)
+                        enemy.level < 0 || enemy.level > run.maps.Count || enemy.physicalDefense < 0 || enemy.physicalDefense > 1000 || (int)enemy.role < 0 || (int)enemy.role > 2)
                         throw new InvalidDataException("敌人数据无效。");
                 foreach (var loot in map.loot)
                 {
@@ -366,7 +383,7 @@ namespace MagicCave.Prototype
                     foreach (var item in loot.units) ValidateItem(item, ids);
                 }
             }
-            bool legacyBossDoor = allowLegacyPosition && run.mapIndex == 4 && run.bossDefeated &&
+            bool legacyBossDoor = allowLegacyPosition && run.mapIndex == run.maps.Count - 1 && run.bossDefeated &&
                 run.CellX == 6 && run.CellY == 10 && run.Map.At(6, 10) == Tile.Return;
             if (float.IsNaN(run.x) || float.IsNaN(run.y) || float.IsInfinity(run.x) || float.IsInfinity(run.y) ||
                 (!run.Map.Walkable(run.CellX, run.CellY) && !legacyBossDoor) ||

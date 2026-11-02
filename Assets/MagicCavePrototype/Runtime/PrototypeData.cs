@@ -7,7 +7,7 @@ namespace MagicCave.Prototype
     public enum Tile { Ground, Wall, Advance, Return }
     // Existing values are save identifiers. Append new kinds; never reorder them.
     public enum ItemKind { Ore, Crystal, Relic, Potion, IronSword, SwiftSword, InscribedSword, RefinedSword,
-        WoodShield, LeatherArmor, InsightArmor, IronArmor, StrengthEssence, AgilityEssence, WisdomEssence, AssaultPotion, SwordShield, LeatherHelm, LeatherGloves, LeatherBoots, CopperRing }
+        WoodShield, LeatherArmor, InsightArmor, IronArmor, StrengthEssence, AgilityEssence, WisdomEssence, AssaultPotion, SwordShield, LeatherHelm, LeatherGloves, LeatherBoots, CopperRing, Torch }
     public enum EnemyKind { Bat, Beetle, Boss }
     public enum EnemyRole { Roaming, ItemGuard, CorridorGuard }
     public enum ContainerKind { Legacy, Equipment, Treasure, Supplies }
@@ -70,6 +70,8 @@ namespace MagicCave.Prototype
         public int secondGuardEnemyId;
         // New layouts remain connected with containers as permanent obstacles. Old saves keep their behavior.
         public bool permanentObstacle;
+        // Layout intent only; never used as an opening or pickup lock.
+        public bool combatApproach;
         public bool GuardedBy(int enemyId) => enemyId != 0 && (guardEnemyId == enemyId || secondGuardEnemyId == enemyId);
         public bool loose;
         // Missing fields in existing saves keep their already generated contents.
@@ -99,6 +101,9 @@ namespace MagicCave.Prototype
     {
         public const float PlayerCollisionSize = 0.8f;
         public int number, size, spawnX, spawnY;
+        public bool dugTerrain;
+        public bool hasMerchant;
+        public int merchantX, merchantY;
         public int[] cells;
         public bool[] revealed;
         public List<EnemyData> enemies = new List<EnemyData>();
@@ -117,6 +122,7 @@ namespace MagicCave.Prototype
         public bool CanTraverse(int x, int y)
         {
             if (!Walkable(x, y)) return false;
+            if (hasMerchant && merchantX == x && merchantY == y) return false;
             foreach (var enemy in enemies) if (!enemy.defeated && enemy.x == x && enemy.y == y) return false;
             foreach (var item in loot) if (item.BlocksMovement && item.x == x && item.y == y) return false;
             return true;
@@ -145,12 +151,18 @@ namespace MagicCave.Prototype
         public AttributeRules attributeRules;
         public RandomStream lootRandom;
         public int containerVersion;
+        // Zero keeps the original five-floor save layout; one adds three excavation trials.
+        public int terrainVersion;
         public ContainerLootRules containerRules;
         public RandomStream containerRandom;
         public bool UsesAttributes => attributeVersion == 1;
         public int nextEntityId = 1, nextItemId = 1, nextAcquisitionOrder = 1;
         public float x, y;
         public bool bossDefeated;
+        // A torch is consumed on ignition. Zero means no flame; old saves remain unlit.
+        public int torchStepsRemaining;
+        // Run currency, never an inventory item or a warehouse reward. Missing in old saves => zero.
+        public int teeth;
         public RandomStream mapRandom, battleRandom, cardRandom;
         public List<MapData> maps = new List<MapData>();
         public List<CardKind> deck = new List<CardKind>();
@@ -195,7 +207,7 @@ namespace MagicCave.Prototype
     public static class Rules
     {
         public static readonly string[] ItemNames = { "碎矿石", "晶簇", "古代遗物", "治疗药剂", "铁制剑盾", "迅捷剑盾", "铭文剑盾", "精制剑盾",
-            "木盾", "皮甲", "启迪皮甲", "铁甲", "力量精华", "敏捷精华", "智慧精华", "强攻药剂", "制式剑盾", "皮盔", "皮护手", "皮靴", "铜戒指" };
+            "木盾", "皮甲", "启迪皮甲", "铁甲", "力量精华", "敏捷精华", "智慧精华", "强攻药剂", "制式剑盾", "皮盔", "皮护手", "皮靴", "铜戒指", "火把" };
         public static readonly string[] EnemyNames = { "洞穴蝠", "岩甲虫", "岩洞守卫" };
         public static readonly int[] EnemyHealth = { 18, 30, 80 };
         public static int Health(EnemyData enemy) { return EnemyHealth[(int)enemy.kind] + 4 * (enemy.Level - 1); }

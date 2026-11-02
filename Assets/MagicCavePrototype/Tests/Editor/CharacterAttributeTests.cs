@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using MagicCave.Prototype;
@@ -175,8 +175,8 @@ public class CharacterAttributeTests
             Assert.That(map.loot.All(l => l.unopened && l.units.Count == 0), Is.True);
             foreach (var item in map.loot.SelectMany(l => l.units).Where(i => i.kind >= ItemKind.IronSword && i.kind <= ItemKind.RefinedSword))
                 Assert.That(run.attributeRules.Find(item.kind).ownerCharacterId, Is.EqualTo(run.character.templateId));
-            foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.ItemGuard))
-                Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.GuardedBy(guard.id)).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
+            foreach (var enemy in map.enemies)
+                Assert.That(enemy.Level, Is.EqualTo(map.number));
         }
         a.attributeRules.Find(ItemKind.SwiftSword).ownerCharacterId = "other";
         for (int i = 0; i < 100; i++) Assert.That(MapGenerator.DrawWeapon(a), Is.Not.EqualTo(ItemKind.SwiftSword));
@@ -305,7 +305,7 @@ public class CharacterAttributeTests
     }
 
     [Test]
-    public void NewRuleMapsAndGuardLevelsValidateAcrossOneHundredSeeds()
+    public void NewRuleMapsAndFloorLevelsValidateAcrossOneHundredSeeds()
     {
         for (int seed = 0; seed < 100; seed++)
         {
@@ -313,11 +313,28 @@ public class CharacterAttributeTests
             foreach (var map in run.maps.Take(4))
             {
                 Assert.That(MapGenerator.ValidateTerrain(map, out _, out _), Is.True, "Seed " + seed);
-                Assert.That(map.loot.Count, Is.EqualTo(10)); Assert.That(map.enemies.Count, Is.EqualTo(19));
-                foreach (var guard in map.enemies.Where(e => e.role == EnemyRole.ItemGuard))
-                    Assert.That(guard.Level, Is.EqualTo(map.loot.Where(l => l.GuardedBy(guard.id)).Max(l => ContainerLoot.GuardRarity(run, l, map.number)) + 1));
+                Assert.That(map.loot.Count, Is.EqualTo(10));
+                Assert.That(MapGenerator.ValidateCombatApproaches(map), Is.True);
+                foreach (var enemy in map.enemies)
+                    Assert.That(enemy.Level, Is.EqualTo(map.number), "Seed " + seed);
             }
+            Assert.That(run.maps[4].enemies.Single().Level, Is.EqualTo(5), "Seed " + seed);
         }
+    }
+
+    [Test]
+    public void LoadingExistingRunPreservesEnemyLevelsInsteadOfApplyingFloorLevels()
+    {
+        var run = New();
+        run.maps[0].enemies[0].level = 3;
+        run.maps[3].enemies[0].level = 1;
+        run.maps[4].enemies.Single().level = 1;
+        var store = new PrototypeStore(folder);
+        store.SaveCheckpoint(run);
+        var loaded = new PrototypeStore(folder).Continue();
+        Assert.That(loaded.maps[0].enemies[0].Level, Is.EqualTo(3));
+        Assert.That(loaded.maps[3].enemies[0].Level, Is.EqualTo(1));
+        Assert.That(loaded.maps[4].enemies.Single().Level, Is.EqualTo(1));
     }
 
     [TestCase(AttributeKind.Agility)] [TestCase(AttributeKind.Wisdom)]
