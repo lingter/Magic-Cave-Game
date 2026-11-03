@@ -917,6 +917,156 @@ public class PrototypePlayTests
         driver.keyState = new KeyboardState(Key.D, Key.W); yield return new WaitForSeconds(.4f);
         Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(new Vector2(6, 5)), "A blocked first direction cannot slide along a later key.");
     }
+    void PrepareNavigationMap()
+    {
+        game.StartNewRun(12345);
+        var map = game.Run.Map;
+        map.enemies.Clear(); map.loot.Clear(); map.hasMerchant = false;
+        for (int y = 1; y < map.size - 1; y++)
+        for (int x = 1; x < map.size - 1; x++)
+        { map.Set(x, y, Tile.Ground); map.revealed[map.Index(x, y)] = true; }
+        game.Run.x = 5; game.Run.y = 5;
+        typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new object[] { true });
+    }
+    [UnityTest]
+    public IEnumerator WheelDefaultsToBottomRightLongPressRelocatesAndReleaseRestores()
+    {
+        PrepareNavigationMap(); yield return null;
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var center = typeof(PrototypeGame).GetProperty("WheelCenter", flags);
+        var active = typeof(PrototypeGame).GetField("wheelActive", flags);
+        Assert.That(center.GetValue(game), Is.EqualTo(new Vector2(1184, 588)));
+        // The fixed wheel works immediately, with its own center instead of the press point.
+        driver.mouseState = new MouseState { position = GuiPoint(1220, 588), buttons = 1 };
+        yield return new WaitForSeconds(.15f);
+        Assert.That(game.Run.x, Is.GreaterThan(5));
+        driver.mouseState.buttons = 0; yield return new WaitForSeconds(.4f);
+        var stopped = new Vector2(game.Run.x, game.Run.y);
+        driver.mouseState = new MouseState { position = GuiPoint(450, 300), buttons = 1 };
+        yield return new WaitForSeconds(.12f);
+        Assert.That(active.GetValue(game), Is.False);
+        yield return new WaitForSeconds(.2f);
+        Assert.That(active.GetValue(game), Is.True, "Long press should summon the wheel without requiring a drag.");
+        Assert.That(center.GetValue(game), Is.EqualTo(new Vector2(450, 300)));
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(stopped));
+        string captures = Path.GetFullPath("Captures/Navigation"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "long-press-wheel.png")); yield return null; yield return null;
+        driver.mouseState.buttons = 0; yield return new WaitForSeconds(.4f);
+        Assert.That(center.GetValue(game), Is.EqualTo(new Vector2(1184, 588)));
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(stopped), "Releasing the long press must not create a click route.");
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "default-wheel.png")); yield return null; yield return null;
+    }
+    [UnityTest]
+    public IEnumerator ExpandedMinimapBlocksMovementClosesWithEscapeAndRoutesUsingExpandedCoordinates()
+    {
+        PrepareNavigationMap(); yield return null;
+        var expanded = typeof(PrototypeGame).GetField("minimapExpanded", BindingFlags.Instance | BindingFlags.NonPublic);
+        yield return Click(1220, 117);
+        Assert.That(expanded.GetValue(game), Is.True);
+        driver.keyState = new KeyboardState(Key.D); yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.x, Is.EqualTo(5), "Expanded map must own keyboard input.");
+        driver.keyState = new KeyboardState(); yield return null;
+        yield return Click(100, 400);
+        Assert.That(game.Run.x, Is.EqualTo(5), "Overlay clicks must not reach the scene.");
+        string captures = Path.GetFullPath("Captures/Navigation"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "expanded-map.png")); yield return null; yield return null;
+        driver.keyState = new KeyboardState(Key.Escape); yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(expanded.GetValue(game), Is.False);
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.None), "Esc should close the map without opening pause.");
+        yield return Click(1220, 117);
+        Assert.That(expanded.GetValue(game), Is.True);
+        yield return Click(910, 108); yield return null;
+        Assert.That(expanded.GetValue(game), Is.False, "The collapse button must work independently of the map.");
+        yield return Click(1220, 117);
+        float step = 492f / game.Run.Map.size;
+        yield return Click(394 + 7.5f * step, 128 + (game.Run.Map.size - 5.5f) * step);
+        Assert.That(expanded.GetValue(game), Is.False, "Choosing reachable ground closes the map and starts travel.");
+        yield return new WaitForSeconds(1);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(new Vector2(7, 5)));
+    }
+    [UnityTest]
+    public IEnumerator WheelYieldsToKeyboardAndCancelsWhenInventoryOpens()
+    {
+        PrepareNavigationMap(); yield return null;
+        driver.mouseState = new MouseState { position = GuiPoint(600, 400), buttons = 1 }; yield return null;
+        driver.mouseState.position = GuiPoint(650, 400); yield return new WaitForSeconds(.4f);
+        driver.keyState = new KeyboardState(Key.W); yield return new WaitForSeconds(.4f);
+        float x = game.Run.x;
+        Assert.That(game.Run.y, Is.GreaterThan(5));
+        driver.keyState = new KeyboardState(); yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.x, Is.EqualTo(x), "Wheel must not resume while the cancelled press is still held.");
+        driver.mouseState.buttons = 0; yield return null;
+        driver.mouseState = new MouseState { position = GuiPoint(600, 400), buttons = 1 }; yield return null;
+        driver.mouseState.position = GuiPoint(650, 400); yield return null;
+        driver.keyState = new KeyboardState(Key.B); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
+        var stopped = new Vector2(game.Run.x, game.Run.y);
+        driver.mouseState.buttons = 0; yield return null;
+        driver.keyState = new KeyboardState(Key.Escape); yield return null;
+        driver.keyState = new KeyboardState(); yield return new WaitForSeconds(.5f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(stopped));
+    }
+    [UnityTest]
+    public IEnumerator TownWheelMovesAndReleasesWithoutSubmittingTownRoute()
+    {
+        var start = game.TownPosition;
+        driver.mouseState = new MouseState { position = GuiPoint(400, 400), buttons = 1 }; yield return null;
+        driver.mouseState.position = GuiPoint(450, 400); yield return new WaitForSeconds(.4f);
+        Assert.That(game.TownPosition.x, Is.GreaterThan(start.x)); Assert.That(game.TownPosition.y, Is.EqualTo(start.y));
+        driver.mouseState = new MouseState { position = GuiPoint(650, 500) }; yield return new WaitForSeconds(.4f);
+        var stopped = game.TownPosition; yield return new WaitForSeconds(.5f);
+        Assert.That(game.TownPosition, Is.EqualTo(stopped));
+    }
+    [UnityTest]
+    public IEnumerator DirectionWheelStopsStabilizesAndDoesNotClickOnRelease()
+    {
+        PrepareNavigationMap(); yield return null;
+        driver.mouseState = new MouseState { position = GuiPoint(600, 400), buttons = 1 };
+        yield return null; yield return null;
+        Assert.That(game.Run.x, Is.EqualTo(5), "Press alone must not start the click route.");
+        driver.mouseState.position = GuiPoint(650, 400);
+        yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.x, Is.GreaterThan(5)); Assert.That(game.Run.y, Is.EqualTo(5));
+        driver.mouseState.position = GuiPoint(650, 345);
+        yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.y, Is.EqualTo(5), "Small diagonal boundary changes should retain horizontal direction.");
+        driver.mouseState.position = GuiPoint(605, 330);
+        yield return new WaitForSeconds(.4f);
+        Assert.That(game.Run.y, Is.GreaterThan(5));
+        driver.mouseState.position = GuiPoint(600, 400);
+        yield return new WaitForSeconds(.4f);
+        var stopped = new Vector2(game.Run.x, game.Run.y);
+        yield return new WaitForSeconds(.4f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(stopped));
+        driver.mouseState = new MouseState { position = GuiPoint(800, 500) };
+        yield return new WaitForSeconds(.6f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(stopped), "Releasing a drag must not submit a click route.");
+    }
+    [UnityTest]
+    public IEnumerator MinimapRoutesOnlyToKnownReachableGroundAndDoesNotClickThrough()
+    {
+        PrepareNavigationMap(); yield return null;
+        var map = game.Run.Map;
+        float step = 204f / map.size;
+        Func<int, int, Vector2> mini = (x, y) => new Vector2(1050 + (x + .5f) * step, 133 + (map.size - y - .5f) * step);
+        // Isolate a revealed target behind four walls; an invalid request must leave the player in place.
+        map.Set(7, 8, Tile.Wall); map.Set(9, 8, Tile.Wall); map.Set(8, 7, Tile.Wall); map.Set(8, 9, Tile.Wall);
+        var point = mini(8, 8); yield return Click(point.x, point.y); yield return new WaitForSeconds(.5f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(new Vector2(5, 5)));
+        map.revealed[map.Index(10, 10)] = false;
+        point = mini(10, 10); yield return Click(point.x, point.y); yield return new WaitForSeconds(.4f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(new Vector2(5, 5)));
+        point = mini(7, 5); yield return Click(point.x, point.y); yield return new WaitForSeconds(1f);
+        Assert.That(new Vector2(game.Run.x, game.Run.y), Is.EqualTo(new Vector2(7, 5)));
+        Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Explore));
+        string captures = Path.GetFullPath("Captures/Navigation"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "minimap.png")); yield return null; yield return null;
+        driver.mouseState = new MouseState { position = GuiPoint(600, 400), buttons = 1 }; yield return null; yield return null;
+        driver.mouseState.position = GuiPoint(650, 400); yield return null; yield return null;
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "direction-wheel.png")); yield return null; yield return null;
+    }
     [UnityTest]
     public IEnumerator ThreeRegionStarMapCanPurchaseWisdomAndPersist()
     {

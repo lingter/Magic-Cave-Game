@@ -104,7 +104,7 @@ namespace MagicCave.Prototype
             Matrix4x4 oldMatrix = GUI.matrix; bool oldEnabled = GUI.enabled;
             float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - 1280 * scale) / 2, (Screen.height - 720 * scale) / 2, 0), Quaternion.identity, new Vector3(scale, scale, 1));
-            GUI.enabled = Panel == GamePanel.None;
+            GUI.enabled = Panel == GamePanel.None && !minimapExpanded;
             if (ScreenMode != GameScreen.Explore) Fill(new Rect(0, 0, 1280, 720), "background", new Color(0.025f, 0.04f, 0.075f));
             switch (ScreenMode)
             {
@@ -117,6 +117,8 @@ namespace MagicCave.Prototype
                 case GameScreen.Warehouse: DrawWarehouse(); break;
             }
             GUI.enabled = true;
+            DrawDirectionWheel();
+            DrawExpandedMinimap();
             if (Panel != GamePanel.None) DrawPanel();
             if (!string.IsNullOrEmpty(error))
             {
@@ -141,7 +143,8 @@ namespace MagicCave.Prototype
             Label(new Rect(865, 5, 235, 27), "牙齿 " + Run.teeth, textStyle, Gold);
             Label(new Rect(865, 33, 180, 26), "背包 " + Inventory.UsedSlots(Run) + " / 20", smallStyle);
             Button(new Rect(1110, 17, 140, 41), "暂停 [Esc]", () => { Panel = GamePanel.Pause; CancelRoute(); });
-            Label(new Rect(26, 61, 1220, 23), "WASD/方向键移动  左键寻路/交互  右键破墙  E交互  B背包  C角色  Tab卡组", smallStyle);
+            Label(new Rect(26, 61, 1220, 23), "WASD/方向键  单击寻路/交互 · 长按呼出轮盘  小地图可放大/寻路  右键破墙  E交互  B背包  C角色  Tab卡组", smallStyle);
+            if (!minimapExpanded) DrawMinimap();
             Box(new Rect(0, 657, 1280, 63));
             string hint = "探索迷雾，寻找门与物品";
             var target = hover.kind != TargetKind.None ? hover : highlighted;

@@ -133,7 +133,7 @@ namespace MagicCave.Prototype
                 int nearby = NearbyTown(); if (nearby >= 0) OpenTownDestination(nearby);
                 return;
             }
-            if (gridDirection != Vector2Int.zero) { townRoute.Clear(); townDestination = -1; }
+            if (MovementDirection != Vector2Int.zero) { townRoute.Clear(); townDestination = -1; }
             AdvanceTownMovement(4f * Mathf.Min(Time.deltaTime, .1f));
         }
         Vector2 townVisualPosition = new Vector2(12, 11), townMotionTarget = new Vector2(12, 11);
@@ -157,7 +157,7 @@ namespace MagicCave.Prototype
                     if (townVisualPosition != townMotionTarget) return;
                 }
                 if (townRoute.Count == 0 && townDestination >= 0) { OpenTownDestination(townDestination); return; }
-                var input = new Vector2Int(gridDirection.x, -gridDirection.y);
+                var input = new Vector2Int(MovementDirection.x, -MovementDirection.y);
                 Vector2Int next;
                 if (input != Vector2Int.zero) next = Vector2Int.RoundToInt(TownPosition) + input;
                 else if (townRoute.Count > 0) { next = townRoute[0]; townRoute.RemoveAt(0); }
@@ -201,7 +201,7 @@ namespace MagicCave.Prototype
         }
         void DrawTownHome()
         {
-            DrawTownHeader("WASD / 方向键移动    左键寻路 / 拜访    E 交互    Esc 关闭面板");
+            DrawTownHeader("WASD / 方向键移动    左键单击寻路 / 拜访 · 拖动方向轮盘    E 交互    Esc 关闭面板");
             if (Store == null) { Label(new Rect(60, 160, 1100, 100), "城镇存档未能载入，请查看下方提示。"); return; }
             if (TownPage == TownPage.Mentor) DrawTalentTree();
             else DrawTownMap();
@@ -257,7 +257,7 @@ namespace MagicCave.Prototype
             Fill(new Rect(position.center.x - 12, position.yMax + 1, 24, 3), "town player mark", Gold);
             int nearby = NearbyTown();
             if (nearby >= 0) Label(new Rect(30, 601, 810, 25), "[E] " + NearbyTownAction(nearby), buttonStyle, Gold);
-            if (TownPage != TownPage.None || !GUI.enabled || !Click(TownMapRect)) return;
+            if (TownPage != TownPage.None || !GUI.enabled || PointerOverDefaultWheel || !Click(TownMapRect)) return;
             var point = GuiMouse;
             var target = new Vector2Int(Mathf.FloorToInt((point.x - TownMapRect.x) / TownTile), Mathf.FloorToInt((point.y - TownMapRect.y) / TownTile));
             for (int i = 0; i < TownStops.Length; i++)

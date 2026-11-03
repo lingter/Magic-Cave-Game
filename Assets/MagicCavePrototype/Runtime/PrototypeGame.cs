@@ -42,7 +42,7 @@ namespace MagicCave.Prototype
         partial void ReleaseInterfaceInput();
 
         void OnEnable() { InputSystem.onEvent += TrackMovementKeys; }
-        void OnDisable() { InputSystem.onEvent -= TrackMovementKeys; heldMovementKeys.Clear(); gridDirection = Vector2Int.zero; }
+        void OnDisable() { InputSystem.onEvent -= TrackMovementKeys; heldMovementKeys.Clear(); gridDirection = Vector2Int.zero; ResetNavigationPointer(); }
         void TrackMovementKeys(InputEventPtr inputEvent, InputDevice device)
         {
             var keyboard = device as Keyboard;
@@ -88,6 +88,7 @@ namespace MagicCave.Prototype
         void Update()
         {
             ReadGridDirection();
+            ReadNavigationPointer();
             ReadInterfaceInput();
             UpdateTown();
             if (queued != null)
@@ -95,6 +96,7 @@ namespace MagicCave.Prototype
                 var action = queued; queued = null;
                 try { action(); error = ""; } catch (Exception exception) { ReportError(exception); }
             }
+            if (minimapExpanded || navigationEscapeHandled) return;
             var keyboard = Keyboard.current;
             if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && Panel == GamePanel.NewRun)
             { Panel = GamePanel.None; departurePreview = null; return; }
@@ -128,8 +130,9 @@ namespace MagicCave.Prototype
             var mouse = Mouse.current;
             if (mouse != null && !PointerOverHud())
             {
-                if (mouse.leftButton.wasPressedThisFrame)
+                if (navigationClick)
                 {
+                    hover = pointerClickTarget;
                     CancelRoute();
                     if (hover.kind == TargetKind.Ground) Navigate(hover, false);
                     else if (hover.kind == TargetKind.Enemy || hover.kind == TargetKind.Loot || hover.kind == TargetKind.Door || hover.kind == TargetKind.Merchant) Navigate(hover, true);
@@ -181,9 +184,9 @@ namespace MagicCave.Prototype
                 {
                     var interaction = pendingInteraction; pendingInteraction = default; Interact(interaction); return;
                 }
-                if (gridDirection != Vector2Int.zero)
+                if (MovementDirection != Vector2Int.zero)
                 {
-                    if (!MoveGrid(new Vector2Int(Run.CellX, Run.CellY) + gridDirection)) return;
+                    if (!MoveGrid(new Vector2Int(Run.CellX, Run.CellY) + MovementDirection)) return;
                 }
                 else if (route.Count > 0)
                 {
@@ -274,7 +277,7 @@ namespace MagicCave.Prototype
         {
             if (Mouse.current == null) return false;
             Vector2 point = GuiMouse;
-            return point.y < 94 || point.y > 654 || (!string.IsNullOrEmpty(error) && point.y > 604);
+            return minimapExpanded || PointerOverDefaultWheel || point.y < 94 || point.y > 654 || MinimapPanel.Contains(point) || (!string.IsNullOrEmpty(error) && point.y > 604);
         }
         Vector2 GuiMouse
         {
