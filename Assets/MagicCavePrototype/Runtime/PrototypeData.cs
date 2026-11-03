@@ -140,6 +140,8 @@ namespace MagicCave.Prototype
     [Serializable]
     public sealed class RunData
     {
+        public int settingsVersion;
+        public PrototypeSettings settings;
         public string id;
         public int seed, mapIndex, level = 1, experience, totalExperience;
         public double health = 60;
@@ -151,16 +153,20 @@ namespace MagicCave.Prototype
         public AttributeRules attributeRules;
         public RandomStream lootRandom;
         public int containerVersion;
-        // Zero keeps the original five-floor save layout; one adds three excavation trials.
+        // 0: original five floors; 1: legacy eight floors; 2: selected terrain, four floors + boss.
         public int terrainVersion;
+        public MapGenerationMode generationMode;
         public ContainerLootRules containerRules;
         public RandomStream containerRandom;
         public bool UsesAttributes => attributeVersion == 1;
         public int nextEntityId = 1, nextItemId = 1, nextAcquisitionOrder = 1;
         public float x, y;
         public bool bossDefeated;
-        // A torch is consumed on ignition. Zero means no flame; old saves remain unlit.
+        // Consumed on first ignition. Pausing keeps durability; missing paused flag preserves old burning saves.
         public int torchStepsRemaining;
+        public bool torchPaused;
+        // Item-kind shortcuts into the bag, never extra inventory. Null migrates older saves.
+        public int[] quickSlots;
         // Run currency, never an inventory item or a warehouse reward. Missing in old saves => zero.
         public int teeth;
         public RandomStream mapRandom, battleRandom, cardRandom;

@@ -11,6 +11,7 @@ namespace MagicCave.Prototype
         GUIStyle textStyle, smallStyle, titleStyle, headingStyle, buttonStyle;
         readonly Dictionary<string, Texture2D> guiTextures = new Dictionary<string, Texture2D>();
         Keyboard uiKeyboard;
+        int battleHandPage;
         bool seedFocused;
         int consumedClick = -1, dropSlot = -1, dropQuantity = 1;
         static readonly Color Ink = new Color(0.84f, 0.89f, 0.96f);
@@ -38,6 +39,7 @@ namespace MagicCave.Prototype
         }
         void SeedCharacter(char value)
         {
+            SettingsCharacter(value);
             if (TownPage == TownPage.Expedition && seedFocused && customSeed && ScreenMode == GameScreen.Home && Panel == GamePanel.None &&
                 customSeedText.Length < 11 && (char.IsDigit(value) || (value == '-' && customSeedText.Length == 0))) customSeedText += value;
         }
@@ -125,13 +127,13 @@ namespace MagicCave.Prototype
                 Box(new Rect(60, 603, 1160, 72)); Label(new Rect(77, 617, 1030, 52), error, smallStyle, new Color(1f, 0.55f, 0.48f));
                 Button(new Rect(1120, 620, 80, 32), "关闭", () => error = "");
             }
-            else if (!string.IsNullOrEmpty(message) && Time.unscaledTime < messageUntil)
+            else if (Panel != GamePanel.Settings && !string.IsNullOrEmpty(message) && Time.unscaledTime < messageUntil)
             {
                 Box(new Rect(260, 99, 760, 31)); Label(new Rect(274, 100, 730, 28), message, buttonStyle, Gold);
             }
             GUI.enabled = oldEnabled; GUI.matrix = oldMatrix;
         }
-        void DrawHome() { DrawTownHome(); }
+        void DrawHome() { DrawTownHome(); Button(new Rect(1110, 670, 140, 36), "设置", OpenSettings, Store != null); }
         void DrawExplore()
         {
             if (Run == null) return;
@@ -145,6 +147,7 @@ namespace MagicCave.Prototype
             Button(new Rect(1110, 17, 140, 41), "暂停 [Esc]", () => { Panel = GamePanel.Pause; CancelRoute(); });
             Label(new Rect(26, 61, 1220, 23), "WASD/方向键  单击寻路/交互 · 长按呼出轮盘  小地图可放大/寻路  右键破墙  E交互  B背包  C角色  Tab卡组", smallStyle);
             if (!minimapExpanded) DrawMinimap();
+            DrawQuickBar(ExploreQuickBarRect);
             Box(new Rect(0, 657, 1280, 63));
             string hint = "探索迷雾，寻找门与物品";
             var target = hover.kind != TargetKind.None ? hover : highlighted;
@@ -168,7 +171,8 @@ namespace MagicCave.Prototype
                     (loot.unopened ? " · 点击 / E开启" : " · 点击 / E拾取");
             }
             Label(new Rect(26, 671, 530, 38), hint, textStyle, Gold);
-            Button(new Rect(565, 669, 225, 36), TorchLight.IsLit(Run) ? "火把 " + Run.torchStepsRemaining + "步 · 熄灭" : "火把未点亮", () => ExtinguishTorch(), TorchLight.IsLit(Run));
+            Button(new Rect(565, 669, 225, 36), Run.torchStepsRemaining > 0 ? "火把 " + Run.torchStepsRemaining + (TorchLight.IsLit(Run) ? "步 · 熄灭" : "步 · 点燃") : "火把未点亮", () => ToggleTorch(),
+                Run.torchStepsRemaining > 0 && (TorchLight.IsLit(Run) || PrototypeSettings.For(Run)?.torch != false && PrototypeSettings.For(Run)?.consumables != false));
             Button(new Rect(805, 669, 140, 36), "角色 [C]", () => { Panel = GamePanel.Character; CancelRoute(); });
             Button(new Rect(960, 669, 135, 36), "背包 [B]", () => { Panel = GamePanel.Inventory; CancelRoute(); });
             Button(new Rect(1110, 669, 140, 36), "卡组 [Tab]", () => { Panel = GamePanel.Deck; CancelRoute(); });
@@ -177,7 +181,7 @@ namespace MagicCave.Prototype
         {
             Button(rectangle, "", click, enabled, true);
             Label(new Rect(rectangle.x + 10, rectangle.y + 10, rectangle.width - 45, 32), Rules.CardNames[(int)card], textStyle, Gold);
-            Label(new Rect(rectangle.xMax - 35, rectangle.y + 10, 26, 30), Rules.Costs[(int)card].ToString(), buttonStyle, Cyan);
+            Label(new Rect(rectangle.xMax - 35, rectangle.y + 10, 26, 30), PrototypeSettings.Cost(Run, card).ToString(), buttonStyle, Cyan);
             Label(new Rect(rectangle.x + 10, rectangle.y + 63, rectangle.width - 20, rectangle.height - 72), CardEffect(card), smallStyle);
         }
         void DrawArt(Rect rectangle, Sprite sprite)
@@ -199,7 +203,7 @@ namespace MagicCave.Prototype
             Label(new Rect(130, 261, 360, 35), "格挡 " + Combat.playerBlock + "     战意 +" + Combat.spirit);
             Label(new Rect(781, 143, 360, 42), Rules.EnemyLabel(Combat.enemy), headingStyle, new Color(1f, 0.53f, 0.46f));
             DrawArt(new Rect(1080, 143, 64, 64), artSet != null ? artSet.enemies[(int)Combat.enemy.kind] : null);
-            Bar(new Rect(782, 206, 362, 30), Combat.enemyHealth / (float)Rules.Health(Combat.enemy), new Color(0.68f, 0.25f, 0.30f), "生命 " + Combat.enemyHealth + " / " + Rules.Health(Combat.enemy));
+            Bar(new Rect(782, 206, 362, 30), Combat.enemyHealth / (float)PrototypeSettings.Health(Run, Combat.enemy), new Color(0.68f, 0.25f, 0.30f), "生命 " + Combat.enemyHealth + " / " + PrototypeSettings.Health(Run, Combat.enemy));
             Label(new Rect(782, 254, 360, 72), "格挡 " + CharacterAttributes.Number(Combat.enemyBlock) + "   意图：" + Combat.Intent +
                 (Combat.IntentAttack > 0 ? "\n预计生命损失 " + CharacterAttributes.Number(Combat.ExpectedHealthLoss) : ""), smallStyle, Gold);
             if (Run.UsesAttributes)
@@ -211,12 +215,21 @@ namespace MagicCave.Prototype
             }
             Label(new Rect(538, 165, 205, 92), "能量\n" + Combat.energy + " / " + (3 + (Combat.enemyTurn == 0 ? Run.openingEnergy : 0)), buttonStyle, Cyan);
             Label(new Rect(380, 367, 520, 35), Combat.playerTurn ? "你的回合 · 点击卡牌使用" : "敌人行动中…", buttonStyle, Gold);
-            int count = Combat.hand.Count; float width = Mathf.Min(170, 1120f / Mathf.Max(1, count) - 10);
+            int pages = Math.Max(1, (Combat.hand.Count + 6) / 7);
+            battleHandPage = Mathf.Clamp(battleHandPage, 0, pages - 1);
+            int offset = battleHandPage * 7;
+            int count = Math.Min(7, Combat.hand.Count - offset); float width = Mathf.Min(170, 1120f / Mathf.Max(1, count) - 10);
             float start = (1280 - count * (width + 10) + 10) / 2f;
             for (int i = 0; i < count; i++)
             {
-                int index = i; CardKind card = Combat.hand[i];
-                Card(new Rect(start + i * (width + 10), 425, width, 178), card, () => PlayCard(index), Combat.playerTurn && Combat.outcome == BattleOutcome.None && Combat.energy >= Rules.Costs[(int)card]);
+                int index = offset + i; CardKind card = Combat.hand[index];
+                Card(new Rect(start + i * (width + 10), 425, width, 178), card, () => PlayCard(index), Combat.playerTurn && Combat.outcome == BattleOutcome.None && Combat.energy >= PrototypeSettings.Cost(Run, card));
+            }
+            if (pages > 1)
+            {
+                Button(new Rect(420, 610, 130, 29), "上一页手牌", () => battleHandPage--, battleHandPage > 0);
+                Label(new Rect(560, 610, 160, 29), (battleHandPage + 1) + " / " + pages + " · 共" + Combat.hand.Count + "张", buttonStyle);
+                Button(new Rect(730, 610, 130, 29), "下一页手牌", () => battleHandPage++, battleHandPage < pages - 1);
             }
             Button(new Rect(46, 650, 180, 45), "抽牌堆 " + Combat.draw.Count, () => Panel = GamePanel.Draw);
             Button(new Rect(241, 650, 180, 45), "弃牌堆 " + Combat.discard.Count, () => Panel = GamePanel.Discard);
@@ -289,6 +302,7 @@ namespace MagicCave.Prototype
         void DrawPanel()
         {
             Fill(new Rect(0, 0, 1280, 720), "shade", new Color(0, 0, 0, 0.70f));
+            if (Panel == GamePanel.Settings) { DrawSettings(); return; }
             if (Panel == GamePanel.NewRun) { DrawDeparture(); return; }
             if (Panel == GamePanel.Character) { DrawCharacter(); return; }
             if (Panel == GamePanel.Inventory) { DrawInventory(); return; }
@@ -347,7 +361,7 @@ namespace MagicCave.Prototype
         }
         void DrawInventory()
         {
-            Box(new Rect(60, 100, 1160, 550));
+            Box(new Rect(60, 100, 1160, 615));
             Label(new Rect(87, 117, 900, 40), Panel == GamePanel.Character ? "角色与装备" : "背包与装备", headingStyle, Gold);
             Button(new Rect(1010, 119, 180, 34), "关闭 [Esc]", () => Panel = GamePanel.None);
             bool previousEnabled = GUI.enabled; GUI.enabled = previousEnabled && !attributeDetails;
@@ -357,8 +371,8 @@ namespace MagicCave.Prototype
             {
                 int index = selectedBagSlot; var slot = Run.inventory[index]; var kind = slot.units[0].kind;
                 Label(new Rect(585, 548, 590, 28), Rules.ItemNames[(int)kind] + " ×" + slot.units.Count + " · " +
-                    (kind == ItemKind.Torch ? "耐久20步 · 熄灭后无法再点燃" : Rules.RarityName(kind)), smallStyle, Gold);
-                Button(new Rect(585, 588, 140, 32), kind == ItemKind.Torch ? "点燃一根" : "使用一件", () => { if (UseInventory(index)) Notify(kind == ItemKind.Torch ? "火把已点燃 · 照明距离<3 · 耐久20步" : "已使用" + Rules.ItemNames[(int)kind]); }, ScreenMode == GameScreen.Explore && Inventory.CanUse(Run, index));
+                    (kind == ItemKind.Torch ? "耐久20步 · 熄灭保留耐久，可再点燃" : Rules.RarityName(kind)), smallStyle, Gold);
+                Button(new Rect(585, 588, 140, 32), kind == ItemKind.Torch ? (Run.torchStepsRemaining > 0 ? "继续点燃" : "点燃一根") : "使用一件", () => { if (UseInventory(index)) Notify(kind == ItemKind.Torch ? "火把已点燃 · 5×5去四角 · 剩余" + Run.torchStepsRemaining + "步" : "已使用" + Rules.ItemNames[(int)kind]); }, ScreenMode == GameScreen.Explore && Inventory.CanUse(Run, index));
                 Button(new Rect(740, 588, 140, 32), "丢弃…", () => { dropSlot = index; dropQuantity = 1; });
             }
             if (dropSlot >= 0 && Run.inventory[dropSlot].units.Count > 0)
@@ -371,6 +385,7 @@ namespace MagicCave.Prototype
                 Button(new Rect(730, 588, 160, 32), "确认丢弃", () => { Inventory.Drop(Run, dropSlot, dropQuantity); dropSlot = -1; BuildWorld(false); });
                 Button(new Rect(905, 588, 140, 32), "取消", () => dropSlot = -1);
             }
+            DrawQuickBar(BagQuickBarRect);
             DrawItemDrag(); GUI.enabled = previousEnabled;
             Button(new Rect(85, 239, 126, 32), "属性详情", () => { attributeDetails = !attributeDetails; ClearItemDrag(); });
             if (attributeDetails) DrawAttributeDetails();
@@ -386,7 +401,7 @@ namespace MagicCave.Prototype
             {
                 float y = 195 + row++ * 38;
                 Label(new Rect(263, y, 220, 33), Rules.CardNames[(int)group.Key] + " ×" + group.Count());
-                Label(new Rect(499, y, 515, 33), Rules.Costs[(int)group.Key] + "能量 · " + CardDescription(Run, group.Key, ScreenMode == GameScreen.Battle).Split('\n')[0], smallStyle);
+                Label(new Rect(499, y, 515, 33), PrototypeSettings.Cost(Run, group.Key) + "能量 · " + CardDescription(Run, group.Key, ScreenMode == GameScreen.Battle).Split('\n')[0], smallStyle);
             }
             Button(new Rect(720, 604, 295, 36), "关闭 [Esc]", () => Panel = GamePanel.None);
         }

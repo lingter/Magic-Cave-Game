@@ -13,6 +13,39 @@ namespace MagicCave.Prototype
         bool draggingItem;
         GamePanel dragPanel;
         RunData dragRun;
+        static readonly Rect ExploreQuickBarRect = new Rect(565, 590, 525, 60);
+        static readonly Rect BagQuickBarRect = new Rect(585, 650, 610, 60);
+        Rect QuickCell(Rect area, int index) => new Rect(area.x + index * (area.width / 3), area.y, area.width / 3 - 6, area.height);
+        void DrawQuickBar(Rect area)
+        {
+            if (Run == null) return;
+            QuickBar.Ensure(Run);
+            for (int i = 0; i < QuickBar.Capacity; i++)
+            {
+                int index = i, bag = QuickBar.BagSlot(Run, i); var rect = QuickCell(area, i);
+                bool burning = QuickBar.IsBurningTorch(Run, i);
+                bool heldTorch = QuickBar.HasTorch(Run, i);
+                bool usable = ScreenMode == GameScreen.Explore && (burning || heldTorch &&
+                    PrototypeSettings.For(Run)?.torch != false && PrototypeSettings.For(Run)?.consumables != false || bag >= 0 && Inventory.CanUse(Run, bag));
+                Box(rect);
+                Label(new Rect(rect.x + 5, rect.y + 2, 24, 22), (i + 1).ToString(), smallStyle, Cyan);
+                if (bag >= 0 || heldTorch)
+                {
+                    var kind = (ItemKind)Run.quickSlots[i];
+                    ItemSprite(new Rect(rect.x + 7, rect.y + 25, 26, 26), kind);
+                    Label(new Rect(rect.x + 39, rect.y + 4, rect.width - 42, 29), Rules.ItemNames[(int)kind] + (burning ? " · 燃烧中" : heldTorch ? " · 已熄灭" : ""), smallStyle, usable ? Gold : Color.gray);
+                    Label(new Rect(rect.x + 39, rect.y + 32, rect.width - 42, 24), heldTorch ? Run.torchStepsRemaining + (burning ? "步 · 点击熄灭" : "步 · 点击点燃") :
+                        "×" + QuickBar.Count(Run, kind) + (usable ? (kind == ItemKind.Torch ? " · 点燃" : " · 使用") : " · 暂不可用"), smallStyle);
+                    if (usable && Click(rect)) Queue(() => UseQuickSlot(index));
+                }
+                else Label(new Rect(rect.x + 29, rect.y + 16, rect.width - 31, 40), "快捷栏 · 空", smallStyle);
+                if (GUI.enabled && (Panel == GamePanel.Inventory || Panel == GamePanel.Character) &&
+                    Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && rect.Contains(GuiMouse))
+                    Queue(() => { if (!QuickBar.IsBurningTorch(Run, index)) Run.quickSlots[index] = -1; else Notify("请先熄灭正在使用的火把"); });
+            }
+            if (Panel == GamePanel.Inventory || Panel == GamePanel.Character)
+                Label(new Rect(85, 659, 465, 42), "消耗品拖入快捷栏 · 右键移除\n探索时按1 / 2 / 3或点击使用", smallStyle, Cyan);
+        }
         static readonly EquipmentSlot[] visibleEquipmentSlots = { EquipmentSlot.MainHand, EquipmentSlot.Head, EquipmentSlot.Armor, EquipmentSlot.Hands,
             EquipmentSlot.Feet, EquipmentSlot.Ring1, EquipmentSlot.Ring2, EquipmentSlot.Ring3, EquipmentSlot.OffHand };
         static readonly Vector2[] equipmentPositions = { new Vector2(85, 295), new Vector2(255, 205), new Vector2(425, 295), new Vector2(85, 405),
@@ -111,6 +144,11 @@ namespace MagicCave.Prototype
             consumedClick = Time.frameCount;
             int bag = dragBagSlot, equipment = dragEquipmentSlot; var position = GuiMouse;
             ClearItemDrag();
+            for (int i = 0; i < QuickBar.Capacity && bag >= 0; i++)
+                if (QuickCell(BagQuickBarRect, i).Contains(position))
+                {
+                    Notify(QuickBar.Assign(Run, i, source.kind) ? "已放入快捷栏" : "快捷栏只能放入消耗品"); return;
+                }
             for (int i = 0; i < Run.inventory.Count; i++)
                 if (BagCell(i).Contains(position))
                 {

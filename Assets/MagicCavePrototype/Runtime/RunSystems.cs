@@ -8,16 +8,70 @@ namespace MagicCave.Prototype
     public static class TorchLight
     {
         public const int Durability = 20;
-        public static bool IsLit(RunData run) => run.torchStepsRemaining > 0;
+        public static bool IsLit(RunData run) => run.torchStepsRemaining > 0 && !run.torchPaused;
+        public static bool Resume(RunData run)
+        {
+            if (run.torchStepsRemaining <= 0 || !run.torchPaused || run.health <= 0 ||
+                PrototypeSettings.For(run)?.consumables == false || PrototypeSettings.For(run)?.torch == false) return false;
+            run.torchPaused = false; MapGenerator.Reveal(run); return true;
+        }
         public static bool Extinguish(RunData run)
         {
             if (!IsLit(run)) return false;
-            run.torchStepsRemaining = 0; return true;
+            run.torchPaused = true; return true;
         }
         // Called only for successful grid movement, never for collision, interaction or time passing.
         public static void Step(RunData run)
         {
             if (IsLit(run)) run.torchStepsRemaining--;
+        }
+    }
+    public static class QuickBar
+    {
+        public const int Capacity = 3;
+        public static bool IsConsumable(ItemKind kind) => kind == ItemKind.Potion || kind == ItemKind.Torch ||
+            kind >= ItemKind.StrengthEssence && kind <= ItemKind.AssaultPotion;
+        public static int Count(RunData run, ItemKind kind) => run.inventory.Sum(s => s.units.Count(i => i.kind == kind));
+        public static void Ensure(RunData run)
+        {
+            if (run.quickSlots == null || run.quickSlots.Length != Capacity)
+            {
+                var previous = run.quickSlots;
+                run.quickSlots = new[] { -1, -1, -1 };
+                if (previous != null) Array.Copy(previous, run.quickSlots, Math.Min(previous.Length, Capacity));
+                else foreach (var kind in run.inventory.SelectMany(s => s.units).Select(i => i.kind).Distinct())
+                    if (IsConsumable(kind) && Array.IndexOf(run.quickSlots, -1) >= 0)
+                        run.quickSlots[Array.IndexOf(run.quickSlots, -1)] = (int)kind;
+            }
+            for (int i = 0; i < Capacity; i++)
+                if (!IsConsumable((ItemKind)run.quickSlots[i]) ||
+                    (Count(run, (ItemKind)run.quickSlots[i]) == 0 && !HasTorch(run, i)) ||
+                    Array.IndexOf(run.quickSlots, run.quickSlots[i]) < i) run.quickSlots[i] = -1;
+        }
+        public static bool IsBurningTorch(RunData run, int index) => run.quickSlots != null && index >= 0 &&
+            index < run.quickSlots.Length && run.quickSlots[index] == (int)ItemKind.Torch && TorchLight.IsLit(run);
+        public static bool HasTorch(RunData run, int index) => run.quickSlots != null && index >= 0 &&
+            index < run.quickSlots.Length && run.quickSlots[index] == (int)ItemKind.Torch && run.torchStepsRemaining > 0;
+        public static void OnAcquired(RunData run, ItemKind kind)
+        {
+            Ensure(run);
+            if (!IsConsumable(kind) || Count(run, kind) == 0 || Array.IndexOf(run.quickSlots, (int)kind) >= 0) return;
+            int empty = Array.IndexOf(run.quickSlots, -1);
+            if (empty >= 0) run.quickSlots[empty] = (int)kind;
+        }
+        public static int BagSlot(RunData run, int index)
+        {
+            Ensure(run);
+            if (index < 0 || index >= Capacity || run.quickSlots[index] < 0) return -1;
+            return run.inventory.FindIndex(s => s.units.Count > 0 && (int)s.units[0].kind == run.quickSlots[index]);
+        }
+        public static bool Assign(RunData run, int index, ItemKind kind)
+        {
+            Ensure(run);
+            if (index < 0 || index >= Capacity || !IsConsumable(kind) || Count(run, kind) == 0) return false;
+            int previous = Array.IndexOf(run.quickSlots, (int)kind);
+            if (previous >= 0) run.quickSlots[previous] = -1;
+            run.quickSlots[index] = (int)kind; return true;
         }
     }
     public static class Inventory
@@ -43,6 +97,7 @@ namespace MagicCave.Prototype
                     item.acquisitionOrder = run.nextAcquisitionOrder++;
                 }
                 slot.units.Add(item); loot.units.RemoveAt(0); taken++;
+                QuickBar.OnAcquired(run, item.kind);
             }
             return taken;
         }
@@ -57,7 +112,8 @@ namespace MagicCave.Prototype
         {
             if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.health <= 0 || run.inventory[slotIndex].units.Count == 0) return false;
             var kind = run.inventory[slotIndex].units[0].kind;
-            if (kind == ItemKind.Torch) return !TorchLight.IsLit(run);
+            if (PrototypeSettings.For(run)?.consumables == false) return false;
+            if (kind == ItemKind.Torch) return PrototypeSettings.For(run)?.torch != false && !TorchLight.IsLit(run);
             if (kind == ItemKind.Potion) return run.health < run.MaxHealth;
             if (!run.UsesAttributes || kind < ItemKind.StrengthEssence || kind > ItemKind.AssaultPotion) return false;
             return kind != ItemKind.AssaultPotion || !run.character.modifiers.Any(m => m.source == "assault-potion" && m.remainingBattles == 2);
@@ -68,7 +124,8 @@ namespace MagicCave.Prototype
             var slot = run.inventory[slotIndex]; var kind = slot.units[0].kind;
             if (kind == ItemKind.Torch)
             {
-                slot.units.RemoveAt(0); run.torchStepsRemaining = TorchLight.Durability;
+                if (run.torchStepsRemaining > 0) return TorchLight.Resume(run);
+                slot.units.RemoveAt(0); run.torchStepsRemaining = TorchLight.Durability; run.torchPaused = false;
                 MapGenerator.Reveal(run); return true;
             }
             if (kind == ItemKind.Potion) return Heal(run, slotIndex);
@@ -91,6 +148,7 @@ namespace MagicCave.Prototype
         public static string Equip(RunData run, int slotIndex, EquipmentSlot? targetSlot = null)
         {
             if (slotIndex < 0 || slotIndex >= run.inventory.Count || run.inventory[slotIndex].units.Count != 1) return "请选择背包中的装备";
+            if (PrototypeSettings.For(run)?.equipment == false) return "本局已关闭装备穿戴";
             var slot = run.inventory[slotIndex]; var item = slot.units[0];
             string reason = CharacterAttributes.EquipLock(run, item); if (reason.Length > 0) return reason;
             var definition = run.attributeRules.Find(item.kind);
@@ -157,6 +215,7 @@ namespace MagicCave.Prototype
     {
         public static void Award(RunData run, int amount)
         {
+            if (PrototypeSettings.For(run)?.growth == false) return;
             run.totalExperience += amount; run.experience += amount;
         }
         public static List<CardKind> NextUpgrade(RunData run)
@@ -165,13 +224,15 @@ namespace MagicCave.Prototype
             if (run.experience < required) return null;
             run.experience -= required; run.level++;
             var pool = new List<CardKind> { CardKind.Heavy, CardKind.Double, CardKind.Shield, CardKind.Fortify, CardKind.Quick, CardKind.Spirit, CardKind.Steady };
-            run.cardRandom.Shuffle(pool); return pool.GetRange(0, 3);
+            run.cardRandom.Shuffle(pool);
+            if (PrototypeSettings.For(run)?.cardRewards == false) return NextUpgrade(run);
+            return pool.GetRange(0, 3);
         }
         public static void FinishVictory(RunData run, EnemyData enemy)
         {
             if (enemy.defeated) return;
             enemy.defeated = true;
-            run.teeth = (int)Math.Min(int.MaxValue, (long)run.teeth + ToothMerchant.VictoryTeeth(enemy));
+            if (PrototypeSettings.For(run)?.teeth != false) run.teeth = (int)Math.Min(int.MaxValue, (long)run.teeth + ToothMerchant.VictoryTeeth(enemy));
             run.health = CharacterAttributes.Quantize(Math.Min(run.MaxHealth, run.health + run.victoryHealing));
             CharacterAttributes.FinishBattle(run);
             Award(run, enemy.kind == EnemyKind.Boss ? 30 : 10);
@@ -180,9 +241,13 @@ namespace MagicCave.Prototype
                 run.bossDefeated = true;
                 run.Map.Set(6, 10, Tile.Return);
                 run.Map.revealed[run.Map.Index(6, 10)] = true;
-                var reward = MapGenerator.AddLoot(run, run.Map, new Vector2Int(6, 9), ItemKind.Relic, 1);
-                // Continue the layout's collision rule, including for a boss reached after loading an old save.
-                reward.permanentObstacle = run.maps.Any(m => m.loot.Any(l => l.permanentObstacle));
+                int chance = PrototypeSettings.For(run)?.bossRelicChance ?? 100;
+                if (chance == 100 || new RandomStream(RandomStream.Derive(run.seed, 0x52454c49)).Range(0, 100) < chance)
+                {
+                    var reward = MapGenerator.AddLoot(run, run.Map, new Vector2Int(6, 9), ItemKind.Relic, 1);
+                    // Continue the layout's collision rule, including for a boss reached after loading an old save.
+                    reward.permanentObstacle = run.maps.Any(m => m.loot.Any(l => l.permanentObstacle));
+                }
                 // The return door may appear on or overlap the pre-battle player footprint.
                 MapGenerator.EnsureSafePlayerPosition(run);
             }
@@ -205,7 +270,7 @@ namespace MagicCave.Prototype
         public Battle(RunData run, EnemyData enemy)
         {
             this.run = run; this.enemy = enemy;
-            enemyHealth = Rules.Health(enemy);
+            enemyHealth = PrototypeSettings.Health(run, enemy);
             draw.AddRange(run.deck); run.battleRandom.Shuffle(draw);
             StartPlayerTurn();
             playerBlock = run.openingBlock;
@@ -229,22 +294,23 @@ namespace MagicCave.Prototype
         public bool Play(int handIndex)
         {
             if (!playerTurn || outcome != BattleOutcome.None || handIndex < 0 || handIndex >= hand.Count) return false;
-            CardKind card = hand[handIndex]; int cost = Rules.Costs[(int)card];
+            CardKind card = hand[handIndex]; int cost = PrototypeSettings.Cost(run, card);
             if (energy < cost) return false;
             energy -= cost; hand.RemoveAt(handIndex);
             switch (card)
             {
                 case CardKind.Strike: Hit(card); break;
                 case CardKind.Defend: playerBlock += CombatNumbers.Block(run, card); break;
-                case CardKind.Prepare: Draw(2); break;
+                case CardKind.Prepare: break;
                 case CardKind.Heavy: Hit(card); break;
                 case CardKind.Double: Hit(card); if (outcome == BattleOutcome.None) Hit(card); break;
                 case CardKind.Shield: Hit(card); break;
                 case CardKind.Fortify: playerBlock += CombatNumbers.Block(run, card); break;
-                case CardKind.Quick: Hit(card); if (outcome == BattleOutcome.None) Draw(1); break;
-                case CardKind.Spirit: spirit += 2; break;
-                case CardKind.Steady: playerBlock += CombatNumbers.Block(run, card); Draw(1); break;
+                case CardKind.Quick: Hit(card); break;
+                case CardKind.Spirit: spirit += PrototypeSettings.For(run)?.spirit ?? 2; break;
+                case CardKind.Steady: playerBlock += CombatNumbers.Block(run, card); break;
             }
+            if (outcome == BattleOutcome.None) Draw(PrototypeSettings.Draw(run, card));
             discard.Add(card);
             return true;
         }
@@ -290,12 +356,15 @@ namespace MagicCave.Prototype
             get
             {
                 int bonus = enemy.Level - 1;
-                if (enemy.kind == EnemyKind.Bat) return 5 + bonus;
-                if (enemy.kind == EnemyKind.Beetle) return enemyTurn % 2 == 1 ? 8 + bonus : 0;
-                return enemyTurn % 3 == 0 ? 8 + bonus : enemyTurn % 3 == 2 ? 14 + bonus : 0;
+                var settings = PrototypeSettings.For(run);
+                int attack = settings?.enemyAttack[(int)enemy.kind] ?? (enemy.kind == EnemyKind.Bat ? 5 : 8);
+                int heavy = settings?.enemyHeavy[(int)enemy.kind] ?? 14;
+                if (enemy.kind == EnemyKind.Bat) return attack + bonus;
+                if (enemy.kind == EnemyKind.Beetle) return enemyTurn % 2 == 1 ? attack + bonus : 0;
+                return enemyTurn % 3 == 0 ? attack + bonus : enemyTurn % 3 == 2 ? heavy + bonus : 0;
             }
         }
-        public int IntentBlock { get { return enemy.kind == EnemyKind.Beetle ? 6 : 10; } }
+        public int IntentBlock { get { return PrototypeSettings.For(run)?.enemyBlock[(int)enemy.kind] ?? (enemy.kind == EnemyKind.Beetle ? 6 : 10); } }
         public string Intent { get { return IntentAttack > 0 ? "攻击 " + IntentAttack : "格挡 " + IntentBlock; } }
     }
 }

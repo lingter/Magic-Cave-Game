@@ -42,6 +42,8 @@ namespace MagicCave.Prototype
         public static string PurchaseLock(RunData run, ItemKind kind)
         {
             if (run == null || run.health <= 0 || !InRange(run)) return "请先靠近集齿者";
+            if (PrototypeSettings.For(run)?.merchant == false || PrototypeSettings.For(run)?.teeth == false) return "本局已关闭牙齿交易";
+            if (PrototypeSettings.For(run)?.consumables == false || kind == ItemKind.Torch && PrototypeSettings.For(run)?.torch == false) return "本局已关闭此消耗品";
             int price = Price(kind);
             if (price <= 0 || kind == ItemKind.AssaultPotion && !run.UsesAttributes) return "商品暂未出售";
             if (run.teeth < price) return "牙齿不足";
@@ -56,6 +58,7 @@ namespace MagicCave.Prototype
             Destination(run, kind).units.Add(new ItemUnit { id = run.nextItemId++, kind = kind,
                 acquiredTicks = DateTime.UtcNow.Ticks, acquisitionOrder = run.nextAcquisitionOrder++ });
             run.teeth -= Price(kind);
+            QuickBar.OnAcquired(run, kind);
             return "";
         }
 

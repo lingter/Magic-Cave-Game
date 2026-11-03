@@ -215,7 +215,7 @@ namespace MagicCave.Prototype
                 default: DrawTownGuide(); break;
             }
             if (TownPage != TownPage.None) Button(new Rect(899, 578, 336, 35), InGuild ? "返回公会 [Esc]" : "返回城镇 [Esc]", CloseTownPage);
-            Label(new Rect(26, 653, 1190, 36), "局外成长自动保存  ·  存档回城保留本局，结束探索才结算物品、金币与声望  ·  当前为初版数值", smallStyle);
+            Label(new Rect(26, 653, 1050, 36), "局外成长自动保存  ·  存档回城保留本局，结束探索才结算物品、金币与声望  ·  当前为初版数值", smallStyle);
         }
         void DrawTownMap()
         {

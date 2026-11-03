@@ -27,6 +27,54 @@ public class PrototypeInputDriver : MonoBehaviour
 
 public class PrototypePlayTests
 {
+    [UnityTest]
+    public IEnumerator QuickBarUsesMouseAndNumberKeysAndAppearsInBag()
+    {
+        game.StartNewRun(12345); var run = game.Run;
+        var loot = new GroundLoot { loose = true };
+        foreach (var kind in new[] { ItemKind.Potion, ItemKind.Potion, ItemKind.Torch, ItemKind.AssaultPotion })
+            loot.units.Add(new ItemUnit { id = run.nextItemId++, kind = kind });
+        Inventory.Pickup(run, loot); run.health = run.MaxHealth - 40;
+        yield return null; yield return null;
+        var position = new Vector2(run.x, run.y);
+        yield return Click(650, 620);
+        Assert.That(QuickBar.Count(run, ItemKind.Potion), Is.EqualTo(1));
+        Assert.That(new Vector2(run.x, run.y), Is.EqualTo(position), "Quickbar click must not navigate the map.");
+        driver.keyState = new KeyboardState(Key.Digit1); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(run.health, Is.EqualTo(run.MaxHealth));
+        Assert.That(run.quickSlots[0], Is.EqualTo(-1));
+        Inventory.Pickup(run, new GroundLoot { loose = true, units = new System.Collections.Generic.List<ItemUnit> {
+            new ItemUnit { id = run.nextItemId++, kind = ItemKind.Potion } } });
+        string captures = Path.GetFullPath("Captures/QuickBar"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "exploration.png")); yield return null; yield return null;
+        yield return Click(1010, 687);
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "inventory.png")); yield return null; yield return null;
+        yield return Click(885, 680);
+        Assert.That(TorchLight.IsLit(run), Is.True);
+        Assert.That(QuickBar.Count(run, ItemKind.Torch), Is.Zero);
+        Assert.That(QuickBar.IsBurningTorch(run, 1), Is.True);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "burning-torch.png")); yield return null; yield return null;
+        yield return Click(885, 680);
+        Assert.That(TorchLight.IsLit(run), Is.False);
+        Assert.That(run.quickSlots[1], Is.EqualTo((int)ItemKind.Torch));
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(20));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "paused-torch.png")); yield return null; yield return null;
+        yield return Click(885, 680);
+        Assert.That(TorchLight.IsLit(run), Is.True, "Clicking the same shortcut relights without spare stock.");
+        Assert.That(QuickBar.Count(run, ItemKind.Torch), Is.Zero);
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(20));
+        driver.keyState = new KeyboardState(Key.Escape); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
+        driver.keyState = new KeyboardState(Key.Digit2); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null;
+        Assert.That(TorchLight.IsLit(run), Is.False);
+        Assert.That(game.UseQuickSlot(1), Is.True);
+        game.BeginBattle(run.Map.enemies.First(e => !e.defeated));
+        Assert.That(game.UseQuickSlot(2), Is.False, "Exploration shortcut must not bypass combat consumable rules.");
+    }
     PrototypeGame game;
     PrototypeInputDriver driver;
     string folder;
@@ -57,6 +105,56 @@ public class PrototypePlayTests
         driver.mouse = InputSystem.AddDevice<Mouse>(); driver.keyboard = InputSystem.AddDevice<Keyboard>();
         yield return null; yield return null;
     }
+    [UnityTest]
+    public IEnumerator SettingsPanelSavesCancelsAndAppliesOnlyToNewRuns()
+    {
+        string captures = Path.GetFullPath("Captures/Settings"); Directory.CreateDirectory(captures);
+        yield return Click(1180, 688); Assert.That(game.Panel, Is.EqualTo(GamePanel.Settings));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "features.png")); yield return null; yield return null;
+        yield return Click(800, 230); // Torch off in draft.
+        yield return Click(1020, 650); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
+        Assert.That(game.Store.Settings.torch, Is.False);
+        game.OpenSettings(); yield return null;
+        yield return Click(500, 155); // Card page.
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "cards.png")); yield return null; yield return null;
+        yield return Click(475, 240); // Strike count +1.
+        yield return Click(400, 240); // Focus numeric input.
+        driver.keyState = new KeyboardState(Key.LeftCtrl, Key.A); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
+        InputSystem.QueueTextEvent(driver.keyboard, '1'); InputSystem.QueueTextEvent(driver.keyboard, '2'); yield return null; yield return null;
+        driver.keyState = new KeyboardState(Key.Enter); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
+        yield return Click(1020, 650); Assert.That(game.Store.Settings.cardCounts[0], Is.EqualTo(12));
+        game.OpenSettings(); yield return null;
+        yield return Click(770, 155);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "monsters.png")); yield return null; yield return null;
+        yield return Click(1040, 155);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "drops.png")); yield return null; yield return null;
+        yield return Click(578, 251); // Change drop weight then cancel.
+        yield return Click(770, 650); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
+        Assert.That(game.Store.Settings.drops.firstEquipment[0].weight, Is.EqualTo(1));
+        game.StartNewRun(12345); Assert.That(game.Run.deck.Count, Is.EqualTo(17)); Assert.That(PrototypeSettings.For(game.Run).torch, Is.False);
+        PrototypeStore.ValidateRun(game.Run);
+    }
+
+    [UnityTest]
+    public IEnumerator LargeCustomHandsArePagedAndDisabledGrowthDoesNotAwardFailureExperience()
+    {
+        var settings = new PrototypeSettings { growth = false };
+        settings.cardCounts[0] = 30; game.Store.SaveSettings(settings); game.StartNewRun(12345);
+        game.BeginBattle(game.Run.Map.enemies[0]); game.Combat.hand.Clear();
+        game.Combat.hand.AddRange(Enumerable.Repeat(CardKind.Defend, 14)); yield return null; yield return null;
+        yield return Click(790, 625);
+        Assert.That((int)typeof(PrototypeGame).GetField("battleHandPage", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(game), Is.EqualTo(1));
+        int handCount = game.Combat.hand.Count; yield return Click(150, 500);
+        Assert.That(game.Combat.hand.Count, Is.EqualTo(handCount - 1));
+        string captures = Path.GetFullPath("Captures/Settings"); Directory.CreateDirectory(captures);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "large-hand.png")); yield return null; yield return null;
+        game.Run.health = 0; game.Combat.outcome = BattleOutcome.Failure;
+        typeof(PrototypeGame).GetMethod("ProcessBattle", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(game, null);
+        Assert.That(game.Run.totalExperience, Is.Zero);
+    }
+
     [UnityTearDown]
     public IEnumerator Cleanup()
     {
@@ -151,7 +249,7 @@ public class PrototypePlayTests
         var character = typeof(PrototypeGame).GetMethod("SeedCharacter", BindingFlags.Instance | BindingFlags.NonPublic);
         foreach (char value in "-2026") character.Invoke(game, new object[] { value });
         yield return Click(1050, 292); Assert.That(game.Panel, Is.EqualTo(GamePanel.NewRun));
-        yield return Click(840, 547);
+        yield return Click(840, 612);
         Assert.That(game.ScreenMode, Is.EqualTo(GameScreen.Explore)); Assert.That(game.Run.seed, Is.EqualTo(-2026));
         yield return Click(1010, 687); Assert.That(game.Panel, Is.EqualTo(GamePanel.Inventory));
         yield return Click(1090, 136); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
@@ -174,7 +272,12 @@ public class PrototypePlayTests
         Assert.That(game.Panel, Is.EqualTo(GamePanel.NewRun));
         Assert.That(game.Run, Is.Null);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "departure-wisdom.png")); yield return null; yield return null;
-        yield return Click(830, 547);
+        yield return Click(830, 502);
+        Assert.That(game.Run, Is.Null, "Selecting terrain must not start the run.");
+        yield return Click(830, 612);
+        Assert.That(game.Run.generationMode, Is.EqualTo(MapGenerationMode.Excavated));
+        Assert.That(game.Run.maps.Count, Is.EqualTo(5));
+        Assert.That(game.Run.maps.Take(4).All(m => m.dugTerrain), Is.True);
         Assert.That(game.Run.character.secondary, Is.EqualTo(AttributeKind.None));
         Assert.That(game.Run.UsesAttributes, Is.True);
         var run = game.Run;
@@ -735,42 +838,45 @@ public class PrototypePlayTests
     }
 
     [UnityTest]
-    public IEnumerator ExcavatedFloorsRenderAndAdvanceThroughAllNewFloorsToBoss()
+    public IEnumerator SelectedTerrainFloorsRenderSaveAndAdvanceToFifthFloorBoss()
     {
-        game.StartNewRun(12345);
-        var rebuild = typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic);
-        var targetType = typeof(PrototypeGame).GetNestedType("Target", BindingFlags.NonPublic);
-        for (int index = 3; index < 7; index++)
+        foreach (var mode in new[] { MapGenerationMode.RoomsAndCorridors, MapGenerationMode.Excavated })
         {
-            game.Run.mapIndex = index;
-            var map = game.Run.Map;
-            game.Run.x = map.spawnX; game.Run.y = map.spawnY;
-            if (map.dugTerrain)
+            game.StartNewRun(12345, mode);
+            var rebuild = typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic);
+            var targetType = typeof(PrototypeGame).GetNestedType("Target", BindingFlags.NonPublic);
+            for (int index = 0; index < 4; index++)
             {
-                for (int i = 0; i < map.revealed.Length; i++) map.revealed[i] = true;
-                rebuild.Invoke(game, new object[] { true }); yield return null; yield return null;
-                CaptureWallCamera("floor-" + map.number + ".png", new Vector2Int(15, 15), map.size, 31, "Captures/NaturalTerrain");
-                game.Store.SaveCheckpoint(game.Run); game.ContinueRun(); yield return null;
-                Assert.That(game.Run.mapIndex, Is.EqualTo(index));
-                Assert.That(game.Run.Map.cells, Is.EqualTo(map.cells));
-                Assert.That(MapGenerator.ValidateContainerRoutes(game.Run.Map), Is.True);
+                game.Run.mapIndex = index;
+                var map = game.Run.Map;
+                game.Run.x = map.spawnX; game.Run.y = map.spawnY;
+                if (map.dugTerrain)
+                {
+                    for (int i = 0; i < map.revealed.Length; i++) map.revealed[i] = true;
+                    rebuild.Invoke(game, new object[] { true }); yield return null; yield return null;
+                    CaptureWallCamera("floor-" + map.number + ".png", new Vector2Int(15, 15), map.size, 31, "Captures/NaturalTerrain");
+                    game.Store.SaveCheckpoint(game.Run); game.ContinueRun(); yield return null;
+                    Assert.That(game.Run.mapIndex, Is.EqualTo(index));
+                    Assert.That(game.Run.Map.cells, Is.EqualTo(map.cells));
+                    Assert.That(MapGenerator.ValidateContainerRoutes(game.Run.Map), Is.True);
+                }
+                int door = Array.IndexOf(game.Run.Map.cells, (int)Tile.Advance);
+                var point = new Vector2Int(door % map.size, door / map.size);
+                var approach = MapGenerator.Directions.Select(d => point + d).First(p => game.Run.Map.Walkable(p.x, p.y) &&
+                    !game.Run.Map.loot.Any(l => l.BlocksMovement && l.x == p.x && l.y == p.y));
+                foreach (var enemy in game.Run.Map.enemies) enemy.defeated = true;
+                game.Run.x = approach.x; game.Run.y = approach.y;
+                rebuild.Invoke(game, new object[] { true }); yield return null;
+                var target = Activator.CreateInstance(targetType);
+                targetType.GetField("kind").SetValue(target, TargetKind.Door);
+                targetType.GetField("x").SetValue(target, point.x); targetType.GetField("y").SetValue(target, point.y);
+                typeof(PrototypeGame).GetMethod("Interact", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new[] { target });
+                yield return null;
+                Assert.That(game.Run.mapIndex, Is.EqualTo(index + 1));
             }
-            int door = Array.IndexOf(game.Run.Map.cells, (int)Tile.Advance);
-            var point = new Vector2Int(door % map.size, door / map.size);
-            var approach = MapGenerator.Directions.Select(d => point + d).First(p => game.Run.Map.Walkable(p.x, p.y) &&
-                !game.Run.Map.loot.Any(l => l.BlocksMovement && l.x == p.x && l.y == p.y));
-            foreach (var enemy in game.Run.Map.enemies) enemy.defeated = true;
-            game.Run.x = approach.x; game.Run.y = approach.y;
-            rebuild.Invoke(game, new object[] { true }); yield return null;
-            var target = Activator.CreateInstance(targetType);
-            targetType.GetField("kind").SetValue(target, TargetKind.Door);
-            targetType.GetField("x").SetValue(target, point.x); targetType.GetField("y").SetValue(target, point.y);
-            typeof(PrototypeGame).GetMethod("Interact", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, new[] { target });
-            yield return null;
-            Assert.That(game.Run.mapIndex, Is.EqualTo(index + 1));
+            Assert.That(game.Run.Map.number, Is.EqualTo(5));
+            Assert.That(game.Run.Map.enemies.Single().kind, Is.EqualTo(EnemyKind.Boss));
         }
-        Assert.That(game.Run.Map.number, Is.EqualTo(8));
-        Assert.That(game.Run.Map.enemies.Single().kind, Is.EqualTo(EnemyKind.Boss));
     }
 
     void CaptureWallCamera(string filename, Vector2Int center, int mapSize, float viewCells = 7,
@@ -869,6 +975,38 @@ public class PrototypePlayTests
         PrototypeStore.ValidateRun(run);
         string captures = Path.GetFullPath("Captures/InventoryStars"); Directory.CreateDirectory(captures);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "inventory-grid.png")); yield return null; yield return null;
+    }
+    [UnityTest]
+    public IEnumerator SightRendersWallOcclusionAndTorchToggle()
+    {
+        game.StartNewRun(12345); var run = game.Run; var map = run.Map;
+        run.x = 5; run.y = 5;
+        Array.Fill(map.cells, (int)Tile.Wall); Array.Clear(map.revealed, 0, map.revealed.Length);
+        map.enemies.Clear(); map.loot.Clear(); map.hasMerchant = false;
+        for (int y = 2; y <= 8; y++) for (int x = 2; x <= 8; x++) map.Set(x, y, Tile.Ground);
+        for (int y = 2; y <= 8; y++) map.Set(6, y, Tile.Wall);
+        MapGenerator.Reveal(run);
+        var rebuild = typeof(PrototypeGame).GetMethod("BuildWorld", BindingFlags.Instance | BindingFlags.NonPublic);
+        rebuild.Invoke(game, new object[] { true }); yield return null; yield return null;
+        Assert.That(map.Known(4, 4), Is.True);
+        Assert.That(map.Known(6, 5), Is.True);
+        Assert.That(map.Known(7, 5), Is.False);
+        CaptureWallCamera("base-wall-occlusion.png", new Vector2Int(5, 5), map.size, 7, "Captures/Sight");
+        Inventory.Pickup(run, new GroundLoot { loose = true, units = new System.Collections.Generic.List<ItemUnit> {
+            new ItemUnit { id = run.nextItemId++, kind = ItemKind.Torch } } });
+        int slot = Array.IndexOf(run.quickSlots, (int)ItemKind.Torch);
+        Assert.That(game.UseQuickSlot(slot), Is.True); yield return null;
+        Assert.That(map.Known(3, 4), Is.True);
+        Assert.That(map.Known(7, 5), Is.False, "Torch cannot reveal the other side of the wall.");
+        CaptureWallCamera("torch-wall-occlusion.png", new Vector2Int(5, 5), map.size, 7, "Captures/Sight");
+        TorchLight.Step(run);
+        Assert.That(game.UseQuickSlot(slot), Is.True);
+        Assert.That(TorchLight.IsLit(run), Is.False);
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(19));
+        Assert.That(game.UseQuickSlot(slot), Is.True);
+        Assert.That(TorchLight.IsLit(run), Is.True);
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(19));
+        Assert.That(QuickBar.Count(run, ItemKind.Torch), Is.Zero);
     }
     [UnityTest]
     public IEnumerator TorchOnlyBurnsForSuccessfulGridSteps()

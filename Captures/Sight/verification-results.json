@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-03",
+  "project": "E:/UnityProject/Magic Cave Game",
+  "editorOperations": "Unity MCP",
+  "editMode": {
+    "jobId": "9aa88373c2f14a4a8725c7c37a4f98e5",
+    "passed": 175,
+    "failed": 0
+  },
+  "playMode": {
+    "initialJobId": "3b5b0d6631044f7a9c717ee99e5df858",
+    "initialPassed": 36,
+    "initialFailed": 1,
+    "failure": "QuickBarUsesMouseAndNumberKeysAndAppearsInBag pressed the numeric shortcut while inventory was open. The test now closes inventory first, matching existing input routing.",
+    "rerunJobId": "2174cb355aa74b77b832220400aeae63",
+    "rerunPassed": 1,
+    "rerunFailed": 0,
+    "all37HavePassingResults": true
+  },
+  "checked": [
+    "100 seeds / 400 natural maps: connected terrain, sustained passages, chambers, permanent container routes and guarded approaches",
+    "Base sight 3x3; torch sight 5x5 excluding four corners",
+    "Walls visible at first hit, no new discovery behind walls or through blocked diagonal corners",
+    "Digging refreshes sight",
+    "Torch pause and resume preserve durability and spare inventory",
+    "Mouse shortcut toggle, exploration number-key toggle and checkpoint state",
+    "Visual review of four natural floors, base/torch wall occlusion and paused torch shortcut"
+  ],
+  "consoleErrorsAtCompletion": 0,
+  "editorAtCompletion": "WorldMap, not playing",
+  "buildRebuilt": false
+}

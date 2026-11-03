@@ -9,7 +9,7 @@ using UnityEngine.InputSystem.LowLevel;
 namespace MagicCave.Prototype
 {
     public enum GameScreen { Home, Explore, Battle, Rewards, Settlement, Result, Warehouse }
-    public enum GamePanel { None, Inventory, Deck, Draw, Discard, Pause, Return, NewRun, Leave, Character, Merchant }
+    public enum GamePanel { None, Inventory, Deck, Draw, Discard, Pause, Return, NewRun, Leave, Character, Merchant, Settings }
 
     public sealed partial class PrototypeGame : MonoBehaviour
     {
@@ -67,6 +67,7 @@ namespace MagicCave.Prototype
             {
                 string folder = string.IsNullOrEmpty(storageOverride) ? Path.Combine(Application.persistentDataPath, "magic-cave-prototype") : storageOverride;
                 Store = new PrototypeStore(folder);
+                if (Store.SettingsWarning != null) Notify(Store.SettingsWarning);
                 Debug.Log("[MagicCave] Character prototype ready; rules v" + PrototypeAttributeSet.LoadRules().version + ".");
                 if (Store.Session.pending != null)
                 {
@@ -90,6 +91,7 @@ namespace MagicCave.Prototype
             ReadGridDirection();
             ReadNavigationPointer();
             ReadInterfaceInput();
+            ReadSettingsInput();
             UpdateTown();
             if (queued != null)
             {
@@ -122,6 +124,12 @@ namespace MagicCave.Prototype
                 else if (keyboard.cKey.wasPressedThisFrame) { Panel = GamePanel.Character; CancelRoute(); }
             }
             if (Panel != GamePanel.None) return;
+            if (!minimapExpanded && keyboard != null)
+            {
+                if (keyboard.digit1Key.wasPressedThisFrame) UseQuickSlot(0);
+                else if (keyboard.digit2Key.wasPressedThisFrame) UseQuickSlot(1);
+                else if (keyboard.digit3Key.wasPressedThisFrame) UseQuickSlot(2);
+            }
             hover = PointerTarget(); highlighted = NearbyTarget();
             if (keyboard != null && keyboard.eKey.wasPressedThisFrame && highlighted.kind != TargetKind.None)
             {
@@ -277,7 +285,7 @@ namespace MagicCave.Prototype
         {
             if (Mouse.current == null) return false;
             Vector2 point = GuiMouse;
-            return minimapExpanded || PointerOverDefaultWheel || point.y < 94 || point.y > 654 || MinimapPanel.Contains(point) || (!string.IsNullOrEmpty(error) && point.y > 604);
+            return minimapExpanded || PointerOverDefaultWheel || ExploreQuickBarRect.Contains(point) || point.y < 94 || point.y > 654 || MinimapPanel.Contains(point) || (!string.IsNullOrEmpty(error) && point.y > 604);
         }
         Vector2 GuiMouse
         {
@@ -299,12 +307,14 @@ namespace MagicCave.Prototype
                     if (ToothMerchant.InRange(Run)) Panel = GamePanel.Merchant;
                     break;
                 case TargetKind.Wall:
+                    if (PrototypeSettings.For(Run)?.digging == false) { Notify("本局已关闭破墙"); return; }
                     if (Run.Map.At(target.x, target.y) != Tile.Wall || Run.Map.Border(target.x, target.y)) return;
                     Run.Map.Set(target.x, target.y, Tile.Ground); MapGenerator.Reveal(Run); BuildWorld(false); Notify("墙体已破坏"); break;
                 case TargetKind.Loot:
                     var loot = Run.Map.loot.FirstOrDefault(l => l.id == target.id);
                     if (loot == null || !loot.HasContents) return;
                     ContainerLoot.Open(Run, loot);
+                    if (loot.units.Count == 0) { Notify("空箱／袋：本局掉落池已停用"); BuildWorld(false); break; }
                     ItemKind kind = loot.units[0].kind; int count = Inventory.Pickup(Run, loot);
                     Notify(count > 0 ? "拾取 " + Rules.ItemNames[(int)kind] + " ×" + count : "背包已满，物品留在地面"); BuildWorld(false); break;
                 case TargetKind.Enemy:
@@ -325,9 +335,14 @@ namespace MagicCave.Prototype
             => StartNewRun(seed, AttributeKind.None);
 
         public void StartNewRun(int seed, AttributeKind secondary)
+            => StartNewRun(seed, MapGenerationMode.RoomsAndCorridors);
+
+        public void StartNewRun(int seed, MapGenerationMode mode)
         {
-            var next = MapGenerator.NewRun(seed, AttributeKind.None);
-            TownRules.Apply(Store.Warehouse.town, next); PrototypeStore.ValidateRun(next);
+            var next = MapGenerator.NewRun(seed, mode);
+            Store.Settings.Apply(next);
+            if (Store.Settings.talents) TownRules.Apply(Store.Warehouse.town, next);
+            PrototypeStore.ValidateRun(next);
             Store.DiscardCheckpoint(); Run = next; Combat = null; Panel = GamePanel.None;
             facing = Vector2.down; attributeDetails = false;
             equipmentPreviewSlot = selectedBagSlot = dropSlot = -1; ClearItemDrag();
@@ -353,6 +368,7 @@ namespace MagicCave.Prototype
         }
         public void BeginBattle(EnemyData enemy)
         {
+            battleHandPage = 0;
             CancelRoute(); Combat = new Battle(Run, enemy); processedBattle = false;
             ScreenMode = GameScreen.Battle; Panel = GamePanel.None;
         }
@@ -369,27 +385,50 @@ namespace MagicCave.Prototype
         public bool UseInventory(int slot)
         {
             if (ScreenMode != GameScreen.Explore || Run == null || !Inventory.Use(Run, slot)) return false;
+            QuickBar.Ensure(Run);
             RefreshVisibility(); return true;
+        }
+        public bool UseQuickSlot(int index)
+        {
+            if (Run == null || ScreenMode != GameScreen.Explore || minimapExpanded ||
+                (Panel != GamePanel.None && Panel != GamePanel.Inventory && Panel != GamePanel.Character)) return false;
+            int slot = QuickBar.BagSlot(Run, index);
+            if (QuickBar.IsBurningTorch(Run, index)) { CancelRoute(); return ExtinguishTorch(); }
+            if (QuickBar.HasTorch(Run, index)) { CancelRoute(); return ToggleTorch(); }
+            if (slot < 0) return false;
+            var kind = Run.inventory[slot].units[0].kind;
+            if (!UseInventory(slot)) return false;
+            CancelRoute();
+            Notify(kind == ItemKind.Torch ? "火把已点燃 · 剩余" + Run.torchStepsRemaining + "步" : "已使用" + Rules.ItemNames[(int)kind]);
+            return true;
         }
         public bool ExtinguishTorch()
         {
             if (ScreenMode != GameScreen.Explore || Run == null || !TorchLight.Extinguish(Run)) return false;
-            RefreshVisibility(); Notify("火把已熄灭，不能再次点燃"); return true;
+            QuickBar.Ensure(Run);
+            RefreshVisibility(); Notify("火把已熄灭 · 保留" + Run.torchStepsRemaining + "步耐久"); return true;
+        }
+        public bool ToggleTorch()
+        {
+            if (ScreenMode != GameScreen.Explore || Run == null) return false;
+            if (TorchLight.IsLit(Run)) return ExtinguishTorch();
+            if (!TorchLight.Resume(Run)) return false;
+            RefreshVisibility(); Notify("火把已点燃 · 剩余" + Run.torchStepsRemaining + "步"); return true;
         }
         void PlayCard(int index)
         {
             if (Combat.Play(index)) ProcessBattle();
         }
-        void EndTurn() { Combat.EndPlayerTurn(); enemyWait = 0.35f; }
+        void EndTurn() { battleHandPage = 0; Combat.EndPlayerTurn(); enemyWait = 0.35f; }
         void ProcessBattle()
         {
             if (Combat.outcome == BattleOutcome.None || processedBattle) return;
             processedBattle = true;
             if (Combat.outcome == BattleOutcome.Failure)
             {
-                Run.totalExperience += 5; BeginSettlement(true); return;
+                if (PrototypeSettings.For(Run)?.growth != false) Run.totalExperience += 5; BeginSettlement(true); return;
             }
-            int gainedTeeth = ToothMerchant.VictoryTeeth(Combat.enemy);
+            int gainedTeeth = PrototypeSettings.For(Run)?.teeth == false ? 0 : ToothMerchant.VictoryTeeth(Combat.enemy);
             Growth.FinishVictory(Run, Combat.enemy); Combat = null; NextReward();
             Notify("战斗胜利 · 牙齿 +" + gainedTeeth + " · 余额 " + Run.teeth);
         }

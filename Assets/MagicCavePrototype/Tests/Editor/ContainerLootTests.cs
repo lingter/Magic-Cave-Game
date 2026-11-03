@@ -12,13 +12,33 @@ public sealed class ContainerLootTests
     {
         for (int seed = 0; seed < 100; seed++)
         {
-            var run = MapGenerator.NewRun(seed, AttributeKind.None, false);
-            Assert.That(run.maps.Count, Is.EqualTo(8));
-            foreach (var map in run.maps.Skip(4).Take(3))
+            var run = MapGenerator.NewRun(seed, MapGenerationMode.Excavated, false);
+            Assert.That(run.maps.Count, Is.EqualTo(5));
+            foreach (var map in run.maps.Take(4))
             {
                 string context = "Seed " + seed + " floor " + map.number;
                 Assert.That(map.dugTerrain, Is.True, context);
                 Assert.That(MapGenerator.ValidateTerrain(map, out _, out _), Is.True, context);
+                // Reject fragmented-looking growth: sustained passages and open chambers must
+                // coexist with enough terminal branches for the permanent containers.
+                int ends = 0, longPassages = 0, chamberSquares = 0;
+                for (int y = 1; y < map.size - 1; y++) for (int x = 1; x < map.size - 1; x++)
+                {
+                    if (!map.Walkable(x, y)) continue;
+                    if (MapGenerator.IsRoadEnd(map, new Vector2Int(x, y))) ends++;
+                    if (map.Walkable(x + 1, y) && map.Walkable(x, y + 1) && map.Walkable(x + 1, y + 1)) chamberSquares++;
+                    bool horizontal = true, vertical = true;
+                    for (int step = 0; step < 7; step++)
+                    {
+                        horizontal &= map.Walkable(x + step, y);
+                        vertical &= map.Walkable(x, y + step);
+                    }
+                    if (horizontal) longPassages++;
+                    if (vertical) longPassages++;
+                }
+                Assert.That(ends, Is.InRange(10, 45), context);
+                Assert.That(longPassages, Is.GreaterThanOrEqualTo(20), context);
+                Assert.That(chamberSquares, Is.GreaterThanOrEqualTo(8), context);
                 Assert.That(map.loot.Count, Is.EqualTo(10), context);
                 Assert.That(map.loot.All(l => MapGenerator.IsRoadEnd(map, new Vector2Int(l.x, l.y))), Is.True, context);
                 Assert.That(map.loot.Count(l => l.combatApproach), Is.EqualTo(8), context);
@@ -37,13 +57,70 @@ public sealed class ContainerLootTests
                 Assert.That(MapGenerator.ValidateContainerRoutes(map), Is.True, context);
             }
             Assert.That(run.maps.Last().enemies.Single().kind, Is.EqualTo(EnemyKind.Boss));
-            Assert.That(run.maps.Last().enemies.Single().Level, Is.EqualTo(8));
-            run.mapIndex = 6; run.x = run.Map.spawnX; run.y = run.Map.spawnY;
+            Assert.That(run.maps.Last().enemies.Single().Level, Is.EqualTo(5));
+            run.mapIndex = 3; run.x = run.Map.spawnX; run.y = run.Map.spawnY;
             var copy = Rules.Copy(run); PrototypeStore.ValidateRun(copy);
             Assert.That(copy.Map.cells, Is.EqualTo(run.Map.cells));
-            Assert.That(copy.terrainVersion, Is.EqualTo(1));
+            Assert.That(copy.terrainVersion, Is.EqualTo(2));
             Assert.That(MapGenerator.Visible(copy, 0, 0), Is.False);
         }
+    }
+
+    [TestCase(MapGenerationMode.RoomsAndCorridors)]
+    [TestCase(MapGenerationMode.Excavated)]
+    public void SelectedTerrainIsDeterministicAndCheckpointPreservesEveryFloor(MapGenerationMode mode)
+    {
+        var run = MapGenerator.NewRun(-12345, mode, false);
+        var again = MapGenerator.NewRun(-12345, mode, false);
+        Assert.That(run.maps.Count, Is.EqualTo(5));
+        for (int i = 0; i < 5; i++)
+            Assert.That(JsonUtility.ToJson(run.maps[i]), Is.EqualTo(JsonUtility.ToJson(again.maps[i])));
+        Assert.That(run.maps.Take(4).All(m => m.dugTerrain == (mode == MapGenerationMode.Excavated)), Is.True);
+        Assert.That(run.maps.Take(4).All(m => m.size == (mode == MapGenerationMode.Excavated ? 31 : 25)), Is.True);
+        Assert.That(run.maps.Last().size, Is.EqualTo(13));
+        Assert.That(run.maps.Take(4).Count(m => m.hasMerchant), Is.GreaterThanOrEqualTo(2));
+        string folder = Path.Combine(Application.temporaryCachePath, "SelectedTerrainTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new PrototypeStore(folder);
+            for (int i = 0; i < 5; i++)
+            {
+                run.mapIndex = i; run.x = run.Map.spawnX; run.y = run.Map.spawnY;
+                store.SaveCheckpoint(run);
+                var copy = new PrototypeStore(folder).Continue();
+                Assert.That(copy.generationMode, Is.EqualTo(mode));
+                Assert.That(JsonUtility.ToJson(copy), Is.EqualTo(JsonUtility.ToJson(run)));
+            }
+        }
+        finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+        run.maps[0].dugTerrain = !run.maps[0].dugTerrain;
+        Assert.Throws<InvalidDataException>(() => PrototypeStore.ValidateRun(run));
+    }
+
+    [Test]
+    public void LegacyEightFloorSnapshotKeepsItsLayoutOnLoad()
+    {
+        // Reconstruct the old version-1 shape from stored map snapshots; loading must never regenerate it.
+        var run = MapGenerator.NewRun(12345, MapGenerationMode.RoomsAndCorridors, false);
+        var dug = MapGenerator.NewRun(54321, MapGenerationMode.Excavated, false);
+        var boss = run.maps.Last(); run.maps.RemoveAt(4);
+        run.maps.AddRange(dug.maps.Take(3)); run.maps.Add(boss); run.terrainVersion = 1;
+        int entityId = 1;
+        for (int i = 0; i < 8; i++)
+        {
+            var map = run.maps[i]; map.number = i + 1;
+            foreach (var enemy in map.enemies) { enemy.id = entityId++; enemy.level = map.number; }
+            foreach (var loot in map.loot) loot.id = entityId++;
+        }
+        run.nextEntityId = entityId;
+        run.mapIndex = 6; run.x = run.Map.spawnX; run.y = run.Map.spawnY;
+        var copy = Rules.Copy(run); PrototypeStore.ValidateRun(copy);
+        Assert.That(copy.maps.Count, Is.EqualTo(8));
+        Assert.That(JsonUtility.ToJson(copy), Is.EqualTo(JsonUtility.ToJson(run)));
+        var legacy = MapGenerator.NewRun(12345, AttributeKind.Agility, false);
+        PrototypeStore.ValidateRun(legacy);
+        Assert.That(legacy.terrainVersion, Is.Zero);
+        Assert.That(legacy.maps.Count, Is.EqualTo(5));
     }
 
     RunData New(int seed = 12345) => MapGenerator.NewRun(seed, AttributeKind.Agility, false);
@@ -87,7 +164,7 @@ public sealed class ContainerLootTests
         for (int seed = 0; seed < 100; seed++)
         {
             var run = MapGenerator.NewRun(seed, AttributeKind.None, false);
-            foreach (var map in run.maps.Take(7))
+            foreach (var map in run.maps.Take(run.maps.Count - 1))
             {
                 Array.Fill(map.revealed, true);
                 var start = new Vector2Int(map.spawnX, map.spawnY);

@@ -7,6 +7,7 @@ namespace MagicCave.Prototype
     public sealed partial class PrototypeGame
     {
         RunData departurePreview;
+        MapGenerationMode departureMode;
         bool attributeDetails;
         int equipmentPreviewSlot = -1, settlementPage, warehousePage, resultPage;
 
@@ -18,24 +19,26 @@ namespace MagicCave.Prototype
                 double damage = CombatNumbers.Damage(run, card, active ? Combat.spirit : 0, active ? Combat.playerBlock : 0, inBattle);
                 string description = card == CardKind.Double ? "每次" + CharacterAttributes.Number(damage) + "伤害，共2次" :
                     "造成" + CharacterAttributes.Number(damage) + "点物理伤害";
-                if (card == CardKind.Quick) description += "，抽1张";
+                if (PrototypeSettings.Draw(run, card) > 0) description += "，抽" + PrototypeSettings.Draw(run, card) + "张";
                 if (card == CardKind.Shield) description += "\n不消耗格挡";
                 return description;
             }
             double block = CombatNumbers.Block(run, card, inBattle);
-            if (CombatNumbers.IsDefense(card)) return "获得" + CharacterAttributes.Number(block) + "点格挡" + (card == CardKind.Steady ? "，抽1张" : "");
+            if (CombatNumbers.IsDefense(card)) return "获得" + CharacterAttributes.Number(block) + "点格挡" + (PrototypeSettings.Draw(run, card) > 0 ? "，抽" + PrototypeSettings.Draw(run, card) + "张" : "");
+            if (card == CardKind.Prepare) return "抽" + PrototypeSettings.Draw(run, card) + "张牌";
+            if (card == CardKind.Spirit) return "本回合每段攻击+" + (PrototypeSettings.For(run)?.spirit ?? 2) + "，可叠加" + (PrototypeSettings.Draw(run, card) > 0 ? "，抽" + PrototypeSettings.Draw(run, card) + "张" : "");
             return Rules.Effects[(int)card];
         }
 
         void DrawDeparture()
         {
-            Box(new Rect(210, 125, 860, 470));
+            Box(new Rect(210, 95, 860, 560));
             Label(new Rect(244, 148, 780, 42), "新局出发 · 骑士", headingStyle, Gold);
             if (departurePreview == null)
             {
                 departurePreview = new RunData { seed = requestedSeed };
                 CharacterAttributes.Initialize(departurePreview, AttributeKind.None);
-                TownRules.Apply(Store.Warehouse.town, departurePreview);
+                if (Store.Settings.talents) TownRules.Apply(Store.Warehouse.town, departurePreview);
             }
             var stats = CharacterAttributes.Calculate(departurePreview);
             Label(new Rect(244, 208, 780, 38), "Seed：" + requestedSeed + "    生命 " + stats.maxHealth, textStyle, Cyan);
@@ -43,9 +46,14 @@ namespace MagicCave.Prototype
             Label(new Rect(244, 322, 780, 58), "三属性通过武器修正和天赋生效。\n本局采用出发时的天赋快照。", textStyle);
             Label(new Rect(244, 397, 780, 42), "ATK " + stats.attack.ToString("0.##") + "   打击 " +
                 CharacterAttributes.Number(CombatNumbers.Damage(departurePreview, CardKind.Strike, inBattle: false)), textStyle, Gold);
-            if (Store.Session.checkpoint != null) Label(new Rect(244, 447, 780, 48), "开始新局将放弃已有探索存档，不发放旧局带出奖励。", smallStyle, Gold);
-            Button(new Rect(244, 525, 370, 45), "取消", () => { Panel = GamePanel.None; departurePreview = null; });
-            Button(new Rect(654, 525, 380, 45), "开始探索", () => StartNewRun(requestedSeed), true, true);
+            Label(new Rect(244, 442, 780, 30), "地图生成方式 · 4张探索图＋1张首领图", smallStyle);
+            Button(new Rect(244, 482, 370, 42), (departureMode == MapGenerationMode.RoomsAndCorridors ? "● " : "○ ") + "房间／走廊",
+                () => departureMode = MapGenerationMode.RoomsAndCorridors, true, departureMode == MapGenerationMode.RoomsAndCorridors);
+            Button(new Rect(654, 482, 380, 42), (departureMode == MapGenerationMode.Excavated ? "● " : "○ ") + "自然挖掘",
+                () => departureMode = MapGenerationMode.Excavated, true, departureMode == MapGenerationMode.Excavated);
+            if (Store.Session.checkpoint != null) Label(new Rect(244, 532, 780, 40), "开始新局将放弃已有探索存档，不发放旧局带出奖励。", smallStyle, Gold);
+            Button(new Rect(244, 590, 370, 45), "取消", () => { Panel = GamePanel.None; departurePreview = null; });
+            Button(new Rect(654, 590, 380, 45), "开始探索", () => StartNewRun(requestedSeed, departureMode), true, true);
         }
 
         void DrawCharacter()

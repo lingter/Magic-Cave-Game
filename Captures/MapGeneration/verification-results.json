@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-03",
+  "editMode": {
+    "passed": 154,
+    "failed": 0
+  },
+  "playMode": {
+    "passed": 37,
+    "failed": 0
+  },
+  "newRun": "4 selected-terrain exploration floors + fifth-floor boss",
+  "legacy": "version 0 five-floor and version 1 eight-floor snapshots retained",
+  "build": "not rebuilt",
+  "screenshot": "departure-choice.png"
+}

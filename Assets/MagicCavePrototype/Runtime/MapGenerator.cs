@@ -5,19 +5,26 @@ using UnityEngine;
 
 namespace MagicCave.Prototype
 {
+    public enum MapGenerationMode { RoomsAndCorridors, Excavated }
+
     public static class MapGenerator
     {
         public static readonly Vector2Int[] Directions = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
 
         public static RunData NewRun(int seed, bool logSeed = true)
-            => CreateRun(seed, AttributeKind.None, logSeed, false);
+            => CreateRun(seed, AttributeKind.None, logSeed, false, MapGenerationMode.RoomsAndCorridors);
 
         public static RunData NewRun(int seed, AttributeKind secondary, bool logSeed = true)
-            => CreateRun(seed, secondary, logSeed, true);
+            => CreateRun(seed, secondary, logSeed, true, MapGenerationMode.RoomsAndCorridors);
+
+        public static RunData NewRun(int seed, MapGenerationMode mode, bool logSeed = true)
+            => CreateRun(seed, AttributeKind.None, logSeed, true, mode);
 
         // The original overload retains the legacy rules for old-save regression fixtures.
-        static RunData CreateRun(int seed, AttributeKind secondary, bool logSeed, bool attributes)
+        static RunData CreateRun(int seed, AttributeKind secondary, bool logSeed, bool attributes, MapGenerationMode mode)
         {
+            if (mode < MapGenerationMode.RoomsAndCorridors || mode > MapGenerationMode.Excavated)
+                throw new ArgumentOutOfRangeException(nameof(mode));
             if (logSeed) Debug.Log("[MagicCave] Run Seed = " + seed);
             var run = new RunData
             {
@@ -28,7 +35,8 @@ namespace MagicCave.Prototype
             };
             if (attributes)
             {
-                run.terrainVersion = secondary == AttributeKind.None ? 1 : 0;
+                run.terrainVersion = secondary == AttributeKind.None ? 2 : 0;
+                run.generationMode = mode;
                 CharacterAttributes.Initialize(run, secondary);
                 run.containerVersion = 1; run.containerRules = ContainerLootRules.Defaults(); run.containerRules.Validate();
                 run.containerRandom = new RandomStream(RandomStream.Derive(seed, 0x434f4e04));
@@ -37,10 +45,8 @@ namespace MagicCave.Prototype
             for (int i = 0; i < 4; i++) run.deck.Add(CardKind.Defend);
             run.deck.Add(CardKind.Prepare);
             for (int i = 0; i < 20; i++) run.inventory.Add(new InventorySlot());
-            var merchantFloors = attributes ? ToothMerchant.PlanFloors(seed, run.terrainVersion == 1 ? 8 : 5) : null;
+            var merchantFloors = attributes ? ToothMerchant.PlanFloors(seed, 5) : null;
             for (int number = 1; number <= 4; number++) run.maps.Add(Generate(run, number, merchantFloors != null && merchantFloors[number - 1]));
-            if (run.terrainVersion == 1)
-                for (int number = 5; number <= 7; number++) run.maps.Add(Generate(run, number, merchantFloors[number - 1]));
             var boss = EmptyMap(run.maps.Count + 1, 13);
             for (int y = 1; y < 12; y++) for (int x = 1; x < 12; x++) boss.Set(x, y, Tile.Ground);
             for (int i = 0; i < boss.revealed.Length; i++) boss.revealed[i] = true;
@@ -65,8 +71,9 @@ namespace MagicCave.Prototype
             var random = run.mapRandom;
             for (int attempt = 0; attempt < 100; attempt++)
             {
-                var map = EmptyMap(number, number >= 5 ? 31 : 25);
-                map.dugTerrain = number >= 5;
+                bool excavated = run.terrainVersion == 2 && run.generationMode == MapGenerationMode.Excavated;
+                var map = EmptyMap(number, excavated ? 31 : 25);
+                map.dugTerrain = excavated;
                 if (map.dugTerrain) Excavate(map, random);
                 else
                 {
@@ -109,29 +116,65 @@ namespace MagicCave.Prototype
             throw new InvalidOperationException("地图" + number + "在100次尝试后仍未通过验收。Seed=" + run.seed);
         }
 
-        // Grow connected passages through solid rock. Local widening makes irregular pockets,
-        // while untouched rock and the surviving branches retain narrow routes and dead ends.
+        // Carve sustained passages first, then join them into irregular chambers and loops.
+        // Two-cell steps keep continuous rock between routes instead of a noisy one-cell frontier.
         static void Excavate(MapData map, RandomStream random)
         {
-            var frontier = new List<Vector2Int> { new Vector2Int(map.size / 2, map.size / 2) };
-            int carved = 0;
-            while (frontier.Count > 0 && carved < 300)
+            var start = new Vector2Int(3, 3);
+            var frontier = new List<Vector2Int> { start };
+            map.Set(start.x, start.y, Tile.Ground);
+            var heading = Vector2Int.zero;
+            while (frontier.Count > 0)
             {
-                int index = random.Range(0, frontier.Count);
-                var p = frontier[index]; frontier.RemoveAt(index);
-                if (p.x < 2 || p.y < 2 || p.x >= map.size - 2 || p.y >= map.size - 2 || map.Walkable(p.x, p.y)) continue;
-                int neighbors = Directions.Count(d => map.Walkable(p.x + d.x, p.y + d.y));
-                if (carved > 0 && neighbors != 1) continue;
-                map.Set(p.x, p.y, Tile.Ground); carved++;
-                foreach (var d in Directions) frontier.Add(p + d);
+                int index = random.Range(0, 100) < 85 ? frontier.Count - 1 : random.Range(0, frontier.Count);
+                var p = frontier[index];
+                var choices = Directions.Where(d =>
+                {
+                    var q = p + d * 2;
+                    return q.x >= 3 && q.y >= 3 && q.x < map.size - 3 && q.y < map.size - 3 && !map.Walkable(q.x, q.y);
+                }).ToList();
+                if (choices.Count == 0) { frontier.RemoveAt(index); heading = Vector2Int.zero; continue; }
+                var direction = choices.Contains(heading) && random.Range(0, 100) < 65
+                    ? heading : choices[random.Range(0, choices.Count)];
+                var next = p + direction * 2;
+                map.Set(p.x + direction.x, p.y + direction.y, Tile.Ground);
+                map.Set(next.x, next.y, Tile.Ground);
+                frontier.Add(next); heading = direction;
             }
+
+            // Keep terminal branches intact so permanent containers never occupy through routes.
+            var ends = new List<Vector2Int>();
             var pockets = new List<Vector2Int>();
             for (int y = 3; y < map.size - 3; y++) for (int x = 3; x < map.size - 3; x++)
-                if (map.Walkable(x, y) && !IsRoadEnd(map, new Vector2Int(x, y))) pockets.Add(new Vector2Int(x, y));
+            {
+                var p = new Vector2Int(x, y);
+                if (IsRoadEnd(map, p)) ends.Add(p);
+                else if (map.Walkable(x, y)) pockets.Add(p);
+            }
+            bool CanWiden(Vector2Int p) => p.x >= 2 && p.y >= 2 && p.x < map.size - 2 && p.y < map.size - 2 &&
+                ends.All(e => Manhattan(e, p) > 2);
             random.Shuffle(pockets);
-            foreach (var p in pockets.Take(18 + (map.number - 5) * 6))
-                foreach (var d in Directions)
-                    if (random.Range(0, 100) < 65) map.Set(p.x + d.x, p.y + d.y, Tile.Ground);
+            foreach (var p in pockets.Take(14 + (map.number - 1) * 2))
+            {
+                // Overlapping small patches give chambers uneven edges without isolated floor dots.
+                var side = Directions[random.Range(0, Directions.Length)];
+                var across = new Vector2Int(-side.y, side.x);
+                for (int along = 0; along <= 1; along++) for (int cross = -1; cross <= 1; cross++)
+                {
+                    var q = p + side * along + across * cross;
+                    if (CanWiden(q)) map.Set(q.x, q.y, Tile.Ground);
+                }
+            }
+            var links = new List<Vector2Int>();
+            for (int y = 3; y < map.size - 3; y++) for (int x = 3; x < map.size - 3; x++)
+            {
+                var p = new Vector2Int(x, y);
+                if (!map.Walkable(x, y) && CanWiden(p) &&
+                    ((map.Walkable(x - 1, y) && map.Walkable(x + 1, y)) ||
+                     (map.Walkable(x, y - 1) && map.Walkable(x, y + 1)))) links.Add(p);
+            }
+            random.Shuffle(links);
+            foreach (var p in links.Take(8)) map.Set(p.x, p.y, Tile.Ground);
         }
 
         static List<Vector2Int> ExcavatedDoorCandidates(MapData map)
@@ -559,11 +602,37 @@ namespace MagicCave.Prototype
         }
         public static bool Visible(RunData run, int x, int y)
         {
-            return run.mapIndex == run.maps.Count - 1 || InSightRange(run.CellX, run.CellY, x, y, TorchLight.IsLit(run));
+            return run.Map.Inside(x, y) && (run.mapIndex == run.maps.Count - 1 ||
+                InSightRange(run.CellX, run.CellY, x, y, TorchLight.IsLit(run)) &&
+                HasLineOfSight(run.Map, run.CellX, run.CellY, x, y));
         }
         public static bool InSightRange(int originX, int originY, int x, int y, bool torchLit)
         {
-            return Math.Abs(originX - x) + Math.Abs(originY - y) < (torchLit ? 3 : 2);
+            int dx = Math.Abs(originX - x), dy = Math.Abs(originY - y);
+            return torchLit ? dx <= 2 && dy <= 2 && !(dx == 2 && dy == 2) : dx <= 1 && dy <= 1;
+        }
+        // Supercover ray between cell centres. The first wall is visible, cells behind it
+        // are hidden; diagonal rays cannot squeeze through either side of a solid corner.
+        public static bool HasLineOfSight(MapData map, int originX, int originY, int x, int y)
+        {
+            if (!map.Inside(originX, originY) || !map.Inside(x, y)) return false;
+            int dx = Math.Abs(x - originX), dy = Math.Abs(y - originY);
+            int sx = Math.Sign(x - originX), sy = Math.Sign(y - originY);
+            int px = originX, py = originY, ix = 0, iy = 0;
+            while (ix < dx || iy < dy)
+            {
+                int compare = (1 + 2 * ix) * dy - (1 + 2 * iy) * dx;
+                if (compare == 0)
+                {
+                    if (!map.Walkable(px + sx, py) || !map.Walkable(px, py + sy)) return false;
+                    px += sx; py += sy; ix++; iy++;
+                }
+                else if (compare < 0) { px += sx; ix++; }
+                else { py += sy; iy++; }
+                if (px == x && py == y) return true;
+                if (!map.Walkable(px, py)) return false;
+            }
+            return true;
         }
         public static bool EnsureSafePlayerPosition(RunData run)
         {
@@ -587,12 +656,13 @@ namespace MagicCave.Prototype
         }
         public static void Reveal(RunData run)
         {
+            if (PrototypeSettings.For(run)?.fog == false) { Array.Fill(run.Map.revealed, true); return; }
             int radius = TorchLight.IsLit(run) ? 2 : 1;
             for (int dx = -radius; dx <= radius; dx++)
             for (int dy = -radius; dy <= radius; dy++)
             {
                 int x = run.CellX + dx, y = run.CellY + dy;
-                if (run.Map.Inside(x, y) && InSightRange(run.CellX, run.CellY, x, y, TorchLight.IsLit(run)))
+                if (Visible(run, x, y))
                     run.Map.revealed[run.Map.Index(x, y)] = true;
             }
         }

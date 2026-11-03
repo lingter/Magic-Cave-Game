@@ -47,7 +47,7 @@ namespace MagicCave.Prototype
                 var pool = Pool(kind, floor);
                 if (pool == null || pool.Count == 0 || pool.Count > 100) throw new InvalidOperationException("容器物品池为空或过大。");
                 foreach (var drop in pool)
-                    if (drop == null || drop.weight < 1 || drop.weight > 100000 || drop.minimum < 1 || drop.maximum < drop.minimum ||
+                    if (drop == null || drop.weight < 0 || drop.weight > 100000 || drop.minimum < 1 || drop.maximum < drop.minimum ||
                         drop.maximum > 20 || !ContainerLoot.Matches(kind, drop.kind)) throw new InvalidOperationException("容器物品池配置无效。");
             }
         }
@@ -88,6 +88,10 @@ namespace MagicCave.Prototype
                     pool.Add(new ContainerDrop(ItemKind.IronSword, 1));
             }
             if (pool.Count == 0) throw new InvalidOperationException("容器中没有适用于本角色的物品。");
+            pool.RemoveAll(d => d.weight == 0 || PrototypeSettings.For(run)?.equipment == false && Rules.IsEquipment(d.kind) ||
+                PrototypeSettings.For(run)?.consumables == false && Matches(ContainerKind.Supplies, d.kind) ||
+                PrototypeSettings.For(run)?.torch == false && d.kind == ItemKind.Torch);
+            if (pool.Count == 0) { loot.unopened = false; loot.opened = true; return true; }
             int roll = run.containerRandom.Range(0, pool.Sum(d => d.weight));
             var chosen = pool[0];
             foreach (var drop in pool) { roll -= drop.weight; if (roll < 0) { chosen = drop; break; } }

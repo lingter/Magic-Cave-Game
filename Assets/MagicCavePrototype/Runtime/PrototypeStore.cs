@@ -11,6 +11,13 @@ namespace MagicCave.Prototype
     public sealed class PrototypeStore
     {
         public readonly string folder;
+        public PrototypeSettings Settings { get; private set; } = new PrototypeSettings();
+        public string SettingsWarning { get; private set; }
+        public void SaveSettings(PrototypeSettings value)
+        {
+            value.Validate(); var next = Rules.Copy(value);
+            AtomicWrite(Path.Combine(folder, "settings.json"), next); Settings = next; SettingsWarning = null;
+        }
         public SessionData Session { get; private set; }
         public WarehouseData Warehouse { get; private set; }
         string SessionPath { get { return Path.Combine(folder, "session.json"); } }
@@ -20,6 +27,8 @@ namespace MagicCave.Prototype
         {
             this.folder = Path.GetFullPath(folder);
             Directory.CreateDirectory(this.folder);
+            try { Settings = Read<PrototypeSettings>(Path.Combine(this.folder, "settings.json")) ?? new PrototypeSettings(); Settings.Validate(); }
+            catch (Exception exception) { Settings = new PrototypeSettings(); SettingsWarning = "设置文件无法读取，暂用默认设置：" + exception.Message; }
             Session = Read<SessionData>(SessionPath) ?? new SessionData();
             Warehouse = Read<WarehouseData>(WarehousePath) ?? new WarehouseData();
             if (UpgradeSecondaryRules(Session) && File.Exists(SessionPath) && !File.Exists(SessionPath + ".pre-secondary-1pct.bak"))
@@ -310,6 +319,8 @@ namespace MagicCave.Prototype
         public static void ValidateRun(RunData run, bool allowLegacyPosition = false)
         {
             if (run == null) throw new InvalidDataException("玩家数据不存在。");
+            if (run.settingsVersion < 0 || run.settingsVersion > 1 || run.settingsVersion == 1 && run.settings == null) throw new InvalidDataException("玩法设置快照无效。");
+            if (run.settingsVersion == 1) run.settings.Validate();
             if (run.teeth < 0) throw new InvalidDataException("牙齿余额无效。");
             if (run.torchStepsRemaining < 0 || run.torchStepsRemaining > TorchLight.Durability)
                 throw new InvalidDataException("火把耐久无效。");
@@ -323,7 +334,8 @@ namespace MagicCave.Prototype
             }
             if (run.attributeVersion != 0 && run.attributeVersion != 1) throw new InvalidDataException("角色规则版本不支持。");
             if (run.UsesAttributes) ValidateCharacter(run);
-            if (run == null || string.IsNullOrEmpty(run.id) || run.maps == null || run.terrainVersion < 0 || run.terrainVersion > 1 ||
+            if (run == null || string.IsNullOrEmpty(run.id) || run.maps == null || run.terrainVersion < 0 || run.terrainVersion > 2 ||
+                run.terrainVersion == 2 && (run.generationMode < MapGenerationMode.RoomsAndCorridors || run.generationMode > MapGenerationMode.Excavated) ||
                 run.maps.Count != (run.terrainVersion == 1 ? 8 : 5) ||
                 run.mapIndex < 0 || run.mapIndex >= run.maps.Count || run.health < 0 || run.health > run.MaxHealth ||
                 double.IsNaN(run.health) || double.IsInfinity(run.health) || CharacterAttributes.Quantize(run.health) != run.health ||
@@ -331,7 +343,7 @@ namespace MagicCave.Prototype
                 run.defenseBonus < 0 || run.defenseBonus > 3 || run.openingEnergy < 0 || run.openingEnergy > 1 ||
                 run.victoryHealing < 0 || run.victoryHealing > 3 || run.openingBlock < 0 || run.openingBlock > 6 ||
                 run.level < 1 || run.level > 1000000 || run.experience < 0 || run.totalExperience < 0 ||
-                run.deck == null || run.deck.Count < 10 || run.inventory == null || run.inventory.Count != 20 ||
+                run.deck == null || run.deck.Count < (run.settingsVersion == 1 ? 1 : 10) || run.inventory == null || run.inventory.Count != 20 ||
                 run.mapRandom == null || run.battleRandom == null || run.cardRandom == null ||
                 run.mapRandom.state == 0 || run.battleRandom.state == 0 || run.cardRandom.state == 0)
                 throw new InvalidDataException("玩家或随机进度数据无效。");
@@ -349,8 +361,10 @@ namespace MagicCave.Prototype
             if (run.UsesAttributes) foreach (var item in run.character.equipment) ValidateItem(item, ids);
             for (int index = 0; index < run.maps.Count; index++)
             {
-                var map = run.maps[index]; int expected = index == run.maps.Count - 1 ? 13 : index >= 4 ? 31 : 25;
+                var map = run.maps[index]; bool excavated = run.terrainVersion == 2 ? run.generationMode == MapGenerationMode.Excavated : index >= 4;
+                int expected = index == run.maps.Count - 1 ? 13 : excavated ? 31 : 25;
                 if (map == null || map.size != expected || map.number != index + 1 ||
+                    (run.terrainVersion == 2 && map.dugTerrain != (index < run.maps.Count - 1 && excavated)) ||
                     map.cells == null || map.cells.Length != expected * expected ||
                     map.revealed == null || map.revealed.Length != map.cells.Length ||
                     map.enemies == null || map.loot == null || !map.Walkable(map.spawnX, map.spawnY))

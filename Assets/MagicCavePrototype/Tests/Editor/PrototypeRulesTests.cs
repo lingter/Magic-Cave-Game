@@ -126,19 +126,73 @@ public class PrototypeRulesTests
         Assert.That(run.inventory[0].units.Count, Is.EqualTo(1));
     }
     [Test]
-    public void TorchRangeIsStrictManhattanRadiusThree()
+    public void SightRangeIsThreeByThreeOrFiveByFiveWithoutCorners()
     {
         int lit = 0, unlit = 0;
         for (int x = -3; x <= 3; x++)
         for (int y = -3; y <= 3; y++)
         {
             bool visible = MapGenerator.InSightRange(5, 7, 5 + x, 7 + y, true);
-            Assert.That(visible, Is.EqualTo(Math.Abs(x) + Math.Abs(y) < 3), "offset " + x + "," + y);
+            Assert.That(visible, Is.EqualTo(Math.Abs(x) <= 2 && Math.Abs(y) <= 2 && !(Math.Abs(x) == 2 && Math.Abs(y) == 2)), "offset " + x + "," + y);
             if (visible) lit++;
             if (MapGenerator.InSightRange(5, 7, 5 + x, 7 + y, false)) unlit++;
         }
-        Assert.That(lit, Is.EqualTo(13));
-        Assert.That(unlit, Is.EqualTo(5));
+        Assert.That(lit, Is.EqualTo(21));
+        Assert.That(unlit, Is.EqualTo(9));
+    }
+    [Test]
+    public void WallsBlockSightAndRevealUpdatesAfterDigging()
+    {
+        var run = New(); run.x = 5; run.y = 5; run.torchStepsRemaining = 20;
+        for (int y = 2; y <= 8; y++) for (int x = 2; x <= 8; x++) run.Map.Set(x, y, Tile.Ground);
+        foreach (var d in MapGenerator.Directions)
+        {
+            var wall = new Vector2Int(5, 5) + d;
+            var behind = wall + d;
+            run.Map.Set(wall.x, wall.y, Tile.Wall);
+            Array.Clear(run.Map.revealed, 0, run.Map.revealed.Length);
+            MapGenerator.Reveal(run);
+            Assert.That(MapGenerator.Visible(run, wall.x, wall.y), Is.True);
+            Assert.That(run.Map.Known(wall.x, wall.y), Is.True);
+            Assert.That(MapGenerator.Visible(run, behind.x, behind.y), Is.False);
+            Assert.That(run.Map.Known(behind.x, behind.y), Is.False);
+            run.Map.Set(wall.x, wall.y, Tile.Ground); MapGenerator.Reveal(run);
+            Assert.That(MapGenerator.Visible(run, behind.x, behind.y), Is.True);
+            Assert.That(run.Map.Known(behind.x, behind.y), Is.True);
+        }
+    }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void SightCannotLeakDiagonallyPastEitherCornerWall(bool lit)
+    {
+        var run = New(); run.x = 5; run.y = 5; run.torchStepsRemaining = lit ? 20 : 0;
+        for (int y = 2; y <= 8; y++) for (int x = 2; x <= 8; x++) run.Map.Set(x, y, Tile.Ground);
+        foreach (var d in MapGenerator.Directions)
+        {
+            var side = new Vector2Int(-d.y, d.x);
+            var corner = new Vector2Int(5, 5) + d + side;
+            foreach (var edge in new[] { d, side })
+            {
+                run.Map.Set(5 + edge.x, 5 + edge.y, Tile.Wall);
+                Array.Clear(run.Map.revealed, 0, run.Map.revealed.Length); MapGenerator.Reveal(run);
+                Assert.That(MapGenerator.Visible(run, corner.x, corner.y), Is.False);
+                Assert.That(run.Map.Known(corner.x, corner.y), Is.False);
+                run.Map.Set(5 + edge.x, 5 + edge.y, Tile.Ground);
+                Assert.That(MapGenerator.Visible(run, corner.x, corner.y), Is.True);
+            }
+        }
+    }
+    [Test]
+    public void RelightingPreservesDurabilityAndSpareInventory()
+    {
+        var run = New();
+        Inventory.Pickup(run, MapGenerator.AddLoot(run, run.Map, new Vector2Int(run.CellX, run.CellY), ItemKind.Torch, 2));
+        Assert.That(Inventory.Use(run, 0), Is.True);
+        for (int i = 0; i < 3; i++) TorchLight.Step(run);
+        Assert.That(TorchLight.Extinguish(run), Is.True);
+        Assert.That(Inventory.Use(run, 0), Is.True);
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(17));
+        Assert.That(run.inventory[0].units.Count, Is.EqualTo(1));
     }
     [Test]
     public void TorchConsumesOneItemAndExpiresExactlyAtTwentySteps()
@@ -158,21 +212,28 @@ public class PrototypeRulesTests
         Assert.That(Inventory.Use(run, 0), Is.True, "A separate unused torch can be lit.");
         Assert.That(TorchLight.Extinguish(run), Is.True);
         Assert.That(TorchLight.Extinguish(run), Is.False);
-        Assert.That(Inventory.Use(run, 0), Is.False, "Extinguished torches cannot be lit again.");
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(20));
+        TorchLight.Step(run);
+        Assert.That(run.torchStepsRemaining, Is.EqualTo(20), "Paused torches do not consume steps.");
+        Assert.That(TorchLight.Resume(run), Is.True, "The same torch can be lit without stock.");
+        Assert.That(TorchLight.IsLit(run), Is.True);
         Assert.That(run.inventory[0].units, Is.Empty);
     }
     [Test]
-    public void TorchRevealsDiamondAndKeepsDiscoveryAfterExtinguishing()
+    public void TorchRevealsTwentyOneCellsAndKeepsDiscoveryAfterExtinguishing()
     {
         var run = New(); run.x = 5; run.y = 5;
+        for (int y = 2; y <= 8; y++) for (int x = 2; x <= 8; x++) run.Map.Set(x, y, Tile.Ground);
         Array.Clear(run.Map.revealed, 0, run.Map.revealed.Length);
         run.torchStepsRemaining = 20; MapGenerator.Reveal(run);
-        Assert.That(run.Map.revealed.Count(value => value), Is.EqualTo(13));
+        Assert.That(run.Map.revealed.Count(value => value), Is.EqualTo(21));
+        Assert.That(MapGenerator.Visible(run, 6, 6), Is.True);
+        Assert.That(MapGenerator.Visible(run, 7, 6), Is.True);
+        Assert.That(MapGenerator.Visible(run, 7, 7), Is.False);
+        TorchLight.Extinguish(run); MapGenerator.Reveal(run);
         Assert.That(MapGenerator.Visible(run, 6, 6), Is.True);
         Assert.That(MapGenerator.Visible(run, 7, 6), Is.False);
-        TorchLight.Extinguish(run); MapGenerator.Reveal(run);
-        Assert.That(MapGenerator.Visible(run, 6, 6), Is.False);
-        Assert.That(run.Map.Known(6, 6), Is.True);
+        Assert.That(run.Map.Known(7, 6), Is.True);
         run.x = 0; run.y = 0; run.torchStepsRemaining = 20;
         Assert.DoesNotThrow(() => MapGenerator.Reveal(run));
     }
@@ -184,7 +245,11 @@ public class PrototypeRulesTests
         var restored = new PrototypeStore(folder).Continue();
         Assert.That(restored.torchStepsRemaining, Is.EqualTo(13));
         TorchLight.Extinguish(restored); store.SaveCheckpoint(restored);
-        Assert.That(new PrototypeStore(folder).Continue().torchStepsRemaining, Is.Zero);
+        var paused = new PrototypeStore(folder).Continue();
+        Assert.That(paused.torchStepsRemaining, Is.EqualTo(13));
+        Assert.That(TorchLight.IsLit(paused), Is.False);
+        Assert.That(TorchLight.Resume(paused), Is.True);
+        Assert.That(paused.torchStepsRemaining, Is.EqualTo(13));
         restored.torchStepsRemaining = 21;
         Assert.Throws<InvalidDataException>(() => PrototypeStore.ValidateRun(restored));
         Assert.That(New().torchStepsRemaining, Is.Zero);
