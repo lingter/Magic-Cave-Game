@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -115,7 +115,7 @@ public class PrototypePlayTests
         yield return Click(1020, 650); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
         Assert.That(game.Store.Settings.torch, Is.False);
         game.OpenSettings(); yield return null;
-        yield return Click(500, 155); // Card page.
+        yield return Click(365, 155); // Card page.
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "cards.png")); yield return null; yield return null;
         yield return Click(475, 240); // Strike count +1.
         yield return Click(400, 240); // Focus numeric input.
@@ -126,9 +126,9 @@ public class PrototypePlayTests
         driver.keyState = new KeyboardState(); yield return null; yield return null;
         yield return Click(1020, 650); Assert.That(game.Store.Settings.cardCounts[0], Is.EqualTo(12));
         game.OpenSettings(); yield return null;
-        yield return Click(770, 155);
+        yield return Click(545, 155);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "monsters.png")); yield return null; yield return null;
-        yield return Click(1040, 155);
+        yield return Click(725, 155);
         ScreenCapture.CaptureScreenshot(Path.Combine(captures, "drops.png")); yield return null; yield return null;
         yield return Click(578, 251); // Change drop weight then cancel.
         yield return Click(770, 650); Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
@@ -153,6 +153,154 @@ public class PrototypePlayTests
         game.Run.health = 0; game.Combat.outcome = BattleOutcome.Failure;
         typeof(PrototypeGame).GetMethod("ProcessBattle", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(game, null);
         Assert.That(game.Run.totalExperience, Is.Zero);
+    }
+
+    [UnityTest]
+    public IEnumerator CustomCardEditorCreatesPreviewsSavesAndPlaysNewCard()
+    {
+        string captures = Path.GetFullPath("Captures/CustomCards"); Directory.CreateDirectory(captures);
+        game.OpenSettings(); yield return null;
+        yield return Click(905, 155); yield return Click(220, 209);
+        yield return EnterSettingsText(400, 307, "词条拼接测试");
+        yield return Click(387, 352); yield return Click(387, 352); // Three copies.
+        yield return Click(553, 352); // Zero energy.
+        yield return Click(707, 442); // Two damage segments.
+        yield return Click(435, 487); // Add another source to the damage formula.
+        yield return Click(200, 532); // Strength.
+        yield return EnterSettingsText(450, 532, "50");
+        yield return Click(435, 487); yield return Click(620, 487); // Add/remove a spare formula term.
+        yield return Click(500, 397); yield return Click(200, 442); // Add block effect, self target.
+        for (int i = 0; i < 3; i++) yield return Click(200, 532); // Wisdom.
+        yield return EnterSettingsText(450, 532, "50");
+        yield return Click(500, 397);
+        for (int i = 0; i < 2; i++) yield return Click(200, 442); // Draw.
+        for (int i = 0; i < 6; i++) yield return Click(200, 532); // Fixed value.
+        yield return EnterSettingsText(450, 532, "1");
+        yield return Click(500, 397);
+        for (int i = 0; i < 3; i++) yield return Click(200, 442); // Spirit.
+        for (int i = 0; i < 6; i++) yield return Click(200, 532);
+        yield return EnterSettingsText(450, 532, "2");
+        for (int i = 0; i < 3; i++) yield return Click(292, 397); // Move spirit first.
+        var draft = (PrototypeSettings)typeof(PrototypeGame).GetField("settingsDraft", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(game);
+        Assert.That(draft.customCards[0].effects[0].kind, Is.EqualTo(CardEffectKind.Spirit));
+        for (int i = 0; i < 3; i++) yield return Click(327, 397); // Restore original order.
+        yield return Click(500, 397); yield return Click(650, 397); // Add/remove a spare effect.
+        for (int i = 0; i < 3; i++) yield return Click(145, 397);
+        Assert.That(draft.customCards.Single().name, Is.EqualTo("词条拼接测试"));
+        Assert.That(draft.customCards[0].effects.Count, Is.EqualTo(4));
+        Assert.That(draft.customCards[0].effects[0].terms.Count, Is.EqualTo(2));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "editor-composed-effects.png")); yield return null; yield return null;
+        yield return Click(220, 209); yield return Click(810, 257); // Delete second draft card.
+        yield return Click(1020, 650);
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
+        var saved = new PrototypeStore(folder).Settings.customCards.Single();
+        Assert.That(saved.count, Is.EqualTo(3)); Assert.That(saved.cost, Is.Zero);
+        Assert.That(saved.effectsVersion, Is.EqualTo(1));
+        Assert.That(saved.effects[0].terms[1].amount, Is.EqualTo(50));
+        Assert.That(saved.effects.Select(e => e.kind), Is.EqualTo(new[] { CardEffectKind.Damage, CardEffectKind.Block, CardEffectKind.Draw, CardEffectKind.Spirit }));
+        game.OpenSettings(); yield return null; yield return Click(905, 155);
+        yield return Click(810, 257); yield return Click(760, 650); // Cancel deletion.
+        Assert.That(game.Store.Settings.customCards.Count, Is.EqualTo(1));
+        var settings = Rules.Copy(game.Store.Settings); settings.enemyHealth[0] = settings.enemyHealth[1] = 200;
+        game.Store.SaveSettings(settings); game.StartNewRun(12345);
+        var card = (CardKind)saved.id;
+        Assert.That(game.Run.deck.Count(c => c == card), Is.EqualTo(3));
+        Assert.That(game.Run.deck.Count, Is.EqualTo(13));
+        game.BeginBattle(game.Run.Map.enemies.First(e => !e.defeated));
+        game.Combat.hand.Clear(); game.Combat.hand.Add(card); yield return null; yield return null;
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "composed-card-in-battle.png")); yield return null; yield return null;
+        double expected = game.Combat.Preview(card), before = game.Combat.enemyHealth;
+        yield return Click(640, 500);
+        Assert.That(game.Combat.enemyHealth, Is.EqualTo(before - expected));
+        Assert.That(game.Combat.playerBlock, Is.EqualTo(CombatNumbers.RoundDamage(CharacterAttributes.Calculate(game.Run, true).wisdom * .5m)));
+        Assert.That(game.Combat.spirit, Is.EqualTo(2)); Assert.That(game.Combat.hand.Count, Is.EqualTo(1));
+        Assert.That(game.Combat.energy, Is.EqualTo(3)); Assert.That(game.Combat.discard.Contains(card), Is.True);
+        PrototypeStore.ValidateRun(game.Run);
+    }
+    [UnityTest]
+    public IEnumerator LegacyConversionIsExplicitAndEightEffectCardsRemainVisible()
+    {
+        var settings = new PrototypeSettings();
+        settings.customCards.Add(new CustomCardDefinition { id = 40, name = "旧模板卡", template = CardKind.Double, count = 2 });
+        game.Store.SaveSettings(settings);
+        game.OpenSettings(); yield return null; yield return Click(905, 155);
+        yield return Click(400, 406); yield return Click(760, 650);
+        Assert.That(game.Store.Settings.customCards[0].effectsVersion, Is.Zero);
+        game.OpenSettings(); yield return null; yield return Click(905, 155);
+        yield return Click(400, 406); yield return Click(1020, 650);
+        Assert.That(new PrototypeStore(folder).Settings.customCards[0].effectsVersion, Is.EqualTo(1));
+        settings = Rules.Copy(game.Store.Settings); settings.cardCounts = new int[10];
+        var card = settings.customCards[0]; card.name = "八词条四属性组合测试"; card.count = 10;
+        card.effects.Clear();
+        for (int i = 0; i < 8; i++)
+        {
+            var kind = (CardEffectKind)(i % 4);
+            card.effects.Add(new CardEffectEntry { kind = kind, target = kind == CardEffectKind.Damage ? CardEffectTarget.Enemy : CardEffectTarget.Self,
+                terms = new System.Collections.Generic.List<CardFormulaTerm> { new CardFormulaTerm {
+                    source = kind == CardEffectKind.Damage ? CardValueSource.ActualAttack : CardValueSource.Fixed,
+                    amount = kind == CardEffectKind.Damage ? 100 : 1 } } });
+        }
+        card.effects[0].terms.Add(new CardFormulaTerm { source = CardValueSource.Strength, amount = 50 });
+        card.effects[0].terms.Add(new CardFormulaTerm { source = CardValueSource.Agility, amount = 10 });
+        card.effects[0].terms.Add(new CardFormulaTerm { source = CardValueSource.Wisdom, amount = 10 });
+        settings.enemyHealth[0] = settings.enemyHealth[1] = 200; game.Store.SaveSettings(settings);
+        string captures = Path.GetFullPath("Captures/CustomCards"); Directory.CreateDirectory(captures);
+        game.OpenSettings(); yield return null; yield return Click(905, 155);
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "editor-eight-effects.png")); yield return null; yield return null;
+        yield return Click(760, 650); game.StartNewRun(12345);
+        game.BeginBattle(game.Run.Map.enemies.First(e => !e.defeated));
+        game.Combat.hand.Clear(); game.Combat.hand.Add((CardKind)40); yield return null; yield return null;
+        Assert.That(game.CardDescription(game.Run, (CardKind)40, true).Split('\n').Length, Is.EqualTo(8));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "eight-effects-in-battle.png")); yield return null; yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator EnemyTemplateEditorAddsSpeciesEditsBaselineAndRunsComposedIntent()
+    {
+        string captures = Path.GetFullPath("Captures/EnemyTemplates"); Directory.CreateDirectory(captures);
+        game.OpenSettings(); yield return null; yield return Click(1085, 155);
+        yield return Click(190, 209); yield return EnterSettingsText(400, 307, "血牙蝠");
+        yield return Click(467, 397); yield return Click(1067, 397); // HP19, ATK6.
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "monster-base.png")); yield return null; yield return null;
+        yield return Click(950, 209); // Actions.
+        yield return Click(500, 397); yield return Click(200, 442); // Add block after attack.
+        for (int i = 0; i < 3; i++) yield return Click(200, 532); // Fixed source.
+        yield return EnterSettingsText(450, 532, "5");
+        yield return Click(500, 352); // Add second loop action.
+        yield return Click(707, 442); yield return Click(707, 442); // Three hits.
+        yield return Click(292, 352); yield return Click(327, 352); // Move action up and restore it.
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "monster-action-words.png")); yield return null; yield return null;
+        yield return Click(950, 209); yield return Click(625, 209); // Load original bat for editing.
+        yield return EnterSettingsText(400, 532, "0"); // Replace all bat slots with new species.
+        yield return Click(1020, 650);
+        Assert.That(game.Panel, Is.EqualTo(GamePanel.None));
+        var loaded = new PrototypeStore(folder).Settings;
+        Assert.That(loaded.enemyTemplates.Count, Is.EqualTo(2));
+        Assert.That(loaded.enemyTemplates.Single(t => t.id == 4).turns.Count, Is.EqualTo(2));
+        Assert.That(loaded.enemyTemplates.Single(t => t.id == 1).weight, Is.Zero);
+        game.StartNewRun(12345); var enemy = game.Run.Map.enemies.First(e => e.templateId == 4);
+        game.BeginBattle(enemy); yield return null; yield return null;
+        Assert.That(EnemyTemplates.Label(game.Run, enemy), Does.StartWith("血牙蝠"));
+        Assert.That(game.Combat.Intent, Does.Contain("自身格挡5"));
+        ScreenCapture.CaptureScreenshot(Path.Combine(captures, "monster-intent-in-battle.png")); yield return null; yield return null;
+        double health = game.Run.health, expected = game.Combat.ExpectedHealthLoss;
+        game.Combat.EndPlayerTurn(); game.Combat.ResolveEnemyTurn();
+        Assert.That(game.Run.health, Is.EqualTo(health - expected)); Assert.That(game.Combat.enemyBlock, Is.EqualTo(5));
+        Assert.That(game.Combat.enemyTurn, Is.EqualTo(1)); Assert.That(game.Combat.IntentAttack, Is.EqualTo(18));
+        game.Store.SaveSettings(new PrototypeSettings());
+        Assert.That(EnemyTemplates.Label(game.Run, enemy), Does.StartWith("血牙蝠"));
+        PrototypeStore.ValidateRun(game.Run);
+    }
+
+    IEnumerator EnterSettingsText(float x, float y, string text)
+    {
+        yield return Click(x, y);
+        driver.keyState = new KeyboardState(Key.LeftCtrl, Key.A); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
+        foreach (char value in text) InputSystem.QueueTextEvent(driver.keyboard, value);
+        yield return null; yield return null;
+        driver.keyState = new KeyboardState(Key.Enter); yield return null; yield return null;
+        driver.keyState = new KeyboardState(); yield return null; yield return null;
     }
 
     [UnityTearDown]

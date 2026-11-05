@@ -297,7 +297,20 @@ namespace MagicCave.Prototype
             CardKind card = hand[handIndex]; int cost = PrototypeSettings.Cost(run, card);
             if (energy < cost) return false;
             energy -= cost; hand.RemoveAt(handIndex);
-            switch (card)
+            var custom = PrototypeSettings.Custom(run, card);
+            if (custom != null && custom.UsesEffects)
+            {
+                var state = EffectState();
+                CardEffects.Resolve(run, custom, run.UsesAttributes ? enemy.physicalDefense : 0,
+                    run.UsesAttributes ? CharacterAttributes.Calculate(run, true).defense : 0, state, Draw);
+                enemyHealth = state.enemyHealth; enemyBlock = state.enemyBlock; run.health = state.playerHealth;
+                playerBlock = state.playerBlock; spirit = state.spirit;
+                if (run.health <= 0) { outcome = BattleOutcome.Failure; playerTurn = false; }
+                else if (enemyHealth <= 0) { outcome = BattleOutcome.Victory; playerTurn = false; }
+                discard.Add(card);
+                return true;
+            }
+            switch (PrototypeSettings.Template(run, card))
             {
                 case CardKind.Strike: Hit(card); break;
                 case CardKind.Defend: playerBlock += CombatNumbers.Block(run, card); break;
@@ -307,7 +320,7 @@ namespace MagicCave.Prototype
                 case CardKind.Shield: Hit(card); break;
                 case CardKind.Fortify: playerBlock += CombatNumbers.Block(run, card); break;
                 case CardKind.Quick: Hit(card); break;
-                case CardKind.Spirit: spirit += PrototypeSettings.For(run)?.spirit ?? 2; break;
+                case CardKind.Spirit: spirit += PrototypeSettings.Spirit(run, card); break;
                 case CardKind.Steady: playerBlock += CombatNumbers.Block(run, card); break;
             }
             if (outcome == BattleOutcome.None) Draw(PrototypeSettings.Draw(run, card));
@@ -320,16 +333,28 @@ namespace MagicCave.Prototype
             CombatNumbers.Apply(damage, run.UsesAttributes ? enemy.physicalDefense : 0, ref enemyBlock, ref enemyHealth);
             if (enemyHealth == 0) { outcome = BattleOutcome.Victory; playerTurn = false; }
         }
+        public CardEffectState EffectState() => new CardEffectState
+        {
+            enemyHealth = enemyHealth, enemyBlock = enemyBlock, playerHealth = run.health, playerBlock = playerBlock, spirit = spirit
+        };
         public double Preview(CardKind card)
         {
+            var custom = PrototypeSettings.Custom(run, card);
+            if (custom != null && custom.UsesEffects)
+            {
+                var state = EffectState();
+                CardEffects.Resolve(run, custom, run.UsesAttributes ? enemy.physicalDefense : 0,
+                    run.UsesAttributes ? CharacterAttributes.Calculate(run, true).defense : 0, state);
+                return CharacterAttributes.Quantize(enemyHealth - state.enemyHealth);
+            }
             double block = enemyBlock, health = enemyHealth, total = 0;
-            if (!CombatNumbers.IsAttack(card)) return 0;
-            for (int segment = 0; segment < CombatNumbers.Segments(card) && health > 0; segment++)
+            if (!CombatNumbers.IsAttack(PrototypeSettings.Template(run, card))) return 0;
+            for (int segment = 0; segment < CombatNumbers.Segments(PrototypeSettings.Template(run, card)) && health > 0; segment++)
                 total += CombatNumbers.Apply(CombatNumbers.Damage(run, card, spirit, playerBlock),
                     run.UsesAttributes ? enemy.physicalDefense : 0, ref block, ref health);
             return CharacterAttributes.Quantize(total);
         }
-        public double ExpectedHealthLoss => Math.Max(0, IntentAttack -
+        public double ExpectedHealthLoss => EnemyTemplates.Find(run, enemy) != null ? CharacterAttributes.Quantize(run.health - EnemyTemplates.Preview(this).enemyHealth) : Math.Max(0, IntentAttack -
             (run.UsesAttributes ? CharacterAttributes.Calculate(run, true).defense : 0) - playerBlock);
         public void EndPlayerTurn()
         {
@@ -339,6 +364,17 @@ namespace MagicCave.Prototype
         public void ResolveEnemyTurn()
         {
             if (playerTurn || outcome != BattleOutcome.None) return;
+            var template = EnemyTemplates.Find(run, enemy);
+            if (template != null)
+            {
+                var state = EnemyTemplates.Preview(this);
+                enemyHealth = state.playerHealth; enemyBlock = state.playerBlock;
+                run.health = state.enemyHealth; playerBlock = state.enemyBlock;
+                enemyTurn++;
+                if (run.health <= 0) { outcome = BattleOutcome.Failure; return; }
+                if (enemyHealth <= 0) { outcome = BattleOutcome.Victory; return; }
+                StartPlayerTurn(); return;
+            }
             enemyBlock = 0;
             int attack = IntentAttack;
             if (attack > 0)
@@ -355,6 +391,7 @@ namespace MagicCave.Prototype
         {
             get
             {
+                if (EnemyTemplates.Find(run, enemy) != null) return EnemyTemplates.IntentAmount(this, CardEffectKind.Damage, CardEffectTarget.Enemy);
                 int bonus = enemy.Level - 1;
                 var settings = PrototypeSettings.For(run);
                 int attack = settings?.enemyAttack[(int)enemy.kind] ?? (enemy.kind == EnemyKind.Bat ? 5 : 8);
@@ -364,7 +401,7 @@ namespace MagicCave.Prototype
                 return enemyTurn % 3 == 0 ? attack + bonus : enemyTurn % 3 == 2 ? heavy + bonus : 0;
             }
         }
-        public int IntentBlock { get { return PrototypeSettings.For(run)?.enemyBlock[(int)enemy.kind] ?? (enemy.kind == EnemyKind.Beetle ? 6 : 10); } }
-        public string Intent { get { return IntentAttack > 0 ? "攻击 " + IntentAttack : "格挡 " + IntentBlock; } }
+        public int IntentBlock { get { if (EnemyTemplates.Find(run, enemy) != null) return EnemyTemplates.IntentAmount(this, CardEffectKind.Block, CardEffectTarget.Self); return PrototypeSettings.For(run)?.enemyBlock[(int)enemy.kind] ?? (enemy.kind == EnemyKind.Beetle ? 6 : 10); } }
+        public string Intent { get { if (EnemyTemplates.Find(run, enemy) != null) return EnemyTemplates.Intent(this); return IntentAttack > 0 ? "攻击 " + IntentAttack : "格挡 " + IntentBlock; } }
     }
 }

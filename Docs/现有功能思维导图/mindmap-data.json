@@ -1,0 +1,1485 @@
+{
+  "title": "魔洞游戏 · 现有功能思维导图",
+  "date": "2026-11-03",
+  "systems": [
+    {
+      "id": "flow",
+      "name": "流程与状态",
+      "role": "串联城镇、探索、战斗与结算",
+      "color": "#305bd6",
+      "unity": "MonoBehaviour · Update · OnGUI",
+      "features": [
+        {
+          "id": "flow-state",
+          "name": "游戏状态与面板",
+          "brief": "主流程状态 + 叠加面板",
+          "how": "GameScreen 控制主页、探索、战斗、奖励、结算与结果；GamePanel 控制背包、暂停、商店等面板。由 PrototypeGame 的 partial 文件共享状态。",
+          "unity": "MonoBehaviour；Update 每帧推进；OnGUI 绘制界面；C# enum 管理状态。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 11,
+              "symbol": "public enum GameScreen"
+            }
+          ],
+          "unityShort": "MonoBehaviour / Update"
+        },
+        {
+          "id": "flow-start",
+          "name": "开始新局与继续",
+          "brief": "种子、地貌选择、规则快照",
+          "how": "新局先生成地图，再复制设置、应用天赋、校验，成功后才替换旧存档；继续时复制已有本局快照，不重新生成地图。",
+          "unity": "Debug.Log 输出种子；Resources 间接加载属性配置；JsonUtility 支撑深拷贝。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 340,
+              "symbol": "public void StartNewRun(int seed, MapGenerationMode mode)"
+            }
+          ],
+          "unityShort": "Debug.Log / JsonUtility"
+        },
+        {
+          "id": "flow-switch",
+          "name": "探索与战斗切换",
+          "brief": "主动交互 → 单敌战斗 → 返回",
+          "how": "相邻敌人交互调用 BeginBattle；ProcessBattle 处理胜败，胜利进入选牌或探索，失败进入正式结算。战斗保留本局生命与地图状态。",
+          "unity": "MonoBehaviour.Update；Time.deltaTime 驱动敌方行动等待；C# Battle 保存战斗状态。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 369,
+              "symbol": "public void BeginBattle"
+            }
+          ],
+          "unityShort": "Update / Time.deltaTime"
+        },
+        {
+          "id": "flow-pause",
+          "name": "暂停、回城与离局",
+          "brief": "手动存档与正式结算分流",
+          "how": "面板和流程条件阻止移动或战斗推进；返回门可存档回城或正式离局。暂停退出按未保存提示处理，不自动发放带出奖励。",
+          "unity": "Input System 的 Escape；Application.Quit；暂停靠状态门控，未通过 Time.timeScale 实现。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 365,
+              "symbol": "void SaveAndLeave"
+            }
+          ],
+          "unityShort": "Input System / Application"
+        }
+      ]
+    },
+    {
+      "id": "town",
+      "name": "城镇与局外成长",
+      "role": "为下一局提供职业、天赋和资源",
+      "color": "#976725",
+      "unity": "IMGUI · Input System · Texture2D",
+      "features": [
+        {
+          "id": "town-map",
+          "name": "世界地图与战士公会",
+          "brief": "城镇 / 公会两套格子布局",
+          "how": "TownPage、InGuild 管理公会入口、会长、导师、仓库和出发入口；城镇采用自己的格子布局与路径，复用方向输入及轮盘。",
+          "unity": "Input System；GUI.DrawTexture / GUI.Label 绘制城镇；Vector2.MoveTowards 平滑走格。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeTown.cs",
+              "line": 220,
+              "symbol": "void DrawTownMap"
+            }
+          ],
+          "unityShort": "IMGUI / Input System"
+        },
+        {
+          "id": "town-talent",
+          "name": "三属性天赋星图",
+          "brief": "前置条件、点亮、回撤返点",
+          "how": "力量、敏捷、智慧三区；满足职业、公会、声望、前置和点数条件后点亮即激活。回撤须先处理依赖节点；初始3点、每级1点为试配，正式点数产出未接入。",
+          "unity": "GUI / Rect / Color 绘制节点；Texture2D 支撑星图；C# TownRules 校验；存储层立即保存。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/TownProgression.cs",
+              "line": 49,
+              "symbol": "public static string TalentLock"
+            }
+          ],
+          "unityShort": "IMGUI / Texture2D"
+        },
+        {
+          "id": "town-guild",
+          "name": "公会升级与成长快照",
+          "brief": "金币 / 声望 → 条件与新局增益",
+          "how": "会长提供公会升级；出发时 TownRules.Apply 写入属性与开场能量、格挡、战后回血等效果。城镇后来点亮或回撤，不改写已出发局。",
+          "unity": "IMGUI 展示条件；JsonUtility 复制本局状态；天赋规则为 C# 逻辑。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/TownProgression.cs",
+              "line": 71,
+              "symbol": "public static void Apply"
+            }
+          ],
+          "unityShort": "IMGUI / JsonUtility"
+        },
+        {
+          "id": "town-warehouse",
+          "name": "局外仓库与资源处理",
+          "brief": "存储、出售、捐赠、扩容",
+          "how": "物品数量和装备实例分别保存；部分旧物品可出售，古代遗物可捐赠换声望，金币可扩容。新增装备和精华当前仅存储，未开放下局携入。",
+          "unity": "IMGUI 分页界面；JsonUtility 保存；容量和交易是 C# 规则。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeTown.cs",
+              "line": 418,
+              "symbol": "void DrawTownWarehouse"
+            }
+          ],
+          "unityShort": "IMGUI / JsonUtility"
+        }
+      ]
+    },
+    {
+      "id": "map",
+      "name": "地图生成与布局",
+      "role": "为探索提供地形、对象和路线风险",
+      "color": "#197a69",
+      "unity": "Vector2Int · 自定义 C# 生成算法",
+      "features": [
+        {
+          "id": "map-terrain",
+          "name": "两种地貌与五层流程",
+          "brief": "房间走廊 / 自然挖掘二选一",
+          "how": "整局前4张探索图采用所选方式：房间25×25，自然挖掘31×31；第5张为固定首领图。生成验收失败重试；旧5层或8层存档保留原快照。",
+          "unity": "Vector2Int 表示格子；Mathf 辅助计算；房间、挖掘及连通验收由 C# 完成。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+              "line": 69,
+              "symbol": "static MapData Generate"
+            }
+          ],
+          "unityShort": "Vector2Int + C#生成"
+        },
+        {
+          "id": "map-random",
+          "name": "种子与独立随机流",
+          "brief": "地图 / 洗牌 / 选牌 / 开箱分流",
+          "how": "RandomStream 自行维护状态，按 seed + salt 派生各流；开箱、战斗和选牌互不挤占同一序列。复现要求生成版本、规则和相关操作顺序一致。",
+          "unity": "[Serializable] 数据；Debug.Log；随机为自定义 C# RandomStream，不依赖 UnityEngine.Random。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeData.cs",
+              "line": 17,
+              "symbol": "public sealed class RandomStream"
+            }
+          ],
+          "unityShort": "Serializable + C#随机流"
+        },
+        {
+          "id": "map-layout",
+          "name": "箱袋与镇守入口布局",
+          "brief": "永久障碍下验证可达性",
+          "how": "默认10容器：2装备、5财宝、3消耗品；8受镇守、2无镇守。守卫覆盖原有地面交互入口，数量按入口生成；容器取空仍占格。可破墙绕行，开箱不检查守卫存活。",
+          "unity": "Vector2Int；Queue / HashSet 的 C# BFS；BoxCollider2D 在显示层提供实体组件。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+              "line": 534,
+              "symbol": "public static bool ValidateCombatApproaches"
+            }
+          ],
+          "unityShort": "Vector2Int + C# BFS"
+        },
+        {
+          "id": "map-door",
+          "name": "楼梯、商人与安全出生",
+          "brief": "路径连通、间距与避怪约束",
+          "how": "验收永久容器和商人障碍下的地面、楼梯及交互位连通。返回门在第3层和首领胜利后提供；新局怪物等级按楼层。商人位置须八向避怪。",
+          "unity": "Vector2Int；自定义 C# 路径验收；SpriteRenderer 显示楼梯与对象。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+              "line": 501,
+              "symbol": "public static bool ValidateContainerRoutes"
+            }
+          ],
+          "unityShort": "Vector2Int + C#验收"
+        }
+      ]
+    },
+    {
+      "id": "nav",
+      "name": "移动、导航与交互",
+      "role": "把键鼠输入转成合法走格和操作",
+      "color": "#4b68c2",
+      "unity": "Input System · Vector2.MoveTowards",
+      "features": [
+        {
+          "id": "nav-keys",
+          "name": "键盘走格与平滑表现",
+          "brief": "先按仍按住的方向优先",
+          "how": "输入事件保留按键先后；逻辑位置和存档在格心，显示位置在相邻格心间匀速插值，跨格继承剩余移动距离。洞窟3格/秒、城镇4格/秒为当前试配。",
+          "unity": "InputSystem.onEvent、Keyboard、InputEventPtr；Time.deltaTime；Vector2.MoveTowards。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 46,
+              "symbol": "void TrackMovementKeys"
+            }
+          ],
+          "unityShort": "InputSystem / MoveTowards"
+        },
+        {
+          "id": "nav-path",
+          "name": "点击寻路与相邻交互",
+          "brief": "只走已揭示通路；键盘可接管",
+          "how": "BFS 避开墙、存活敌人、箱袋和商人；点对象先接近四向交互位再执行。不可达给提示，不自动破墙；合法通行由 MapData.CanTraverse 判定。",
+          "unity": "Camera.ScreenToWorldPoint 换算格子；Mouse.current；Vector2Int；寻路为 C# BFS。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+              "line": 670,
+              "symbol": "public static List<Vector2Int> Path"
+            }
+          ],
+          "unityShort": "Camera / Mouse / C# BFS"
+        },
+        {
+          "id": "nav-wheel",
+          "name": "方向轮盘与大小地图",
+          "brief": "常驻 / 长按轮盘；点地图寻路",
+          "how": "右下轮盘直接拖动；地图长按0.25秒临时呼出。大小地图仅接受已揭示、可通行且可达终点；放大地图阻止底层输入，点击可达地块后收起。",
+          "unity": "Mouse / Keyboard；Time.unscaledTime；GUI.DrawTexture、Rect；自绘地图与轮盘。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeNavigation.cs",
+              "line": 37,
+              "symbol": "void ReadNavigationPointer"
+            }
+          ],
+          "unityShort": "Mouse / IMGUI / Time"
+        },
+        {
+          "id": "nav-dig",
+          "name": "交互、碰撞与破墙",
+          "brief": "E / 鼠标操作；破墙重建",
+          "how": "TargetKind 区分敌人、容器、门、墙和商人。内部墙可一次破坏，边界墙不可破；修改 Tile 后重建墙线和视野。输入由面板和 UI 区域分流，避免点击穿透。",
+          "unity": "Input System；Camera；BoxCollider2D / PrototypeTarget 组件；通行主判定为 C# 网格检查。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 300,
+              "symbol": "void Interact(Target target)"
+            }
+          ],
+          "unityShort": "BoxCollider2D / 自定义格检"
+        }
+      ]
+    },
+    {
+      "id": "sight",
+      "name": "视野、火把与情报",
+      "role": "决定可发现内容与路线信息",
+      "color": "#b57b13",
+      "unity": "SpriteRenderer · 自定义格子视线",
+      "features": [
+        {
+          "id": "sight-los",
+          "name": "常规与火把视野",
+          "brief": "3×3 / 5×5去四顶角",
+          "how": "常规最多9格，火把最多21格；Supercover 射线处理墙体遮挡，斜向不能穿墙角；首个遮挡格可见，后方不揭示。首领地图全可见。",
+          "unity": "Vector2Int / Mathf 辅助；视线算法为 C#，未使用 Unity 2D Light 灯光。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+              "line": 616,
+              "symbol": "public static bool HasLineOfSight"
+            }
+          ],
+          "unityShort": "C#格子视线（无2D灯光）"
+        },
+        {
+          "id": "sight-reveal",
+          "name": "永久揭示与迷雾显示",
+          "brief": "发现后保留；不等于当前视线",
+          "how": "MapData.revealed 记录发现；移动、破墙、读档及切图刷新。已发现敌人、容器和门持续显示，小地图读取同一揭示记录。",
+          "unity": "SpriteRenderer 绘制遮罩；GameObject.SetActive / Renderer.enabled 控制显隐。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+              "line": 181,
+              "symbol": "partial void RefreshVisibility"
+            }
+          ],
+          "unityShort": "SpriteRenderer / SetActive"
+        },
+        {
+          "id": "sight-torch",
+          "name": "同一根火把可切换开关",
+          "brief": "点燃消耗1根；保留剩余耐久",
+          "how": "首次点燃取得20步耐久；手动熄灭保留耐久，再点燃同一根不重复消耗库存；耗尽后才需下一根。开关与剩余耐久随本局保存。",
+          "unity": "GUI / Input System 提供操作；TorchLight 是 C# 状态，未使用计时协程或实时灯光。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 8,
+              "symbol": "public static class TorchLight"
+            }
+          ],
+          "unityShort": "Input System + C#开关"
+        },
+        {
+          "id": "sight-step",
+          "name": "照明与移动计步联动",
+          "brief": "仅燃烧时的成功走格扣步",
+          "how": "MoveGrid 成功后调用 TorchLight.Step，再刷新揭示和显示；碰墙、等待、战斗、交互、破墙不扣步，熄灭期间不扣步。",
+          "unity": "MonoBehaviour.Update 驱动移动；Vector2Int；计步依赖走格事件，非 Time 秒数。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+              "line": 224,
+              "symbol": "bool MoveGrid"
+            }
+          ],
+          "unityShort": "Update + C#走格事件"
+        }
+      ]
+    },
+    {
+      "id": "items",
+      "name": "物品、背包与装备",
+      "role": "让探索产出成为可用资源",
+      "color": "#9251af",
+      "unity": "IMGUI · Input System · ScriptableObject",
+      "features": [
+        {
+          "id": "items-loot",
+          "name": "三类容器与首次开箱",
+          "brief": "首次有效开启抽取；之后不重抽",
+          "how": "装备箱、财宝箱、消耗品袋使用规则快照和 containerRandom；满包仍确定内容，支持部分拾取。新局空箱保持不透明开启外观、碰撞，取消交互。",
+          "unity": "[Serializable]；Sprite / SpriteRenderer 选择开闭图；随机和拾取为 C# 规则。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/ContainerLoot.cs",
+              "line": 74,
+              "symbol": "public static bool Open"
+            }
+          ],
+          "unityShort": "SpriteRenderer + C#掉落"
+        },
+        {
+          "id": "items-bag",
+          "name": "20格背包与拖拽整理",
+          "brief": "装备1件/格；同类材料最多20",
+          "how": "Inventory 管理拾取、堆叠、整格交换和明确丢弃；ItemUnit 保存独立ID及获取顺序，为穿戴、带出和失败排序提供唯一身份。",
+          "unity": "OnGUI / GUI.DrawTexture 绘制格子；Mouse.current 处理拖拽；Rect 命中检测。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeItemGrid.cs",
+              "line": 133,
+              "symbol": "void ReadItemDrag"
+            }
+          ],
+          "unityShort": "IMGUI / Mouse / Rect"
+        },
+        {
+          "id": "items-equip",
+          "name": "八个独立装备槽",
+          "brief": "整件剑盾 + 四护甲 + 三戒指",
+          "how": "拖入匹配部位可换装；旧装备退回来源格；卸装检查容量。剑盾只有一个实例，三个戒指分别记录实际槽位；旧木盾仅保留兼容入口。",
+          "unity": "IMGUI 格子与鼠标拖拽；ScriptableObject 属性配置；装备许可/交换为 C#。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 148,
+              "symbol": "public static string Equip"
+            }
+          ],
+          "unityShort": "IMGUI / ScriptableObject"
+        },
+        {
+          "id": "items-quick",
+          "name": "消耗品与三格快捷栏",
+          "brief": "绑定背包类别；不复制库存",
+          "how": "探索点击或1/2/3使用，背包页可点击；拾取/购买时有空位自动绑定，支持拖入替换和右键解绑。药剂回血、精华本局加属性、强攻药剂按战斗次数持续；当前无战斗消耗品牌。",
+          "unity": "Input System 数字键与鼠标；IMGUI 绘制；RunData.quickSlots / TorchLight 保存绑定与火把状态。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 29,
+              "symbol": "public static class QuickBar"
+            }
+          ],
+          "unityShort": "Input System / IMGUI"
+        }
+      ]
+    },
+    {
+      "id": "stats",
+      "name": "角色属性与数值",
+      "role": "为卡面、预览和结算提供统一结果",
+      "color": "#5363ad",
+      "unity": "ScriptableObject · Resources · JsonUtility",
+      "features": [
+        {
+          "id": "stats-template",
+          "name": "角色模板与规则快照",
+          "brief": "固定模板；成长属于本局",
+          "how": "PrototypeAttributeSet 加载 CharacterRules，复制进 RunData；CharacterState 保存天赋、穿戴和增益。新局 secondary=None，取消副属性选择及最终伤害加成；旧局保留兼容。",
+          "unity": "ScriptableObject；[CreateAssetMenu]；Resources.Load；JsonUtility 深拷贝。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeAttributeSet.cs",
+              "line": 9,
+              "symbol": "public static AttributeRules LoadRules"
+            }
+          ],
+          "unityShort": "ScriptableObject / Resources"
+        },
+        {
+          "id": "stats-atk",
+          "name": "三属性、装备与实际ATK",
+          "brief": "武器白值 + 三属性修正",
+          "how": "Calculate 汇总模板、等级成长、天赋、装备和有效增益；武器上配置力量/敏捷/智慧修正。装备可提供生命、防御和属性；换装重算ATK并更新卡面，不替换卡组。",
+          "unity": "[Serializable] 配置/状态；纯 C# decimal 计算；未依赖 Unity 物理或动画计算伤害。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/CharacterAttributes.cs",
+              "line": 145,
+              "symbol": "public static CharacterStats Calculate"
+            }
+          ],
+          "unityShort": "Serializable + C# decimal"
+        },
+        {
+          "id": "stats-buff",
+          "name": "等级与增益生命周期",
+          "brief": "力量/生命成长；按场次结束增益",
+          "how": "等级参与主属性与生命成长；精华写入本局永久 modifier，强攻药剂只在战斗中参与并按剩余战斗数衰减。战后回血、结束增益、经验升级按既定顺序执行。",
+          "unity": "[Serializable] 属性增益列表；C# 事件调用链；不使用 Animator 状态。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/CharacterAttributes.cs",
+              "line": 208,
+              "symbol": "public static void FinishBattle"
+            }
+          ],
+          "unityShort": "Serializable + C#生命周期"
+        },
+        {
+          "id": "stats-damage",
+          "name": "伤害、格挡与一致预览",
+          "brief": "卡牌倍率；逐段减防再扣格挡",
+          "how": "攻击取实际ATK×牌倍率，盾击取当前格挡；防御牌按模板读主属性或实际ATK。最终倍率后整数取整；每段先减防御、再扣格挡、再扣生命，预览复用同一计算。",
+          "unity": "Mathf 用于辅助显示；核心为 C# decimal + RoundDamage / CombatNumbers，防御不是百分比。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/CharacterAttributes.cs",
+              "line": 253,
+              "symbol": "public static class CombatNumbers"
+            }
+          ],
+          "unityShort": "C#统一数值 / IMGUI显示"
+        }
+      ]
+    },
+    {
+      "id": "battle",
+      "name": "卡牌战斗与本局成长",
+      "role": "把探索遭遇转成构筑和资源产出",
+      "color": "#bf5365",
+      "unity": "Update · IMGUI · Input System",
+      "features": [
+        {
+          "id": "battle-turn",
+          "name": "单敌回合与资源",
+          "brief": "玩家先手；3能量；每回合抽5",
+          "how": "Battle 管理玩家/敌方回合；回合开始清自身格挡并补能抽牌；结束回合弃剩余牌，清战意；抽空洗弃牌。天赋可提供开场额外能量或初始格挡。",
+          "unity": "MonoBehaviour.Update 驱动敌方等待；Time.deltaTime；牌堆与回合为 C# 状态。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 258,
+              "symbol": "public sealed class Battle"
+            }
+          ],
+          "unityShort": "Update / Time.deltaTime"
+        },
+        {
+          "id": "battle-play",
+          "name": "十类卡牌与牌堆查看",
+          "brief": "点击出牌；多手牌分页",
+          "how": "起始牌为打击、防御、整备，另7类升级候选。Play 校验费用、移出手牌、按序结算、入弃牌堆；攻击对唯一敌人。界面可查看抽牌/弃牌组成。",
+          "unity": "OnGUI / GUI.Label / GUI.DrawTexture；Mouse.current；自绘按钮点击，而非 uGUI Button。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 294,
+              "symbol": "public bool Play"
+            }
+          ],
+          "unityShort": "IMGUI / Input System"
+        },
+        {
+          "id": "battle-enemy",
+          "name": "敌人意图、胜败与首领",
+          "brief": "洞穴蝠 / 岩甲虫 / 岩洞守卫",
+          "how": "三类敌人按各自循环展示意图；等级调整生命和攻击。胜利将该敌人标为 defeated、发经验和牙齿；首领胜利生成返回门和可配置遗物奖励，安全校正玩家站位。",
+          "unity": "SpriteRenderer 显示敌人；IMGUI 展示意图；C# BattleOutcome / defeated 状态。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 231,
+              "symbol": "public static void FinishVictory"
+            }
+          ],
+          "unityShort": "SpriteRenderer / IMGUI"
+        },
+        {
+          "id": "battle-growth",
+          "name": "经验升级与三选一构筑",
+          "brief": "经验 → 升级 → 选牌/跳过",
+          "how": "胜利普通10、首领30经验；升级曲线20+10×(L-1)，逐次给3种候选，可跳过。新卡写入本局deck；失败经验仅统计，直接结算。等级、卡组不继承新局。",
+          "unity": "IMGUI 候选卡界面；自定义 RandomStream 洗候选；C# Growth 管理升级。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/RunSystems.cs",
+              "line": 221,
+              "symbol": "public static List<CardKind> NextUpgrade"
+            }
+          ],
+          "unityShort": "IMGUI + C#随机流"
+        }
+      ]
+    },
+    {
+      "id": "economy",
+      "name": "牙齿与集齿者",
+      "role": "战斗货币回流到探索消耗品",
+      "color": "#ad7827",
+      "unity": "IMGUI · SpriteRenderer · JSON快照",
+      "features": [
+        {
+          "id": "economy-teeth",
+          "name": "单局牙齿货币",
+          "brief": "胜利发放；不占背包格",
+          "how": "普通怪3、首领10颗为试配；defeated 防止重复发放。牙齿存 RunData，不入仓库、不兑换城镇金币，正式结束后不继承。",
+          "unity": "[Serializable] RunData；JsonUtility 保存；产出为 C# 规则。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/ToothMerchant.cs",
+              "line": 13,
+              "symbol": "public static int VictoryTeeth"
+            }
+          ],
+          "unityShort": "Serializable / JsonUtility"
+        },
+        {
+          "id": "economy-plan",
+          "name": "随机商人分布",
+          "brief": "每层至多1；连续5层至少2",
+          "how": "PlanFloors 按种子安排普通楼层，再补足滑动窗口；首领层计入窗口但不生成商人。位置八向避怪，且不破坏永久障碍下的通路和交互位。",
+          "unity": "Vector2Int；自定义随机流和 C# 布局验收。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/ToothMerchant.cs",
+              "line": 14,
+              "symbol": "public static bool[] PlanFloors"
+            }
+          ],
+          "unityShort": "Vector2Int + C#随机流"
+        },
+        {
+          "id": "economy-buy",
+          "name": "消费、容量校验与交易",
+          "brief": "药剂、火把、强攻药剂",
+          "how": "购买前检查范围、开关、余额、背包与堆叠空间；成功后才扣牙齿并发物品，触发快捷栏自动绑定。失败不扣款、不推进物品ID。",
+          "unity": "IMGUI 商品界面；Input System 点击/E；Inventory.Pickup 复用物品逻辑。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/ToothMerchant.cs",
+              "line": 53,
+              "symbol": "public static string Buy"
+            }
+          ],
+          "unityShort": "IMGUI / Input System"
+        },
+        {
+          "id": "economy-bridge",
+          "name": "两套经济与资源方向",
+          "brief": "牙齿用于本局；金币用于局外",
+          "how": "探索商店回补本局消耗品；金币和声望由正式结算/局外处理获得，驱动公会与仓库。暂存回城只保存牙齿余额，不发城镇结算奖励。",
+          "unity": "JsonUtility 保存两类数据；经济换算为 C# TownRules，未自动兑换牙齿。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/TownProgression.cs",
+              "line": 90,
+              "symbol": "public static long SettlementGold"
+            }
+          ],
+          "unityShort": "JsonUtility + C#奖励"
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "name": "调参与功能开关",
+      "role": "控制随后新局的原型规则",
+      "color": "#527784",
+      "unity": "IMGUI · Input System · JsonUtility",
+      "features": [
+        {
+          "id": "settings-ui",
+          "name": "主界面设置与草稿",
+          "brief": "功能 / 卡牌 / 怪物 / 掉落",
+          "how": "设置面板使用草稿；支持数值加减、文本输入、粘贴、确认、保存/取消及恢复默认。保存前校验；超出范围或空间不足会拒绝，不替换已有存档。",
+          "unity": "OnGUI / GUI；Keyboard.onTextInput；GUIUtility.systemCopyBuffer；Rect 点击。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeSettingsInterface.cs",
+              "line": 63,
+              "symbol": "void DrawSettings"
+            }
+          ],
+          "unityShort": "IMGUI / onTextInput"
+        },
+        {
+          "id": "settings-rules",
+          "name": "十二类功能开关",
+          "brief": "迷雾、消耗品、装备、镇守等",
+          "how": "可切换火把、牙齿、商人、出发天赋、经验、选牌、破墙等。关闭掉落类别仍保留容器，可开空；关闭物品守卫是显式调试选项，默认布局规则继续有效。",
+          "unity": "[Serializable] PrototypeSettings；IMGUI；具体效果在 C# 系统入口判断。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeSettings.cs",
+              "line": 8,
+              "symbol": "public sealed class PrototypeSettings"
+            }
+          ],
+          "unityShort": "Serializable / IMGUI"
+        },
+        {
+          "id": "settings-balance",
+          "name": "卡牌、怪物与掉落调参",
+          "brief": "费用/倍率/数量/权重/首领奖励",
+          "how": "配置初始卡数量、费用、抽牌、倍率和战意；怪物生命、攻击、防御、格挡及自由怪数量；各池权重、数量范围、首领遗物概率。数值是原型试配。",
+          "unity": "JsonUtility 序列化配置；C# Validate 校验数组、范围和候选池。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeSettings.cs",
+              "line": 29,
+              "symbol": "public void Validate"
+            }
+          ],
+          "unityShort": "JsonUtility + C#校验"
+        },
+        {
+          "id": "settings-snapshot",
+          "name": "仅随后新局生效",
+          "brief": "复制设置与掉落池进本局",
+          "how": "Apply 写入 settingsVersion=1 与规则副本，后续系统读取 PrototypeSettings.For(run)。继续旧局使用原快照，旧settingsVersion=0沿用原逻辑。",
+          "unity": "JsonUtility 深拷贝；[Serializable]；Resources 属性配置与本局设置快照并存。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeSettings.cs",
+              "line": 45,
+              "symbol": "public void Apply"
+            }
+          ],
+          "unityShort": "JsonUtility 深拷贝"
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "name": "存档、结算与旧局兼容",
+      "role": "持久化全部状态并防止重复奖励",
+      "color": "#487a63",
+      "unity": "JsonUtility · persistentDataPath",
+      "features": [
+        {
+          "id": "save-files",
+          "name": "三类JSON与原子写入",
+          "brief": "session / warehouse / settings",
+          "how": "默认路径由 Application.persistentDataPath 派生。临时文件写入、Flush后替换；本局、仓库/城镇、设置分别保存。设置损坏暂用默认，保留原文件。",
+          "unity": "Application.persistentDataPath；JsonUtility.ToJson / FromJson；文件读写用 .NET System.IO。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeStore.cs",
+              "line": 99,
+              "symbol": "static void AtomicWrite"
+            }
+          ],
+          "unityShort": "persistentDataPath / JSON"
+        },
+        {
+          "id": "save-checkpoint",
+          "name": "返回门存档与继续",
+          "brief": "保存快照和随机进度",
+          "how": "session 保存地图、揭示、墙体、敌人/容器、位置、生命、经验、牌组、背包、装备/属性/天赋、牙齿、火把开关耐久、快捷栏及各随机流。继续不重Roll、不领奖励。",
+          "unity": "[Serializable] 数据模型；JsonUtility 深拷贝与序列化；不是 PlayerPrefs 存档。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeStore.cs",
+              "line": 131,
+              "symbol": "public void SaveCheckpoint"
+            }
+          ],
+          "unityShort": "Serializable / JsonUtility"
+        },
+        {
+          "id": "save-settle",
+          "name": "正式带出与防重复入账",
+          "brief": "主动最多10件；失败最多5件",
+          "how": "背包与穿戴装备一起选；失败按品质与获取时间自动取。PendingSettlement 保留待处理流程；run.id / committedRuns 账本防重复发物品、金币和声望。仓库不足则暂停提交。",
+          "unity": "JsonUtility 保存事务状态；System.IO 原子替换；C# 账本与容量检查。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeStore.cs",
+              "line": 174,
+              "symbol": "public List<ItemUnit> CommitSettlement"
+            }
+          ],
+          "unityShort": "JsonUtility + C#账本"
+        },
+        {
+          "id": "save-legacy",
+          "name": "版本迁移与旧档保护",
+          "brief": "保留地图/规则/装备实例快照",
+          "how": "读取时验证并对已定义字段迁移生成备份；旧地图不补怪、不重排，新局新增池不追补旧局；旧副属性、旧槽位和原层数按各自兼容路径处理。",
+          "unity": "ISerializationCallbackReceiver；JsonUtility；C# version 字段与 System.IO 备份。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeData.cs",
+              "line": 188,
+              "symbol": "public sealed class SessionData"
+            }
+          ],
+          "unityShort": "序列化回调 / JsonUtility"
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "name": "Unity表现与开发支撑",
+      "role": "把逻辑数据呈现为可操作的原型",
+      "color": "#697582",
+      "unity": "SpriteRenderer · Camera · Editor工具",
+      "features": [
+        {
+          "id": "render-sprite",
+          "name": "像素对象与墙体拼接",
+          "brief": "16 PPU；Y排序；迷雾遮罩",
+          "how": "BuildWorld 从 MapData 创建 GameObject、SpriteRenderer、BoxCollider2D 和 TextMesh。PixelWallTiles 按邻接地形与已知轮廓选择/生成图块，破墙后重建显示。",
+          "unity": "GameObject / Transform / AddComponent；SpriteRenderer.sortingOrder；Texture2D.GetPixels / Sprite.Create。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+              "line": 99,
+              "symbol": "partial void BuildWorld"
+            }
+          ],
+          "unityShort": "SpriteRenderer / Texture2D"
+        },
+        {
+          "id": "render-camera",
+          "name": "正交跟随与像素对齐",
+          "brief": "固定朝向；整数像素缩放",
+          "how": "ConfigurePixelCamera 固定正交及屏幕比例；LateUpdate 内跟随显示位置，用 SmoothDamp 平滑相机并对齐像素；人物按方向换Sprite / flipX。",
+          "unity": "Camera.orthographic；Screen.height；LateUpdate；Vector3.SmoothDamp；SpriteRenderer.flipX。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+              "line": 33,
+              "symbol": "public static void ConfigurePixelCamera"
+            }
+          ],
+          "unityShort": "Camera / SmoothDamp"
+        },
+        {
+          "id": "render-editor",
+          "name": "资源配置、场景与构建工具",
+          "brief": "已有编辑器工具源码支撑",
+          "how": "PrototypeArtSet / PrototypeAttributeSet 定义资源配置；Editor构建器设导入、创建场景和Windows包。图中仅记录这些现有能力，本次未执行导入、改场景或构建。",
+          "unity": "ScriptableObject / Resources；TextureImporter / AssetDatabase；EditorSceneManager / BuildPipeline。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Runtime/PrototypeArtSet.cs",
+              "line": 7,
+              "symbol": "public sealed class PrototypeArtSet"
+            },
+            {
+              "path": "Assets/MagicCavePrototype/Editor/PrototypeSceneBuilder.cs",
+              "line": 98,
+              "symbol": "[MenuItem("
+            },
+            {
+              "path": "Assets/MagicCavePrototype/Editor/PrototypeSceneBuilder.cs",
+              "line": 151,
+              "symbol": "BuildPipeline.BuildPlayer"
+            }
+          ],
+          "unityShort": "AssetDatabase / BuildPipeline"
+        },
+        {
+          "id": "render-tests",
+          "name": "规则与交互验证支撑",
+          "brief": "EditMode / PlayMode 测试源码",
+          "how": "Tests/Editor 覆盖地图、属性、背包、天赋、设置、交易与存档；Tests/PlayMode 覆盖真实输入、拖拽、轮盘、迷雾和流程。此图依据源码与文档核查，本次未重跑Unity测试。",
+          "unity": "Unity Test Framework；NUnit [Test]；[UnityTest] / IEnumerator；Input System 测试输入。",
+          "sources": [
+            {
+              "path": "Assets/MagicCavePrototype/Editor/PrototypeVerification.cs",
+              "line": 18,
+              "symbol": "TestRunnerApi"
+            },
+            {
+              "path": "Assets/MagicCavePrototype/Tests/PlayMode/PrototypePlayTests.cs",
+              "line": 30,
+              "symbol": "[UnityTest]"
+            }
+          ],
+          "unityShort": "Unity Test Framework / NUnit"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "source": "town",
+      "target": "flow",
+      "label": "天赋出发快照",
+      "detail": "点亮的天赋在开始新局时写入角色与战斗开场效果，已出发局保持原快照。"
+    },
+    {
+      "source": "settings",
+      "target": "flow",
+      "label": "新局规则快照",
+      "detail": "先生成和应用配置并验证，成功后才替换旧存档。"
+    },
+    {
+      "source": "flow",
+      "target": "map",
+      "label": "生成整局地图",
+      "detail": "种子与地貌模式决定4张探索图，第5张为固定首领图。"
+    },
+    {
+      "source": "map",
+      "target": "nav",
+      "label": "地形和障碍约束",
+      "detail": "导航使用实际地形与敌人、商人、永久容器占格。"
+    },
+    {
+      "source": "nav",
+      "target": "sight",
+      "label": "成功移动与破墙",
+      "detail": "成功走格扣燃烧耐久并揭示，破墙后重新判断视线。"
+    },
+    {
+      "source": "sight",
+      "target": "nav",
+      "label": "揭示范围限制寻路",
+      "detail": "点击寻路只能通过已揭示地面，大小地图共用揭示状态。"
+    },
+    {
+      "source": "map",
+      "target": "items",
+      "label": "容器与入口风险",
+      "detail": "位置、容器类别和守卫入口由地图生成；开箱和拾取不校验守卫存活。"
+    },
+    {
+      "source": "items",
+      "target": "stats",
+      "label": "换装与消耗增益",
+      "detail": "装备和精华改变属性或防御，强攻药剂按战斗数持续。"
+    },
+    {
+      "source": "stats",
+      "target": "battle",
+      "label": "统一卡牌数值",
+      "detail": "实际ATK/主属性与牌倍率决定伤害和格挡；预览与结算共用公式。"
+    },
+    {
+      "source": "nav",
+      "target": "battle",
+      "label": "相邻敌人主动交互",
+      "detail": "到达相邻交互位后才切入单敌战斗。"
+    },
+    {
+      "source": "battle",
+      "target": "nav",
+      "label": "胜利后恢复通行",
+      "detail": "敌人defeated后不再阻挡，返回原探索位置。"
+    },
+    {
+      "source": "battle",
+      "target": "economy",
+      "label": "胜利发放牙齿",
+      "detail": "普通3、首领10为当前试配；每个敌人只发一次。"
+    },
+    {
+      "source": "economy",
+      "target": "items",
+      "label": "购买消耗品入包",
+      "detail": "先检查牙齿与容量，成功后入包并尝试填快捷栏空位。"
+    },
+    {
+      "source": "items",
+      "target": "sight",
+      "label": "火把库存与开关",
+      "detail": "快捷格操作同一根有耐久的火把，影响视野形状并保留状态。"
+    },
+    {
+      "source": "battle",
+      "target": "save",
+      "label": "失败或主动离局结算",
+      "detail": "战败直接进入失败结算；首领胜利后须再经返回门正式离局。"
+    },
+    {
+      "source": "save",
+      "target": "town",
+      "label": "物品 / 金币 / 声望入账",
+      "detail": "正式结算入仓与发局外奖励，run.id账本避免重复。"
+    },
+    {
+      "source": "town",
+      "target": "stats",
+      "label": "天赋影响下一局属性",
+      "detail": "三属性/生命写入本局，战斗机制节点提供开场或战后效果。"
+    },
+    {
+      "source": "settings",
+      "target": "map",
+      "label": "怪物与分布开关",
+      "detail": "默认生成后按设置移除相应守卫，或配置目标自由怪数量。"
+    },
+    {
+      "source": "settings",
+      "target": "battle",
+      "label": "卡牌与怪物参数",
+      "detail": "费用、倍率、抽牌、意图数值和奖励开关读本局快照。"
+    },
+    {
+      "source": "settings",
+      "target": "items",
+      "label": "掉落池与物品开关",
+      "detail": "有效物品按池权重生成，停用池允许空箱。"
+    },
+    {
+      "source": "save",
+      "target": "flow",
+      "label": "继续快照 / 恢复待结算",
+      "detail": "读取检查点继续本局，或继续未完成的结算。"
+    },
+    {
+      "source": "save",
+      "target": "map",
+      "label": "保存实际地图结果",
+      "detail": "地形、门、对象、揭示、版本及随机进度随快照保存。"
+    },
+    {
+      "source": "save",
+      "target": "items",
+      "label": "保存物品实例与绑定",
+      "detail": "独立ID、穿戴槽、背包、容器状态及快捷格一起保存。"
+    },
+    {
+      "source": "save",
+      "target": "sight",
+      "label": "保存揭示与火把状态",
+      "detail": "恢复剩余耐久与开关；旧清零火把不追补。"
+    },
+    {
+      "source": "render",
+      "target": "map",
+      "label": "绘制数据地图",
+      "detail": "地图数据驱动精灵、碰撞组件、标签与墙体连接。"
+    },
+    {
+      "source": "render",
+      "target": "flow",
+      "label": "统一界面与更新入口",
+      "detail": "IMGUI绘制面板，Input System处理交互，Update推进各状态。"
+    }
+  ],
+  "scope": "当前工作区源码与最新阶段文档；默认设置的新局行为。标注为规则逻辑的功能由C#实现，Unity API负责生命周期、输入、显示、资源与序列化。",
+  "boundaries": [
+    "本图是现有实现说明，不新增玩法规则；默认数值、权重、初始点数等保留原型试配性质。",
+    "采用最新规则：4探索图+第5首领、8装备槽、无副属性、点亮即激活、9/21格视野、火把可反复开关。旧5层/8层局保留原快照。",
+    "运行时地图由自建网格数据、GameObject和SpriteRenderer实现；通行、寻路、视线是自定义C#，未接入Tilemap、NavMesh或实时2D灯光。",
+    "界面为OnGUI/IMGUI绘制，点击与拖拽由Input System自管；未以Canvas/uGUI、UI Toolkit或EventSystem作为这套原型交互主体。",
+    "BoxCollider2D确有使用；核心走格碰撞检查是MapData.CanTraverse/CanStand，不应描述为Rigidbody2D物理移动。",
+    "本次只读源码和文档并生成导图，没有操作Unity编辑器、改资源或运行Unity测试，也未核实当前资产配置与运行包是否更新。",
+    "已知源码边界：全满仓且无可出售/扩容手段时，失败结算仍可能无恢复出口；仓库同名装备属性展示仍取首件。详见原型对照与修正清单R01/R03。",
+    "当前未实现的完整版范围：多公会/多职业、速度与独立出牌次数、战斗消耗品牌、元素/神圣/黑暗全规则、任务/制造/物品解锁、理智与完整逃跑流程。"
+  ],
+  "positions": {
+    "flow": {
+      "x": 60,
+      "y": 266,
+      "w": 750,
+      "h": 255
+    },
+    "town": {
+      "x": 60,
+      "y": 545,
+      "w": 750,
+      "h": 255
+    },
+    "map": {
+      "x": 60,
+      "y": 824,
+      "w": 750,
+      "h": 255
+    },
+    "nav": {
+      "x": 60,
+      "y": 1103,
+      "w": 750,
+      "h": 255
+    },
+    "sight": {
+      "x": 60,
+      "y": 1382,
+      "w": 750,
+      "h": 255
+    },
+    "items": {
+      "x": 60,
+      "y": 1661,
+      "w": 750,
+      "h": 255
+    },
+    "stats": {
+      "x": 1690,
+      "y": 266,
+      "w": 750,
+      "h": 255
+    },
+    "battle": {
+      "x": 1690,
+      "y": 545,
+      "w": 750,
+      "h": 255
+    },
+    "economy": {
+      "x": 1690,
+      "y": 824,
+      "w": 750,
+      "h": 255
+    },
+    "settings": {
+      "x": 1690,
+      "y": 1103,
+      "w": 750,
+      "h": 255
+    },
+    "save": {
+      "x": 1690,
+      "y": 1382,
+      "w": 750,
+      "h": 255
+    },
+    "render": {
+      "x": 1690,
+      "y": 1661,
+      "w": 750,
+      "h": 255
+    }
+  },
+  "unityGuides": [
+    {
+      "id": "lifecycle",
+      "name": "MonoBehaviour / Update / LateUpdate",
+      "tags": [
+        "MonoBehaviour",
+        "Update"
+      ],
+      "intro": "MonoBehaviour让脚本作为组件接受Unity生命周期回调。Update处理每帧逻辑，LateUpdate适合在移动更新后跟随相机。",
+      "usage": "继承MonoBehaviour，把逐帧工作放在Update；订阅事件放在OnEnable，在OnDisable解除。LateUpdate处理依赖本帧位置的显示。",
+      "example": "void Update() { /* 读取输入，推进当前游戏状态 */ }\nvoid LateUpdate() { /* 根据角色显示位置跟随镜头 */ }",
+      "project": "PrototypeGame集中推进探索和战斗；PrototypeWorld在LateUpdate调用的FollowWorld中更新相机。暂停依靠流程和面板条件停止推进。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+          "line": 89,
+          "symbol": "void Update()"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/MonoBehaviour.html"
+    },
+    {
+      "id": "input",
+      "name": "Input System / Keyboard / Mouse",
+      "tags": [
+        "Input System",
+        "InputSystem",
+        "Mouse",
+        "onTextInput"
+      ],
+      "intro": "Unity的输入包提供键盘、鼠标设备状态和输入事件。可以直接读取设备，也可以使用Input Actions。",
+      "usage": "导入UnityEngine.InputSystem，先检查设备是否存在，再读取按下、保持或松开状态。本项目还监听onEvent保留方向键先后顺序。",
+      "example": "var keyboard = Keyboard.current;\nif (keyboard != null && keyboard.eKey.wasPressedThisFrame)\n{ /* 执行附近对象交互 */ }",
+      "project": "控制WASD/方向键走格、E交互、1/2/3快捷栏、点击寻路、装备拖拽和轮盘；输入事件顺序用于“先按仍按住的方向优先”。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+          "line": 46,
+          "symbol": "void TrackMovementKeys"
+        }
+      ],
+      "url": "https://docs.unity3d.com/Packages/com.unity.inputsystem@1.11/manual/Devices.html"
+    },
+    {
+      "id": "imgui",
+      "name": "IMGUI / OnGUI / GUI",
+      "tags": [
+        "IMGUI",
+        "OnGUI"
+      ],
+      "intro": "IMGUI是通过C#绘制即时界面的方式。OnGUI可能在一帧内被多次调用，不适合在绘制时直接重复推进游戏逻辑。",
+      "usage": "在OnGUI中按Rect绘制文字和图片；把操作排队交给Update处理。本项目用Input System判断点击，GUI主要负责画面。",
+      "example": "void OnGUI()\n{\n    GUI.Label(new Rect(20, 20, 200, 30), \"背包\");\n}",
+      "project": "背包格、八槽装备页、卡牌、商店、设置、天赋星图和大小地图都是这套自绘界面，而非uGUI Button。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeInterface.cs",
+          "line": 102,
+          "symbol": "partial void DrawInterface"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/GUI.html"
+    },
+    {
+      "id": "sprite",
+      "name": "SpriteRenderer",
+      "tags": [
+        "SpriteRenderer"
+      ],
+      "intro": "SpriteRenderer组件在场景中显示2D精灵，可指定图片、颜色、翻转和绘制排序。",
+      "usage": "给GameObject添加SpriteRenderer并指定sprite；用sortingOrder控制前后层，用flipX复用左右朝向。",
+      "example": "var image = node.AddComponent<SpriteRenderer>();\nimage.sprite = sprite;\nimage.sortingOrder = 10000 - Mathf.RoundToInt(y * 100);",
+      "project": "地板、墙、玩家、敌人、箱袋、楼梯与迷雾都使用精灵；纵坐标决定遮挡前后，开箱后切换开启贴图。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+          "line": 55,
+          "symbol": "SpriteRenderer Pixel"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/SpriteRenderer.html"
+    },
+    {
+      "id": "camera",
+      "name": "Camera / 正交相机",
+      "tags": [
+        "Camera"
+      ],
+      "intro": "Camera把场景投影到屏幕；正交投影让物体大小不随深度变化，适合俯视像素地图。",
+      "usage": "设置orthographic与orthographicSize；用ScreenToWorldPoint把屏幕鼠标位置变成世界坐标，再换算地图格子。",
+      "example": "camera.orthographic = true;\nVector3 world = camera.ScreenToWorldPoint(mousePosition);",
+      "project": "项目固定正交朝向，按分辨率做整数像素缩放；点击地图先经过相机坐标换算，再交由自定义网格寻路。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+          "line": 33,
+          "symbol": "public static void ConfigurePixelCamera"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Camera.html"
+    },
+    {
+      "id": "texture",
+      "name": "Texture2D / Sprite.Create",
+      "tags": [
+        "Texture2D"
+      ],
+      "intro": "Texture2D保存像素数据；Sprite.Create可把纹理中的矩形区域变成精灵。",
+      "usage": "创建纹理，写入像素后调用Apply；像素风使用Point过滤。GetPixels读取现有图片需要纹理允许读写，运行时创建对象也应在不用时释放。",
+      "example": "var texture = new Texture2D(16, 16);\ntexture.filterMode = FilterMode.Point;\ntexture.SetPixels32(pixels);\ntexture.Apply();",
+      "project": "用于选中框、界面色块、天赋星图和墙线拼接。PixelWallTiles按邻接关系读取并组合原素材像素，不调用Tilemap自动铺图。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+          "line": 90,
+          "symbol": "markerTexture = new Texture2D"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Texture2D.html"
+    },
+    {
+      "id": "config",
+      "name": "ScriptableObject",
+      "tags": [
+        "ScriptableObject"
+      ],
+      "intro": "ScriptableObject是可作为Unity资源保存的数据容器，适合共享配置，不必附着到场景对象。",
+      "usage": "继承ScriptableObject，声明可序列化字段，用CreateAssetMenu提供创建入口。把配置复制为本局状态后再使用，避免本局成长改写模板。",
+      "example": "[CreateAssetMenu(menuName = \"Magic Cave/Rules\")]\npublic class RulesAsset : ScriptableObject\n{ public int baseHealth = 60; }",
+      "project": "PrototypeAttributeSet存角色与装备规则，PrototypeArtSet存精灵引用。出发时把属性配置复制进RunData，模板与本局成长分开。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeAttributeSet.cs",
+          "line": 6,
+          "symbol": "public sealed class PrototypeAttributeSet"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/ScriptableObject.html"
+    },
+    {
+      "id": "resources",
+      "name": "Resources.Load",
+      "tags": [
+        "Resources"
+      ],
+      "intro": "Resources.Load按Resources目录下的相对路径，在运行时加载资源。",
+      "usage": "使用泛型指定类型；路径不包含Resources前缀和扩展名，并处理加载失败。",
+      "example": "var rules = Resources.Load<PrototypeAttributeSet>(\"CharacterRules\");\nif (rules == null) { /* 使用默认配置或报错 */ }",
+      "project": "加载CharacterRules、PrototypeArt和WorldMapArt下的城镇图片。配置能否加载取决于资源路径与类型是否正确。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeAttributeSet.cs",
+          "line": 11,
+          "symbol": "Resources.Load"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Resources.Load.html"
+    },
+    {
+      "id": "json",
+      "name": "JsonUtility / JSON序列化",
+      "tags": [
+        "JsonUtility",
+        "JSON"
+      ],
+      "intro": "JsonUtility在支持的可序列化对象与JSON文本之间转换。它负责数据转换，磁盘写入需要System.IO。",
+      "usage": "用Serializable类和字段表示数据，再ToJson/FromJson。读取后仍需做版本、范围与必填字段校验，JSON转换不代替业务验证。",
+      "example": "string json = JsonUtility.ToJson(run, true);\nRunData restored = JsonUtility.FromJson<RunData>(json);",
+      "project": "用于本局、仓库和设置存档，也用于Rules.Copy深拷贝。临时文件替换由.NET文件API完成，不是JsonUtility自带事务。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeStore.cs",
+          "line": 102,
+          "symbol": "byte[] bytes = Encoding.UTF8.GetBytes"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/JsonUtility.html"
+    },
+    {
+      "id": "serial",
+      "name": "Serializable / 序列化回调",
+      "tags": [
+        "Serializable",
+        "序列化回调"
+      ],
+      "intro": "Serializable是.NET标记；Unity序列化器可据此处理普通数据类。ISerializationCallbackReceiver提供序列化前后的回调。",
+      "usage": "给数据类标记Serializable，保存支持的字段；需要恢复额外结构时使用回调，复杂业务校验留给明确的加载流程。",
+      "example": "[System.Serializable]\npublic class CounterData { public int count; }",
+      "project": "RunData、MapData、物品、装备和随机流保存为数据；SessionData通过回调维护检查点和待结算是否存在的标记。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeData.cs",
+          "line": 188,
+          "symbol": "public sealed class SessionData"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/ISerializationCallbackReceiver.html"
+    },
+    {
+      "id": "vector",
+      "name": "Vector2Int / 网格坐标",
+      "tags": [
+        "Vector2Int"
+      ],
+      "intro": "Vector2Int表示二维整数坐标。它是坐标工具，不会自动提供地图生成或寻路。",
+      "usage": "用x/y表示格子，加方向向量遍历四邻格；结合队列、集合和障碍判定实现BFS。",
+      "example": "Vector2Int next = cell + Vector2Int.right;\nif (map.CanTraverse(next.x, next.y)) { /* 可走 */ }",
+      "project": "用于地图地形、容器间距、守卫入口、商人避怪和路线验收。生成算法、BFS和镇守规则均为项目C#实现。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+          "line": 670,
+          "symbol": "public static List<Vector2Int> Path"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Vector2Int.html"
+    },
+    {
+      "id": "move",
+      "name": "Vector2.MoveTowards",
+      "tags": [
+        "MoveTowards"
+      ],
+      "intro": "MoveTowards让位置每次向目标前进不超过指定距离，到达目标时不越过。",
+      "usage": "把速度乘以本帧时间作为最大移动距离。逻辑格子与显示位置分离，剩余移动距离可继续推进下一段。",
+      "example": "visual = Vector2.MoveTowards(visual, target, speed * Time.deltaTime);",
+      "project": "洞窟和城镇在格心之间匀速移动；松键完成当前格。同方向跨格不断顿，不使用Rigidbody2D驱动移动。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+          "line": 187,
+          "symbol": "Vector2.MoveTowards"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Vector2.MoveTowards.html"
+    },
+    {
+      "id": "smooth",
+      "name": "Vector3.SmoothDamp",
+      "tags": [
+        "SmoothDamp"
+      ],
+      "intro": "SmoothDamp以平滑阻尼方式接近目标位置，速度参数需要在多帧之间保留。",
+      "usage": "维护velocity字段，通过ref传入；smoothTime决定接近目标的响应节奏。通常在LateUpdate跟随本帧移动后的角色。",
+      "example": "focus = Vector3.SmoothDamp(focus, target, ref velocity, 0.1f);",
+      "project": "FollowWorld平滑跟随角色显示位置，然后把相机最终位置对齐到像素，兼顾跟随手感与像素表现。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+          "line": 215,
+          "symbol": "Vector3.SmoothDamp"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Vector3.SmoothDamp.html"
+    },
+    {
+      "id": "time",
+      "name": "Time / deltaTime / unscaledTime",
+      "tags": [
+        "Time"
+      ],
+      "intro": "Time提供帧间隔、累计时间和帧号。deltaTime随时间缩放变化，unscaledTime适合不依赖时间缩放的输入计时。",
+      "usage": "移动距离使用速度×deltaTime；长按手势用unscaledTime的差值；不要用“等待秒数”替代游戏规则中的步数。",
+      "example": "float distance = speed * Time.deltaTime;\nbool longPress = Time.unscaledTime - pressedAt >= 0.25f;",
+      "project": "用于移动距离、敌方行动等待、0.25秒长按轮盘和点击去重；火把耐久按成功走格扣除，不按Time消耗。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeNavigation.cs",
+          "line": 76,
+          "symbol": "Time.unscaledTime"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Time.html"
+    },
+    {
+      "id": "collider",
+      "name": "BoxCollider2D",
+      "tags": [
+        "BoxCollider2D"
+      ],
+      "intro": "BoxCollider2D为对象提供矩形2D碰撞形状，可设置大小和是否为触发器。",
+      "usage": "添加组件并设置size、isTrigger；是否通过物理系统移动角色取决于实现，单有碰撞组件不代表由刚体处理移动。",
+      "example": "var collider = node.AddComponent<BoxCollider2D>();\ncollider.size = Vector2.one;\ncollider.isTrigger = false;",
+      "project": "墙、敌人、容器和玩家都有相应组件；实际走格通行仍由MapData.CanTraverse/CanStand判断，空容器保留碰撞与占格。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+          "line": 64,
+          "symbol": "void TargetTag"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/BoxCollider2D.html"
+    },
+    {
+      "id": "active",
+      "name": "GameObject.SetActive",
+      "tags": [
+        "SetActive"
+      ],
+      "intro": "SetActive切换对象是否激活；关闭对象会同时影响对象上的组件及其激活子对象。Renderer.enabled只控制该渲染组件。",
+      "usage": "根据揭示记录决定对象或迷雾是否激活；只想隐藏某个图像时可改Renderer.enabled。",
+      "example": "fog.gameObject.SetActive(!known);\nrenderer.enabled = known;",
+      "project": "RefreshVisibility切换迷雾、物件及标签。已揭示状态来自MapData，不通过是否激活反向推断探索记录。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeWorld.cs",
+          "line": 181,
+          "symbol": "partial void RefreshVisibility"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/GameObject.SetActive.html"
+    },
+    {
+      "id": "path",
+      "name": "Application.persistentDataPath",
+      "tags": [
+        "persistentDataPath",
+        "Application"
+      ],
+      "intro": "persistentDataPath提供应用可持久保存数据的目录。Application也提供退出等运行环境能力。",
+      "usage": "在该路径下拼接项目存档子目录，用System.IO读写；Application.Quit用于运行包退出，在编辑器内需要单独处理。",
+      "example": "string folder = System.IO.Path.Combine(\n    Application.persistentDataPath, \"magic-cave-prototype\");",
+      "project": "PrototypeGame用该目录初始化PrototypeStore，本局、城镇仓库和设置分文件存储；退出前按当前流程处理未保存提示。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/PrototypeGame.cs",
+          "line": 68,
+          "symbol": "Application.persistentDataPath"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Application.persistentDataPath.html"
+    },
+    {
+      "id": "debug",
+      "name": "Debug.Log",
+      "tags": [
+        "Debug.Log"
+      ],
+      "intro": "Debug.Log把诊断信息写入Unity日志，用于观察运行流程。",
+      "usage": "输出有上下文的状态、种子或阶段；日志用于诊断，不能替代存档和用户界面反馈。",
+      "example": "Debug.Log(\"[MagicCave] Run Seed = \" + seed);",
+      "project": "新局和继续时记录种子，方便按同版本规则复现地图；导图不把此前日志视为本次运行验证。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Runtime/MapGenerator.cs",
+          "line": 28,
+          "symbol": "if (logSeed) Debug.Log"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/Debug.Log.html"
+    },
+    {
+      "id": "editor",
+      "name": "Editor API / AssetDatabase / BuildPipeline",
+      "tags": [
+        "AssetDatabase",
+        "BuildPipeline",
+        "Editor工具"
+      ],
+      "intro": "UnityEditor API用于编辑器内的资源导入、场景保存和构建工具，不属于运行包的业务API。",
+      "usage": "代码放在Editor目录或编辑器程序集；MenuItem添加菜单入口，TextureImporter配置导入，AssetDatabase管理资源，BuildPipeline执行构建。",
+      "example": "// 编辑器工具示意；本项目执行编辑器操作须通过MCP\n[UnityEditor.MenuItem(\"Magic Cave/Example\")]\nstatic void Example() { /* 配置资源或构建 */ }",
+      "project": "项目已有原型/世界地图构建器以及Windows构建工具。本次只展示它们的源码用途，没有触发导入、场景修改或构建。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Editor/PrototypeSceneBuilder.cs",
+          "line": 151,
+          "symbol": "BuildPipeline.BuildPlayer"
+        }
+      ],
+      "url": "https://docs.unity3d.com/6000.0/ScriptReference/BuildPipeline.html"
+    },
+    {
+      "id": "tests",
+      "name": "Unity Test Framework / NUnit",
+      "tags": [
+        "Unity Test Framework",
+        "NUnit"
+      ],
+      "intro": "Unity Test Framework集成测试执行能力。NUnit断言验证规则，UnityTest可用IEnumerator跨帧测试行为。",
+      "usage": "纯规则用Test加Assert；需要输入、等待和场景交互时使用UnityTest并逐帧推进。EditMode和PlayMode按验证目标选择。",
+      "example": "[NUnit.Framework.Test]\npublic void Example()\n{ NUnit.Framework.Assert.AreEqual(3, 1 + 2); }",
+      "project": "Editor测试覆盖属性、地图、交易与存档；PlayMode覆盖键鼠输入、装备拖拽、轮盘及迷雾。本次只运行网页验证，不运行Unity测试。",
+      "sources": [
+        {
+          "path": "Assets/MagicCavePrototype/Tests/PlayMode/PrototypePlayTests.cs",
+          "line": 30,
+          "symbol": "[UnityTest]"
+        }
+      ],
+      "url": "https://docs.unity3d.com/Packages/com.unity.test-framework@1.1/manual/index.html"
+    }
+  ]
+}

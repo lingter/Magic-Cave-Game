@@ -127,7 +127,7 @@ namespace MagicCave.Prototype
             foreach (var enemy in Run.Map.enemies)
             {
                 if (enemy.defeated) continue;
-                var visual = Pixel(Rules.EnemyLabel(enemy), worldRoot.transform, artSet.enemies[(int)enemy.kind], World(enemy.x, enemy.y), SpriteOrder(enemy.y) + 1);
+                var visual = Pixel(EnemyTemplates.Label(Run, enemy), worldRoot.transform, artSet.enemies[(int)enemy.kind], World(enemy.x, enemy.y), SpriteOrder(enemy.y) + 1);
                 TargetTag(visual.gameObject, TargetKind.Enemy, enemy.x, enemy.y, enemy.id);
                 WorldLabel(visual.transform, visual.name, 0.65f);
                 objects.Add(new ObjectVisual { root = visual.gameObject, x = enemy.x, y = enemy.y });

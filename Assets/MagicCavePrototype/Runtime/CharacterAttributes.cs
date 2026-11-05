@@ -259,6 +259,8 @@ namespace MagicCave.Prototype
         public static int Segments(CardKind card) => card == CardKind.Double ? 2 : 1;
         public static double Damage(RunData run, CardKind card, int spirit = 0, double block = 0, bool inBattle = true)
         {
+            decimal power = PrototypeSettings.Power(run, card);
+            card = PrototypeSettings.Template(run, card);
             if (!IsAttack(card)) return 0;
             if (!run.UsesAttributes)
             {
@@ -267,17 +269,19 @@ namespace MagicCave.Prototype
             }
             var stats = CharacterAttributes.Calculate(run, inBattle);
             decimal value = card == CardKind.Shield ? (decimal)block : stats.attack * run.attributeRules.cardMultipliers[(int)card] / 10000m;
-            return RoundDamage(Math.Max(0m, value + spirit) * stats.secondaryMultiplier * PrototypeSettings.Power(run, card));
+            return RoundDamage(Math.Max(0m, value + spirit) * stats.secondaryMultiplier * power);
         }
         public static double Block(RunData run, CardKind card, bool inBattle = true)
         {
+            decimal power = PrototypeSettings.Power(run, card);
+            card = PrototypeSettings.Template(run, card);
             if (!IsDefense(card)) return 0;
             int basis = card == CardKind.Defend ? 5 : card == CardKind.Fortify ? 12 : card == CardKind.Steady ? 4 : 0;
             if (!run.UsesAttributes) return basis + run.defenseBonus;
             var stats = CharacterAttributes.Calculate(run, inBattle);
             var definition = run.attributeRules.DefenseCard(card);
             decimal value = definition.source == DefenseScalingSource.ActualAttack ? stats.attack : stats.Value(run.attributeRules.template.primary);
-            return RoundDamage(Math.Max(0m, value * definition.multiplier / 10000m * PrototypeSettings.Power(run, card)));
+            return RoundDamage(Math.Max(0m, value * definition.multiplier / 10000m * power));
         }
         public static double Apply(double damage, int defense, ref double block, ref double health)
         {

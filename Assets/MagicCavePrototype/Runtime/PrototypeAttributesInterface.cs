@@ -13,21 +13,26 @@ namespace MagicCave.Prototype
 
         public string CardDescription(RunData run, CardKind card, bool inBattle)
         {
+            CardKind template = PrototypeSettings.Template(run, card);
             bool active = inBattle && Combat != null && Combat.run == run;
-            if (CombatNumbers.IsAttack(card))
+            var custom = PrototypeSettings.Custom(run, card);
+            if (custom != null && custom.UsesEffects)
+                return CardEffects.Description(run, custom, inBattle, active ? Combat.EffectState() : null,
+                    active && run.UsesAttributes ? Combat.enemy.physicalDefense : 0);
+            if (CombatNumbers.IsAttack(template))
             {
                 double damage = CombatNumbers.Damage(run, card, active ? Combat.spirit : 0, active ? Combat.playerBlock : 0, inBattle);
-                string description = card == CardKind.Double ? "每次" + CharacterAttributes.Number(damage) + "伤害，共2次" :
+                string description = template == CardKind.Double ? "每次" + CharacterAttributes.Number(damage) + "伤害，共2次" :
                     "造成" + CharacterAttributes.Number(damage) + "点物理伤害";
                 if (PrototypeSettings.Draw(run, card) > 0) description += "，抽" + PrototypeSettings.Draw(run, card) + "张";
-                if (card == CardKind.Shield) description += "\n不消耗格挡";
+                if (template == CardKind.Shield) description += "\n不消耗格挡";
                 return description;
             }
             double block = CombatNumbers.Block(run, card, inBattle);
-            if (CombatNumbers.IsDefense(card)) return "获得" + CharacterAttributes.Number(block) + "点格挡" + (PrototypeSettings.Draw(run, card) > 0 ? "，抽" + PrototypeSettings.Draw(run, card) + "张" : "");
-            if (card == CardKind.Prepare) return "抽" + PrototypeSettings.Draw(run, card) + "张牌";
-            if (card == CardKind.Spirit) return "本回合每段攻击+" + (PrototypeSettings.For(run)?.spirit ?? 2) + "，可叠加" + (PrototypeSettings.Draw(run, card) > 0 ? "，抽" + PrototypeSettings.Draw(run, card) + "张" : "");
-            return Rules.Effects[(int)card];
+            if (CombatNumbers.IsDefense(template)) return "获得" + CharacterAttributes.Number(block) + "点格挡" + (PrototypeSettings.Draw(run, card) > 0 ? "，抽" + PrototypeSettings.Draw(run, card) + "张" : "");
+            if (template == CardKind.Prepare) return "抽" + PrototypeSettings.Draw(run, card) + "张牌";
+            if (template == CardKind.Spirit) return "本回合每段攻击+" + PrototypeSettings.Spirit(run, card) + "，可叠加" + (PrototypeSettings.Draw(run, card) > 0 ? "，抽" + PrototypeSettings.Draw(run, card) + "张" : "");
+            return Rules.Effects[(int)template];
         }
 
         void DrawDeparture()

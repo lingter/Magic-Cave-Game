@@ -1,0 +1,49 @@
+{
+  "desktop": {
+    "date": "2026-11-04",
+    "checks": [
+      "HTML initialization and all 60 system/feature nodes",
+      "Chinese SVG text bounds",
+      "Unity API, implementation and source evidence",
+      "API search and empty results",
+      "Directed system relation focus",
+      "Zoom and fit",
+      "Scope and known limitations",
+      "Responsive layout 1582px",
+      "20 Unity guides, map links, sidebar links, usage examples, source links, return to map and close"
+    ],
+    "unityEditorOperations": 0,
+    "unityTestsRun": false,
+    "counts": {
+      "systems": 12,
+      "features": 48,
+      "relations": 26,
+      "nodes": 60
+    },
+    "passed": true
+  },
+  "mobile": {
+    "date": "2026-11-04",
+    "checks": [
+      "HTML initialization and all 60 system/feature nodes",
+      "Chinese SVG text bounds",
+      "Unity API, implementation and source evidence",
+      "API search and empty results",
+      "Directed system relation focus",
+      "Zoom and fit",
+      "Scope and known limitations",
+      "Responsive layout 504px",
+      "20 Unity guides, map links, sidebar links, usage examples, source links, return to map and close"
+    ],
+    "unityEditorOperations": 0,
+    "unityTestsRun": false,
+    "counts": {
+      "systems": 12,
+      "features": 48,
+      "relations": 26,
+      "nodes": 60
+    },
+    "passed": true
+  },
+  "pngBytes": 665383
+}

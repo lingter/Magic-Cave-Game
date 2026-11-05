@@ -139,4 +139,179 @@ public sealed class PrototypeSettingsTests
         var run = New(); new PrototypeSettings { cardRewards = false }.Apply(run);
         Growth.Award(run, 50); Assert.That(Growth.NextUpgrade(run), Is.Null); Assert.That(run.level, Is.EqualTo(3)); Assert.That(run.deck.Count, Is.EqualTo(10));
     }
+    [TestCase(CardKind.Strike)]
+    [TestCase(CardKind.Defend)]
+    [TestCase(CardKind.Prepare)]
+    [TestCase(CardKind.Heavy)]
+    [TestCase(CardKind.Double)]
+    [TestCase(CardKind.Shield)]
+    [TestCase(CardKind.Fortify)]
+    [TestCase(CardKind.Quick)]
+    [TestCase(CardKind.Spirit)]
+    [TestCase(CardKind.Steady)]
+    public void CustomCardsResolveTemplateWithIndependentNumbers(CardKind template)
+    {
+        var run = New(); var settings = new PrototypeSettings { cardCounts = new int[10] };
+        settings.customCards.Add(new CustomCardDefinition { id = 42, name = "试作牌", template = template, count = 7, cost = 0, power = 200, draw = 1, spirit = 7 });
+        settings.enemyHealth[0] = 10000; settings.Apply(run);
+        var card = (CardKind)42;
+        Assert.That(run.deck, Has.Count.EqualTo(7));
+        Assert.That(run.deck.All(c => c == card), Is.True);
+        var enemy = new EnemyData { kind = EnemyKind.Bat, physicalDefense = 2 };
+        var battle = new Battle(run, enemy) { playerBlock = 8 };
+        double before = battle.enemyHealth, preview = battle.Preview(card);
+        double expectedBlock = CombatNumbers.Block(run, card);
+        Assert.That(battle.Play(0), Is.True);
+        Assert.That(battle.energy, Is.EqualTo(3));
+        Assert.That(battle.hand.Count, Is.EqualTo(5));
+        Assert.That(battle.discard.Single(), Is.EqualTo(card));
+        Assert.That(before - battle.enemyHealth, Is.EqualTo(preview));
+        Assert.That(battle.playerBlock, Is.EqualTo(8 + expectedBlock));
+        Assert.That(battle.spirit, Is.EqualTo(template == CardKind.Spirit ? 7 : 0));
+        Assert.That(PrototypeSettings.Cost(run, template), Is.EqualTo(Rules.Costs[(int)template]));
+        Assert.That(PrototypeSettings.Name(run, card), Is.EqualTo("试作牌"));
+        if (template == CardKind.Shield) Assert.That(preview, Is.EqualTo(14));
+        if (template == CardKind.Double)
+        {
+            var stats = CharacterAttributes.Calculate(run);
+            double each = CombatNumbers.RoundDamage(stats.attack * run.attributeRules.cardMultipliers[(int)template] / 10000m * 2m);
+            Assert.That(preview, Is.EqualTo(2 * Math.Max(0, each - 2)));
+        }
+        PrototypeStore.ValidateRun(run);
+    }
+    [Test]
+    public void CustomDefinitionsSurviveSaveAndLaterDeletionFromSettings()
+    {
+        string folder = Path.Combine(Application.temporaryCachePath, "CustomCards-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new PrototypeStore(folder); var settings = new PrototypeSettings();
+            settings.customCards.Add(new CustomCardDefinition { id = 20, name = "旧局专属", template = CardKind.Double, count = 3, power = 180 });
+            store.SaveSettings(settings);
+            var run = New(); store.Settings.Apply(run); store.SaveCheckpoint(run);
+            settings.customCards.Clear(); store.SaveSettings(settings);
+            var loaded = new PrototypeStore(folder); var continued = loaded.Continue();
+            Assert.That(loaded.Settings.customCards, Is.Empty);
+            Assert.That(continued.deck.Count(c => (int)c == 20), Is.EqualTo(3));
+            Assert.That(PrototypeSettings.Name(continued, (CardKind)20), Is.EqualTo("旧局专属"));
+            Assert.That(PrototypeSettings.Power(continued, (CardKind)20), Is.EqualTo(1.8m));
+            continued.deck.Add((CardKind)21);
+            Assert.Throws<System.IO.InvalidDataException>(() => PrototypeStore.ValidateRun(continued));
+        }
+        finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+    }
+    [Test]
+    public void CustomConfigurationRejectsDuplicateIdsUnknownTemplatesAndOversizedDeck()
+    {
+        var settings = new PrototypeSettings();
+        var card = new CustomCardDefinition { id = 10 };
+        settings.customCards.Add(card); settings.customCards.Add(Rules.Copy(card));
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        settings.customCards.RemoveAt(1); card.template = (CardKind)10;
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        card.template = CardKind.Strike; card.name = " ";
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        card.name = "测试"; settings.cardCounts = Enumerable.Repeat(10, 10).ToArray();
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        settings.customCards = null; settings.Validate();
+        Assert.That(settings.customCards, Is.Empty);
+    }
+
+    static CardEffectEntry Effect(CardEffectKind kind, CardEffectTarget target, CardValueSource source, int amount, int repeat = 1)
+        => new CardEffectEntry { kind = kind, target = target, repeat = repeat,
+            terms = new System.Collections.Generic.List<CardFormulaTerm> { new CardFormulaTerm { source = source, amount = amount } } };
+    static CustomCardDefinition Composed(params CardEffectEntry[] effects) => new CustomCardDefinition
+        { id = 30, name = "拼接词条牌", effectsVersion = 1, count = 7, effects = effects.ToList() };
+    [Test]
+    public void ComposedCardAddsAttributesAndExecutesMultipleEffectsWithMatchingPreview()
+    {
+        var damage = Effect(CardEffectKind.Damage, CardEffectTarget.Enemy, CardValueSource.ActualAttack, 100, 2);
+        damage.terms.Add(new CardFormulaTerm { source = CardValueSource.Strength, amount = 50 });
+        var card = Composed(damage,
+            Effect(CardEffectKind.Block, CardEffectTarget.Self, CardValueSource.Agility, 50),
+            Effect(CardEffectKind.Draw, CardEffectTarget.Self, CardValueSource.Fixed, 1),
+            Effect(CardEffectKind.Spirit, CardEffectTarget.Self, CardValueSource.Fixed, 2));
+        card.effects[1].terms.Add(new CardFormulaTerm { source = CardValueSource.Wisdom, amount = 50 });
+        var settings = new PrototypeSettings { cardCounts = new int[10] }; settings.customCards.Add(card);
+        var run = New(); settings.Apply(run);
+        var battle = new Battle(run, new EnemyData { kind = EnemyKind.Bat, physicalDefense = 2 }) { enemyHealth = 100, enemyBlock = 3 };
+        var stats = CharacterAttributes.Calculate(run, true);
+        double each = CombatNumbers.RoundDamage(stats.attack + stats.strength * .5m);
+        double expected = Math.Max(0, 2 * Math.Max(0, each - 2) - 3);
+        Assert.That(battle.Preview((CardKind)30), Is.EqualTo(expected));
+        Assert.That(battle.enemyHealth, Is.EqualTo(100)); Assert.That(battle.enemyBlock, Is.EqualTo(3));
+        Assert.That(CardEffects.Sentence(damage), Does.Contain("100%实际攻击力＋50%力量"));
+        Assert.That(battle.Play(0), Is.True);
+        Assert.That(battle.enemyHealth, Is.EqualTo(100 - expected)); Assert.That(battle.energy, Is.EqualTo(2));
+        Assert.That(battle.playerBlock, Is.EqualTo(CombatNumbers.RoundDamage((stats.agility + stats.wisdom) * .5m)));
+        Assert.That(battle.hand.Count, Is.EqualTo(5)); Assert.That(battle.spirit, Is.EqualTo(2));
+        PrototypeStore.ValidateRun(Rules.Copy(run));
+    }
+    [Test]
+    public void EffectOrderChangesLaterBlockScalingAndSpiritDamage()
+    {
+        var run = New();
+        var card = Composed(Effect(CardEffectKind.Block, CardEffectTarget.Self, CardValueSource.Fixed, 10),
+            Effect(CardEffectKind.Spirit, CardEffectTarget.Self, CardValueSource.Fixed, 3),
+            Effect(CardEffectKind.Damage, CardEffectTarget.Enemy, CardValueSource.CurrentBlock, 100));
+        var before = new CardEffectState { playerHealth = 60, enemyHealth = 100 };
+        CardEffects.Resolve(run, card, 0, 0, before);
+        Assert.That(before.enemyHealth, Is.EqualTo(87)); Assert.That(before.playerBlock, Is.EqualTo(10));
+        Assert.That(CardEffects.Description(run, card, false), Does.Contain("敌：13物伤"));
+        card.effects.Reverse();
+        var after = new CardEffectState { playerHealth = 60, enemyHealth = 100 };
+        CardEffects.Resolve(run, card, 0, 0, after);
+        Assert.That(after.enemyHealth, Is.EqualTo(100));
+        Assert.That(after.playerBlock, Is.EqualTo(10)); Assert.That(after.spirit, Is.EqualTo(3));
+    }
+    [Test]
+    public void FormulaRoundsOnceAfterAddingTermsAndCapsDrawAndSpirit()
+    {
+        var run = New();
+        var effect = Effect(CardEffectKind.Block, CardEffectTarget.Self, CardValueSource.Fixed, 0);
+        effect.terms.Clear();
+        effect.terms.Add(new CardFormulaTerm { source = CardValueSource.Wisdom, amount = 10 });
+        effect.terms.Add(new CardFormulaTerm { source = CardValueSource.Wisdom, amount = 10 });
+        Assert.That(CardEffects.Amount(run, effect, 0, 0, false), Is.EqualTo(1));
+        var card = Composed(Effect(CardEffectKind.Draw, CardEffectTarget.Self, CardValueSource.Fixed, 1000),
+            Effect(CardEffectKind.Spirit, CardEffectTarget.Self, CardValueSource.Fixed, 1000));
+        int drawn = 0; var state = new CardEffectState { playerHealth = 60, enemyHealth = 100 };
+        CardEffects.Resolve(run, card, 0, 0, state, n => drawn += n);
+        Assert.That(drawn, Is.EqualTo(20)); Assert.That(state.spirit, Is.EqualTo(100));
+    }
+    [Test]
+    public void SelfDamageAndEnemyBlockUseTheirOwnTargetsAndStopAfterDeath()
+    {
+        var run = New();
+        var card = Composed(Effect(CardEffectKind.Block, CardEffectTarget.Enemy, CardValueSource.Fixed, 4),
+            Effect(CardEffectKind.Damage, CardEffectTarget.Self, CardValueSource.Fixed, 10, 2),
+            Effect(CardEffectKind.Draw, CardEffectTarget.Self, CardValueSource.Fixed, 1));
+        var state = new CardEffectState { playerHealth = 10, playerBlock = 3, enemyHealth = 100 };
+        int drawn = 0; CardEffects.Resolve(run, card, 2, 1, state, n => drawn += n);
+        Assert.That(state.playerHealth, Is.Zero); Assert.That(state.enemyHealth, Is.EqualTo(100));
+        Assert.That(state.enemyBlock, Is.EqualTo(4)); Assert.That(drawn, Is.Zero);
+        card.effects = new[] { Effect(CardEffectKind.Damage, CardEffectTarget.Enemy, CardValueSource.Fixed, 20),
+            Effect(CardEffectKind.Spirit, CardEffectTarget.Self, CardValueSource.Fixed, 8) }.ToList();
+        state = new CardEffectState { playerHealth = 10, enemyHealth = 5 };
+        CardEffects.Resolve(run, card, 0, 0, state);
+        Assert.That(state.enemyHealth, Is.Zero); Assert.That(state.spirit, Is.Zero);
+    }
+    [Test]
+    public void ComposedSnapshotsRemainIndependentAndRejectInvalidEffects()
+    {
+        var settings = new PrototypeSettings();
+        var card = Composed(Effect(CardEffectKind.Damage, CardEffectTarget.Enemy, CardValueSource.ActualAttack, 100));
+        settings.customCards.Add(card); var run = New(); settings.Apply(run);
+        card.effects[0].terms[0].amount = 200;
+        Assert.That(PrototypeSettings.Custom(Rules.Copy(run), (CardKind)30).effects[0].terms[0].amount, Is.EqualTo(100));
+        card.effects[0].kind = CardEffectKind.Draw;
+        Assert.Throws<InvalidOperationException>(() => settings.Validate()); // Enemy cannot draw player's cards.
+        card.effects[0].target = CardEffectTarget.Self; card.effects[0].repeat = 2;
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        card.effects[0].repeat = 1; card.effects[0].terms.Clear();
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        card.effects.Clear(); Assert.Throws<InvalidOperationException>(() => settings.Validate());
+        card.effectsVersion = 2; Assert.Throws<InvalidOperationException>(() => settings.Validate());
+    }
+
 }

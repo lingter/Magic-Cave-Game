@@ -347,7 +347,7 @@ namespace MagicCave.Prototype
                 run.mapRandom == null || run.battleRandom == null || run.cardRandom == null ||
                 run.mapRandom.state == 0 || run.battleRandom.state == 0 || run.cardRandom.state == 0)
                 throw new InvalidDataException("玩家或随机进度数据无效。");
-            if (run.deck.Any(card => (int)card < 0 || (int)card >= Rules.CardNames.Length))
+            if (run.deck.Any(card => !PrototypeSettings.Known(run, card)))
                 throw new InvalidDataException("卡组包含未知卡牌。");
             var ids = new HashSet<int>();
             foreach (var slot in run.inventory)
@@ -378,7 +378,7 @@ namespace MagicCave.Prototype
                     map.loot.Any(l => !l.loose && l.x == map.merchantX && l.y == map.merchantY)))
                     throw new InvalidDataException("集齿者位置无效。");
                 foreach (var enemy in map.enemies)
-                    if (enemy == null || (int)enemy.kind < 0 || (int)enemy.kind > 2 || !map.Walkable(enemy.x, enemy.y) ||
+                    if (enemy == null || enemy.templateId < 0 || enemy.templateId > 0 && EnemyTemplates.Find(run, enemy) == null || (int)enemy.kind < 0 || (int)enemy.kind > 2 || !map.Walkable(enemy.x, enemy.y) ||
                         enemy.level < 0 || enemy.level > run.maps.Count || enemy.physicalDefense < 0 || enemy.physicalDefense > 1000 || (int)enemy.role < 0 || (int)enemy.role > 2)
                         throw new InvalidDataException("敌人数据无效。");
                 foreach (var loot in map.loot)

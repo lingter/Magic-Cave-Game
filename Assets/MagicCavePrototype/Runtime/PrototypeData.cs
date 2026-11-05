@@ -90,6 +90,7 @@ namespace MagicCave.Prototype
     {
         public int id, x, y;
         public EnemyKind kind;
+        public int templateId;
         public EnemyRole role;
         public int level = 1;
         public int physicalDefense;

@@ -8,10 +8,10 @@ namespace MagicCave.Prototype
 {
     public sealed partial class PrototypeGame
     {
-        GUIStyle textStyle, smallStyle, titleStyle, headingStyle, buttonStyle;
+        GUIStyle textStyle, smallStyle, titleStyle, headingStyle, buttonStyle, denseCardStyle;
         readonly Dictionary<string, Texture2D> guiTextures = new Dictionary<string, Texture2D>();
         Keyboard uiKeyboard;
-        int battleHandPage;
+        int battleHandPage, cardListPage;
         bool seedFocused;
         int consumedClick = -1, dropSlot = -1, dropQuantity = 1;
         static readonly Color Ink = new Color(0.84f, 0.89f, 0.96f);
@@ -95,6 +95,7 @@ namespace MagicCave.Prototype
             if (textStyle != null) return;
             textStyle = new GUIStyle(GUI.skin.label) { font = interfaceFont, fontSize = 18, wordWrap = true };
             smallStyle = new GUIStyle(textStyle) { fontSize = 14 };
+            denseCardStyle = new GUIStyle(smallStyle) { fontSize = 11 };
             titleStyle = new GUIStyle(textStyle) { fontSize = 40, fontStyle = FontStyle.Bold };
             headingStyle = new GUIStyle(textStyle) { fontSize = 25, fontStyle = FontStyle.Bold };
             buttonStyle = new GUIStyle(textStyle) { alignment = TextAnchor.MiddleCenter, padding = new RectOffset(6, 6, 3, 3) };
@@ -160,7 +161,7 @@ namespace MagicCave.Prototype
             if (target.kind == TargetKind.Enemy)
             {
                 var enemy = Run.Map.enemies.FirstOrDefault(e => e.id == target.id);
-                if (enemy != null) hint = Rules.EnemyLabel(enemy) + " · " +
+                if (enemy != null) hint = EnemyTemplates.Label(Run, enemy) + " · " +
                     (enemy.role == EnemyRole.ItemGuard ? "物品镇守" : enemy.role == EnemyRole.CorridorGuard ? "通道镇守" : "自由怪物") + " · 点击接近后战斗 / 范围内按E";
             }
             if (target.kind == TargetKind.Loot)
@@ -180,9 +181,11 @@ namespace MagicCave.Prototype
         void Card(Rect rectangle, CardKind card, Action click, bool enabled)
         {
             Button(rectangle, "", click, enabled, true);
-            Label(new Rect(rectangle.x + 10, rectangle.y + 10, rectangle.width - 45, 32), Rules.CardNames[(int)card], textStyle, Gold);
+            Label(new Rect(rectangle.x + 10, rectangle.y + 10, rectangle.width - 45, 48), PrototypeSettings.Name(Run, card), PrototypeSettings.Custom(Run, card) != null ? smallStyle : textStyle, Gold);
             Label(new Rect(rectangle.xMax - 35, rectangle.y + 10, 26, 30), PrototypeSettings.Cost(Run, card).ToString(), buttonStyle, Cyan);
-            Label(new Rect(rectangle.x + 10, rectangle.y + 63, rectangle.width - 20, rectangle.height - 72), CardEffect(card), smallStyle);
+            var custom = PrototypeSettings.Custom(Run, card);
+            Label(new Rect(rectangle.x + 10, rectangle.y + 57, rectangle.width - 20, rectangle.height - 63), CardEffect(card),
+                custom != null && custom.UsesEffects && custom.effects.Count > 4 ? denseCardStyle : smallStyle);
         }
         void DrawArt(Rect rectangle, Sprite sprite)
         {
@@ -201,7 +204,7 @@ namespace MagicCave.Prototype
             DrawArt(new Rect(420, 143, 64, 64), artSet != null ? artSet.playerDown : null);
             Bar(new Rect(130, 206, 362, 30), Run.health / (float)Run.MaxHealth, new Color(0.21f, 0.59f, 0.46f), "生命 " + Run.health + " / " + Run.MaxHealth);
             Label(new Rect(130, 261, 360, 35), "格挡 " + Combat.playerBlock + "     战意 +" + Combat.spirit);
-            Label(new Rect(781, 143, 360, 42), Rules.EnemyLabel(Combat.enemy), headingStyle, new Color(1f, 0.53f, 0.46f));
+            Label(new Rect(781, 143, 360, 42), EnemyTemplates.Label(Run, Combat.enemy), headingStyle, new Color(1f, 0.53f, 0.46f));
             DrawArt(new Rect(1080, 143, 64, 64), artSet != null ? artSet.enemies[(int)Combat.enemy.kind] : null);
             Bar(new Rect(782, 206, 362, 30), Combat.enemyHealth / (float)PrototypeSettings.Health(Run, Combat.enemy), new Color(0.68f, 0.25f, 0.30f), "生命 " + Combat.enemyHealth + " / " + PrototypeSettings.Health(Run, Combat.enemy));
             Label(new Rect(782, 254, 360, 72), "格挡 " + CharacterAttributes.Number(Combat.enemyBlock) + "   意图：" + Combat.Intent +
@@ -396,12 +399,21 @@ namespace MagicCave.Prototype
             bool drawPile = Panel == GamePanel.Draw, discardPile = Panel == GamePanel.Discard;
             var cards = drawPile ? Combat.draw : discardPile ? Combat.discard : Run.deck;
             Label(new Rect(263, 124, 750, 48), (drawPile ? "抽牌堆组成（顺序隐藏）" : discardPile ? "弃牌堆" : "本局卡组") + " · " + cards.Count + "张", headingStyle, Gold);
+            var groups = cards.GroupBy(c => c).OrderBy(g => g.Key).ToList();
+            int pages = Math.Max(1, (groups.Count + 9) / 10);
+            cardListPage = Math.Max(0, Math.Min(pages - 1, cardListPage));
             int row = 0;
-            foreach (var group in cards.GroupBy(c => c).OrderBy(g => g.Key))
+            foreach (var group in groups.Skip(cardListPage * 10).Take(10))
             {
                 float y = 195 + row++ * 38;
-                Label(new Rect(263, y, 220, 33), Rules.CardNames[(int)group.Key] + " ×" + group.Count());
+                Label(new Rect(263, y, 220, 33), PrototypeSettings.Name(Run, group.Key) + " ×" + group.Count(), smallStyle);
                 Label(new Rect(499, y, 515, 33), PrototypeSettings.Cost(Run, group.Key) + "能量 · " + CardDescription(Run, group.Key, ScreenMode == GameScreen.Battle).Split('\n')[0], smallStyle);
+            }
+            if (pages > 1)
+            {
+                Button(new Rect(263, 604, 100, 36), "上一页", () => cardListPage--, cardListPage > 0);
+                Label(new Rect(373, 604, 90, 36), (cardListPage + 1) + "/" + pages, buttonStyle);
+                Button(new Rect(473, 604, 100, 36), "下一页", () => cardListPage++, cardListPage < pages - 1);
             }
             Button(new Rect(720, 604, 295, 36), "关闭 [Esc]", () => Panel = GamePanel.None);
         }
